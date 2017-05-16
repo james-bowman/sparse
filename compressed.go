@@ -1,7 +1,6 @@
 package sparse
 
 import (
-	//"github.com/gonum/matrix"
 	"github.com/gonum/matrix"
 	"github.com/gonum/matrix/mat64"
 )
@@ -120,11 +119,11 @@ func (c *CSR) ToType(matType MatrixType) mat64.Matrix {
 
 func (c *CSR) Mul(a, b mat64.Matrix) {
 	if dia, ok := a.(*DIA); ok {
-		c.MulDIA(dia, b, false)
+		c.mulDIA(dia, b, false)
 		return
 	}
 	if dia, ok := b.(*DIA); ok {
-		c.MulDIA(dia, a, true)
+		c.mulDIA(dia, a, true)
 		return
 	}
 
@@ -165,7 +164,7 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 	c.indptr[c.i] = t
 }
 
-func (c *CSR) MulDIA(dia *DIA, other mat64.Matrix, trans bool) {
+func (c *CSR) mulDIA(dia *DIA, other mat64.Matrix, trans bool) {
 	var csMat compressedSparse
 	isCS := false
 
