@@ -9,17 +9,17 @@ Implementation of selected sparse matrix formats to support scientific and machi
 
 Machine learning applications typically model entities as mathematical vectors of features so that they may be compared and analysed quantitively.  Typically the majority of the elements in these vectors are zeros. In the case of text mining applications, each document within a corpus is represented as a vector and its features represent the vocabulary of unique words.  A corpus of several thousand documents might utilise a vocabulary of hundreds of thousands (or perhaps even millions) of unique words but each document will typically only contain a couple of hundred unique words.  This means the number of non-zero values in the matrix might only be around 1%.
 
-Sparse matrix formats capitalise on this by only storing the non-zero values thereby reducing both storage/memory requirements and processing effort for manipulating the data.  Sparse matrices can effectively be divided into 3 main categories:
+Sparse matrix formats capitalise on this premise by only storing the non-zero values thereby reducing both storage/memory requirements and processing effort for manipulating the data.  Sparse matrices can effectively be divided into 3 main categories:
 
 1. Creational - Sparse matrix formats suited to construction and building of matrices.  Matrix formats in this category include DOK (Dictionary Of Keys) and COO (COOrdinate).
 
-2. Operational - Sparse matrix formats suited to arithmetic operations e.g. multiplication.  Matrix formats in this category include CSR (Compact Sparse Row aka CRS - Compact Row Storage) and CSC (Compact Sparse Column aka CCS - Compact Column Storage)
+2. Operational - Sparse matrix formats suited to arithmetic operations e.g. multiplication.  Matrix formats in this category include CSR (Compressed Sparse Row aka CRS - Compressed Row Storage) and CSC (Compressed Sparse Column aka CCS - Compressed Column Storage)
 
 3. Specialised - Specialised matrix formats suiting specific sparsity patterns.  Matrix formats in this category include DIA (DIAgonal) for efficiently storing and manipulating symmetric diagonal matrices.
 
-A common practice is to construct sparse matrices using a creational format e.g. DOK or COO and then converting to an operational format e.g. CSR for arithmetic operations.
+A common practice is to construct sparse matrices using a creational format e.g. DOK or COO and then convert them to an operational format e.g. CSR for arithmetic operations.
 
-## Features
+## Implemented Features
 
 * DOK (Dictionary Of Keys) format
 * COO (COOrdinate) format
@@ -31,7 +31,7 @@ A common practice is to construct sparse matrices using a creational format e.g.
 ## Planned
 
 * Further optimisations of CSR multiplication for sparse matrix types, even for RHS operand ((AB)^T = A^T * B^T)
-* Consider implicitly converting sparse matrix type operands to CSR/CSC for arithmetic operations
-* Further arithmetic operations e.g. add, subtract, divide, etc.
-* Further optimisation of arithmetic operations for improved speed and efficient storage
-* Improve memory allocation for matrix multiplication - pre-calculating sparsity pattern for product and allocate storage in advance.
+* Consider implicitly converting sparse matrix operands to CSR/CSC for arithmetic operations
+* Implement further arithmetic operations e.g. add, subtract, divide, etc.
+* Further optimisation of arithmetic operations for speed and storage efficiency gains
+* Improve memory allocation for matrix multiplication - pre-calculating sparsity pattern for product and allocate storage in advance rather than incrementally.
