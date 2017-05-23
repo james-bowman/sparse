@@ -139,28 +139,45 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 	c.i, c.j = ar, bc
 	t := 0
 
-	for i := 0; i < ar; i++ {
-		c.indptr[i] = t
-		for j := 0; j < bc; j++ {
-			var v float64
-			// TODO Consider converting all Sparsers to CSR
-			if lhs, ok := a.(*CSR); ok {
+	lhs, isCsr := a.(*CSR)
+
+	if isCsr {
+		for i := 0; i < ar; i++ {
+			c.indptr[i] = t
+			for j := 0; j < bc; j++ {
+				var v float64
+				// TODO Consider converting all Sparsers to CSR
 				for k := lhs.indptr[i]; k < lhs.indptr[i+1]; k++ {
 					v += lhs.data[k] * b.At(lhs.ind[k], j)
 				}
-
-			} else {
-				for k := 0; k < ac; k++ {
-					v += a.At(i, k) * b.At(k, j)
+				if v != 0 {
+					t++
+					c.ind = append(c.ind, j)
+					c.data = append(c.data, v)
 				}
 			}
-			if v != 0 {
-				t++
-				c.ind = append(c.ind, j)
-				c.data = append(c.data, v)
+		}
+	} else {
+		row := make([]float64, ac)
+		for i := 0; i < ar; i++ {
+			c.indptr[i] = t
+			for ci := range row {
+				row[ci] = a.At(i, ci)
+			}
+			for j := 0; j < bc; j++ {
+				var v float64
+				for ci, e := range row {
+					v += e * b.At(ci, j)
+				}
+				if v != 0 {
+					t++
+					c.ind = append(c.ind, j)
+					c.data = append(c.data, v)
+				}
 			}
 		}
 	}
+
 	c.indptr[c.i] = t
 }
 

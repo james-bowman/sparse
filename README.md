@@ -11,7 +11,7 @@ Machine learning applications typically model entities as mathematical vectors o
 
 Sparse matrix formats capitalise on this premise by only storing the non-zero values thereby reducing both storage/memory requirements and processing effort for manipulating the data.  Sparse matrices can effectively be divided into 3 main categories:
 
-1. Creational - Sparse matrix formats suited to construction and building of matrices.  Matrix formats in this category include DOK (Dictionary Of Keys) and COO (COOrdinate).
+1. Creational - Sparse matrix formats suited to construction and building of matrices.  Matrix formats in this category include DOK (Dictionary Of Keys) and COO (COOrdinate aka triplet).
 
 2. Operational - Sparse matrix formats suited to arithmetic operations e.g. multiplication.  Matrix formats in this category include CSR (Compressed Sparse Row aka CRS - Compressed Row Storage) and CSC (Compressed Sparse Column aka CCS - Compressed Column Storage)
 
@@ -22,16 +22,18 @@ A common practice is to construct sparse matrices using a creational format e.g.
 ## Implemented Features
 
 * DOK (Dictionary Of Keys) format
-* COO (COOrdinate) format
+* COO (COOrdinate) format (sometimes referred to as 'triplet')
 * CSR (Compressed Sparse Row) format
 * CSC (Compressed Sparse Column) format
 * DIA (DIAgonal) format
-* CSR multiplication of matrices (with optimisations for DIA and CSR matrix types)
+* CSR dot product (matrix multiplication) of 2 matrices (with optimisations for DIA (as LHS or RHS operand) and CSR (as LHS operand only) matrix types) but supporting any implementation of gonum/mat64.Matrix interface.
 
 ## Planned
 
-* Further optimisations of CSR multiplication for sparse matrix types, even for RHS operand ((AB)^T = A^T * B^T)
+* Further optimisations of CSR dot product for sparse matrix type operands, even as RHS operand ((AB)^T = A^T * B^T)
 * Consider implicitly converting sparse matrix operands to CSR/CSC for arithmetic operations
+* Implement Parallel/fast matrix multiplication algorithm for sparse matrices
 * Implement further arithmetic operations e.g. add, subtract, divide, etc.
 * Further optimisation of arithmetic operations for speed and storage efficiency gains
+* Consider optionally utilising LAPACK/BLAS C libraries to perform matrix arithmetic.
 * Improve memory allocation for matrix multiplication - pre-calculating sparsity pattern for product and allocate storage in advance rather than incrementally.
