@@ -118,23 +118,29 @@ func (c *CSR) ToType(matType MatrixType) mat64.Matrix {
 }
 
 func (c *CSR) Mul(a, b mat64.Matrix) {
+	ar, ac := a.Dims()
+	br, bc := b.Dims()
+
 	if dia, ok := a.(*DIA); ok {
+		if ac != br {
+			panic(matrix.ErrShape)
+		}
 		c.mulDIA(dia, b, false)
 		return
 	}
 	if dia, ok := b.(*DIA); ok {
+		if bc != ar {
+			panic(matrix.ErrShape)
+		}
 		c.mulDIA(dia, a, true)
 		return
 	}
 
-	ar, ac := a.Dims()
-	br, bc := b.Dims()
-
-	c.indptr = make([]int, ar+1)
-
 	if ac != br {
 		panic(matrix.ErrShape)
 	}
+
+	c.indptr = make([]int, ar+1)
 
 	c.i, c.j = ar, bc
 	t := 0
