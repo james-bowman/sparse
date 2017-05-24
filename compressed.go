@@ -174,23 +174,17 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 	ar, ac := a.Dims()
 	br, bc := b.Dims()
 
+	if ac != br {
+		panic(matrix.ErrShape)
+	}
+
 	if dia, ok := a.(*DIA); ok {
-		if ac != br {
-			panic(matrix.ErrShape)
-		}
 		c.mulDIA(dia, b, false)
 		return
 	}
 	if dia, ok := b.(*DIA); ok {
-		if bc != ar {
-			panic(matrix.ErrShape)
-		}
 		c.mulDIA(dia, a, true)
 		return
-	}
-
-	if ac != br {
-		panic(matrix.ErrShape)
 	}
 
 	c.indptr = make([]int, ar+1)
