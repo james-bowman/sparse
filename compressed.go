@@ -5,6 +5,8 @@ import (
 	"github.com/gonum/matrix/mat64"
 )
 
+// compressedSparse represents the common structure for representing compressed sparse
+// matrix formats e.g. CSR (Compressed Sparse Row) or CSC (Compressed Sparse Column)
 type compressedSparse struct {
 	i, j   int
 	indptr []int
@@ -12,10 +14,14 @@ type compressedSparse struct {
 	data   []float64
 }
 
+// NNZ returns the Number of Non Zero elements in the sparse matrix.
 func (c *compressedSparse) NNZ() int {
 	return len(c.data)
 }
 
+// at returns the element of the matrix located at coordinate i, j.  Depending upon the
+// context and the type of compressed sparse (CSR or CSC) i and j could represent rows
+// and columns or columns and rows respectively.
 func (c *compressedSparse) at(i, j int) float64 {
 	if uint(i) < 0 || uint(i) >= uint(c.i) {
 		panic(matrix.ErrRowAccess)
@@ -34,10 +40,35 @@ func (c *compressedSparse) at(i, j int) float64 {
 	return 0
 }
 
+// CSR is a Compressed Sparse Row format sparse matrix implementation (sometimes called Compressed Row
+// Storage (CRS) format) and implements the Matrix interface from gonum/matrix.  This allows large sparse
+// (mostly zero values) matrices to be stored efficiently in memory (only storing non-zero values).
+// CSR matrices are poor for constructing sparse matrices incrementally but very good for arithmetic operations.
+// CSR, and their sibling CSC, matrices are similar to COOrdinate matrices except the row index slice is
+// compressed.  Rather than storing the row indices of each non zero values (length == NNZ) each element, i, of the slice
+// contains the cumulative count of non zero values in the matrix up to row i-1 of the matrix.  In this way,
+// it is possible to address any element, i j, in the matrix with the following:
+//
+// 		for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
+//			if c.ind[k] == j {
+//				return c.data[k]
+//			}
+//		}
+//
+// It should be clear that CSR is like CSC except the slices are row major order rather than column major and CSC
+// is essentially the transpose of a CSR.
+// As this type implements the gonum mat64.Matrix interface, it may be used with any of the Gonum mat64 functions that
+// accept Matrix types as parameters in place of other matrix types included in the Gonum mat64 package e.g. mat64.Dense.
 type CSR struct {
 	compressedSparse
 }
 
+// NewCSR creates a new Compressed Sparse Row format sparse matrix.
+// The matrix is initialised to the size of the specified r * c dimensions (rows * columns)
+// with the specified slices containing row pointers and cols indexes of non-zero elements
+// and the non-zero data values themselves respectively.  The supplied slices will be used as the
+// backing storage to the matrix so changes to values of the slices will be reflected in the created matrix
+// and vice versa.
 func NewCSR(r int, c int, ia []int, ja []int, data []float64) *CSR {
 	if uint(r) < 0 {
 		panic(matrix.ErrRowAccess)
@@ -56,18 +87,25 @@ func NewCSR(r int, c int, ia []int, ja []int, data []float64) *CSR {
 	}
 }
 
+// Dims returns the size of the matrix as the number of rows and columns
 func (c *CSR) Dims() (int, int) {
 	return c.i, c.j
 }
 
+// At returns the element of the matrix located at row i and column j.  At will panic if specified values
+// for i or j fall outside the dimensions of the matrix.
 func (c *CSR) At(m, n int) float64 {
 	return c.at(m, n)
 }
 
+// T transposes the matrix creating a new CSC matrix sharing the same backing data but switching
+// column and row sizes and index & index pointer slices i.e. rows become columns and columns become rows.
 func (c *CSR) T() mat64.Matrix {
 	return NewCSC(c.j, c.i, c.indptr, c.ind, c.data)
 }
 
+// ToDense returns a mat64.Dense dense format version of the matrix.  The returned mat64.Dense
+// matrix will not share underlying storage with the receiver.
 func (c *CSR) ToDense() *mat64.Dense {
 	mat := mat64.NewDense(c.i, c.j, nil)
 
@@ -80,6 +118,8 @@ func (c *CSR) ToDense() *mat64.Dense {
 	return mat
 }
 
+// ToDOK returns a DOK (Dictionary Of Keys) sparse format version of the matrix.  The returned DOK
+// matrix will not share underlying storage with the receiver.
 func (c *CSR) ToDOK() *DOK {
 	dok := NewDOK(c.i, c.j)
 	for i := 0; i < len(c.indptr)-1; i++ {
@@ -91,6 +131,10 @@ func (c *CSR) ToDOK() *DOK {
 	return dok
 }
 
+// ToCOO returns a COOrdinate sparse format version of the matrix.  The returned COO matrix will
+// share underlying storage with the receiver so any changes to either matrices will be reflected
+// in the other.  NB this includes sorting the ordering of the non zero elements in the COO matrix
+// e.g. for CSC conversion.
 func (c *CSR) ToCOO() *COO {
 	rows := make([]int, c.NNZ())
 
@@ -105,18 +149,27 @@ func (c *CSR) ToCOO() *COO {
 	return coo
 }
 
+// ToCSR returns the receiver
 func (c *CSR) ToCSR() *CSR {
 	return c
 }
 
+// ToCSC returns a Compressed Sparse Column sparse format version of the matrix.  The returned CSC matrix will
+// share underlying storage with the receiver so any changes to either matrices will be reflected
+// in the other.  NB, the current implementation uses COO as an intermediate format which changes the ordering
+// of the data slice (from row major to col major) as part of the COO to CSC conversion.  This effectively
+// corrupts the original CSR matrix.
 func (c *CSR) ToCSC() *CSC {
 	return c.ToCOO().ToCSC()
 }
 
+// ToType returns an alternative format version fo the matrix in the format specified.
 func (c *CSR) ToType(matType MatrixType) mat64.Matrix {
 	return matType.Convert(c)
 }
 
+// Mul takes the matrix product (Dot product) of the supplied matrices a and b and stores the result
+// in the receiver.  If the number of columns does not equal the number of rows in b, Mul will panic.
 func (c *CSR) Mul(a, b mat64.Matrix) {
 	ar, ac := a.Dims()
 	br, bc := b.Dims()
@@ -187,6 +240,10 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 	c.indptr[c.i] = t
 }
 
+// mulDIA takes the matrix product of the diagonal matrix dia and an other matrix, other and stores the result
+// in the receiver.  This method caters for the specialised case of multiplying by a diagonal matrix where significant
+// optimisation is possible due to the sparsity pattern of the matrix.  If trans is true, the method will assume that
+// other was the LHS (Left Hand Side) operand and that dia was the RHS.
 func (c *CSR) mulDIA(dia *DIA, other mat64.Matrix, trans bool) {
 	var csMat compressedSparse
 	isCS := false
@@ -246,97 +303,7 @@ func (c *CSR) mulDIA(dia *DIA, other mat64.Matrix, trans bool) {
 	return
 }
 
-func (c *CSR) Mul2(a, b mat64.Matrix) {
-	ar, ac := a.Dims()
-	br, bc := b.Dims()
-
-	c.indptr = make([]int, ar+1)
-
-	if rhs, ok := b.(*DIA); ok {
-		c.i, c.j = ar, ac
-		var size int
-		if lhs, ok := a.(*CSR); ok {
-			size = lhs.NNZ()
-		} else {
-			size = ar * bc
-		}
-		c.ind = make([]int, size)
-		c.data = make([]float64, size)
-		t := 0
-		raw := rhs.Diagonal()
-
-		for i := 0; i < ar; i++ {
-			c.indptr[i] = t
-			var v float64
-			if lhs, ok := a.(*CSR); ok {
-				for k := lhs.indptr[i]; k < lhs.indptr[i+1]; k++ {
-					v = lhs.data[k] * raw[i]
-					if v != 0 {
-						c.ind[t] = k
-						c.data[t] = v
-						t++
-					}
-				}
-
-			} else {
-				for k := 0; k < ac; k++ {
-					v = a.At(i, k) * raw[i]
-					if v != 0 {
-						c.ind[t] = k
-						c.data[t] = v
-						t++
-					}
-				}
-			}
-		}
-
-		c.indptr[c.i] = t
-		c.ind = c.ind[:t]
-		c.data = c.data[:t]
-		return
-	}
-
-	if ac != br {
-		panic(matrix.ErrShape)
-	}
-
-	c.i, c.j = ar, bc
-	c.ind = make([]int, ar*bc)
-	c.data = make([]float64, ar*bc)
-
-	t := 0
-
-	for i := 0; i < ar; i++ {
-		c.indptr[i] = t
-		for j := 0; j < bc; j++ {
-			var v float64
-			if lhs, ok := a.(*CSR); ok {
-				for k := lhs.indptr[i]; k < lhs.indptr[i+1]; k++ {
-					v += lhs.data[k] * b.At(lhs.ind[k], j)
-				}
-				if v != 0 {
-					c.ind[t] = j
-					c.data[t] = v
-					t++
-				}
-			} else {
-				for k := 0; k < ac; k++ {
-					v += a.At(i, k) * b.At(k, j)
-				}
-				if v != 0 {
-					c.ind[t] = j
-					c.data[t] = v
-					t++
-				}
-				//c.set(i, j, v)
-			}
-		}
-	}
-	c.indptr[c.i] = t
-	c.ind = c.ind[:t]
-	c.data = c.data[:t]
-}
-
+// RowNNZ returns the Number of Non Zero values in the specified row i.  RowNNZ will panic if i is out of range.
 func (c *CSR) RowNNZ(i int) int {
 	if uint(i) < 0 || uint(i) >= uint(c.i) {
 		panic(matrix.ErrRowAccess)
@@ -344,10 +311,35 @@ func (c *CSR) RowNNZ(i int) int {
 	return c.indptr[i+1] - c.indptr[i]
 }
 
+// CSC is a Compressed Sparse Column format sparse matrix implementation (sometimes called Compressed Column
+// Storage (CCS) format) and implements the Matrix interface from gonum/matrix.  This allows large sparse
+// (mostly zero values) matrices to be stored efficiently in memory (only storing non-zero values).
+// CSC matrices are poor for constructing sparse matrices incrementally but very good for arithmetic operations.
+// CSC, and their sibling CSR, matrices are similar to COOrdinate matrices except the column index slice is
+// compressed.  Rather than storing the column indices of each non zero values (length == NNZ) each element, i, of the slice
+// contains the cumulative count of non zero values in the matrix up to column i-1 of the matrix.  In this way,
+// it is possible to address any element, j i, in the matrix with the following:
+//
+// 		for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
+//			if c.ind[k] == j {
+//				return c.data[k]
+//			}
+//		}
+//
+// It should be clear that CSC is like CSR except the slices are column major order rather than row major and CSC
+// is essentially the transpose of a CSR.
+// As this type implements the gonum mat64.Matrix interface, it may be used with any of the Gonum mat64 functions that
+// accept Matrix types as parameters in place of other matrix types included in the Gonum mat64 package e.g. mat64.Dense.
 type CSC struct {
 	compressedSparse
 }
 
+// NewCSC creates a new Compressed Sparse Column format sparse matrix.
+// The matrix is initialised to the size of the specified r * c dimensions (rows * columns)
+// with the specified slices containing column pointers and row indexes of non-zero elements
+// and the non-zero data values themselves respectively.  The supplied slices will be used as the
+// backing storage to the matrix so changes to values of the slices will be reflected in the created matrix
+// and vice versa.
 func NewCSC(r int, c int, indptr []int, ind []int, data []float64) *CSC {
 	if uint(r) < 0 {
 		panic(matrix.ErrRowAccess)
@@ -366,18 +358,25 @@ func NewCSC(r int, c int, indptr []int, ind []int, data []float64) *CSC {
 	}
 }
 
+// Dims returns the size of the matrix as the number of rows and columns
 func (c *CSC) Dims() (int, int) {
 	return c.j, c.i
 }
 
+// At returns the element of the matrix located at row i and column j.  At will panic if specified values
+// for i or j fall outside the dimensions of the matrix.
 func (c *CSC) At(m, n int) float64 {
 	return c.at(n, m)
 }
 
+// T transposes the matrix creating a new CSR matrix sharing the same backing data but switching
+// column and row sizes and index & index pointer slices i.e. rows become columns and columns become rows.
 func (c *CSC) T() mat64.Matrix {
 	return NewCSR(c.i, c.j, c.indptr, c.ind, c.data)
 }
 
+// ToDense returns a mat64.Dense dense format version of the matrix.  The returned mat64.Dense
+// matrix will not share underlying storage with the receiver.
 func (c *CSC) ToDense() *mat64.Dense {
 	mat := mat64.NewDense(c.j, c.i, nil)
 
@@ -390,6 +389,8 @@ func (c *CSC) ToDense() *mat64.Dense {
 	return mat
 }
 
+// ToDOK returns a DOK (Dictionary Of Keys) sparse format version of the matrix.  The returned DOK
+// matrix will not share underlying storage with the receiver.
 func (c *CSC) ToDOK() *DOK {
 	dok := NewDOK(c.j, c.i)
 	for i := 0; i < len(c.indptr)-1; i++ {
@@ -401,6 +402,10 @@ func (c *CSC) ToDOK() *DOK {
 	return dok
 }
 
+// ToCOO returns a COOrdinate sparse format version of the matrix.  The returned COO matrix will
+// share underlying storage with the receiver so any changes to either matrices will be reflected
+// in the other.  NB this includes sorting the ordering of the non zero elements in the COO matrix
+// e.g. for CSR conversion.
 func (c *CSC) ToCOO() *COO {
 	cols := make([]int, c.NNZ())
 
@@ -415,14 +420,21 @@ func (c *CSC) ToCOO() *COO {
 	return coo
 }
 
+// ToCSR returns a Compressed Sparse Row sparse format version of the matrix.  The returned CSR matrix will
+// share underlying storage with the receiver so any changes to either matrices will be reflected
+// in the other.  NB, the current implementation uses COO as an intermediate format which changes the ordering
+// of the data slice (from col major to row major) as part of the COO to CSR conversion.  This effectively
+// corrupts the original CSC matrix.
 func (c *CSC) ToCSR() *CSR {
 	return c.ToCOO().ToCSR()
 }
 
+// ToCSC returns the receiver
 func (c *CSC) ToCSC() *CSC {
 	return c
 }
 
+// ToType returns an alternative format version fo the matrix in the format specified.
 func (c *CSC) ToType(matType MatrixType) mat64.Matrix {
 	return matType.Convert(c)
 }
