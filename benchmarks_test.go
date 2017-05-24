@@ -18,105 +18,105 @@ func benchmarkMatrixMultiplication(target MatMultiplyer, lhs mat64.Matrix, rhs m
 
 func BenchmarkMulSmallDenseDenseDense(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateDense, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(DenseFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDOKDense(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateDOK, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(DOKFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDOKDOK(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateDOK, 5, 6, 0.4)
-	rhs := createMatrix(CreateDOK, 6, 5, 0.4)
+	lhs := Random(DOKFormat, 5, 6, 0.4)
+	rhs := Random(DOKFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDenseDOK(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateDense, 5, 6, 0.4)
-	rhs := createMatrix(CreateDOK, 6, 5, 0.4)
+	lhs := Random(DenseFormat, 5, 6, 0.4)
+	rhs := Random(DOKFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseCSRDense(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateCSR, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(CSRFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDenseCSR(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateCSR, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(CSRFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseCSRCSR(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateCSR, 5, 6, 0.4)
-	rhs := createMatrix(CreateCSR, 6, 5, 0.4)
+	lhs := Random(CSRFormat, 5, 6, 0.4)
+	rhs := Random(CSRFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseCOODense(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateCOO, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(COOFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDenseCOO(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateCOO, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(COOFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseCOOCOO(b *testing.B) {
 	t := mat64.NewDense(0, 0, nil)
-	lhs := createMatrix(CreateCOO, 5, 6, 0.4)
-	rhs := createMatrix(CreateCOO, 6, 5, 0.4)
+	lhs := Random(COOFormat, 5, 6, 0.4)
+	rhs := Random(COOFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 
 func BenchmarkMulSmallCSRDenseDense(b *testing.B) {
 	t := CreateCSR(6, 5, nil).(*CSR)
-	lhs := createMatrix(CreateDense, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(DenseFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallCSRDOKDense(b *testing.B) {
 	t := CreateCSR(6, 5, nil).(*CSR)
-	lhs := createMatrix(CreateDOK, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(DOKFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallCSRDenseDOK(b *testing.B) {
 	t := CreateCSR(6, 5, nil).(*CSR)
-	lhs := createMatrix(CreateDOK, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(DOKFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallCSRDOKDOK(b *testing.B) {
 	t := CreateCSR(6, 5, nil).(*CSR)
-	lhs := createMatrix(CreateDOK, 5, 6, 0.4)
-	rhs := createMatrix(CreateDOK, 6, 5, 0.4)
+	lhs := Random(DOKFormat, 5, 6, 0.4)
+	rhs := Random(DOKFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallCSRCSRDense(b *testing.B) {
 	t := CreateCSR(6, 5, nil).(*CSR)
-	lhs := createMatrix(CreateCSR, 5, 6, 0.4)
-	rhs := createMatrix(CreateDense, 6, 5, 0.4)
+	lhs := Random(CSRFormat, 5, 6, 0.4)
+	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallCSRDenseCSR(b *testing.B) {
 	t := CreateCSR(6, 5, nil).(*CSR)
-	lhs := createMatrix(CreateDense, 5, 6, 0.4)
-	rhs := createMatrix(CreateCSR, 6, 5, 0.4)
+	lhs := Random(DenseFormat, 5, 6, 0.4)
+	rhs := Random(CSRFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallCSRCSRCSR(b *testing.B) {
 	t := CreateCSR(6, 5, nil).(*CSR)
-	lhs := createMatrix(CreateCSR, 5, 6, 0.4)
-	rhs := createMatrix(CreateCSR, 6, 5, 0.4)
+	lhs := Random(CSRFormat, 5, 6, 0.4)
+	rhs := Random(CSRFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 

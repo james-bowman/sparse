@@ -214,6 +214,9 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 		row := make([]float64, ac)
 		for i := 0; i < ar; i++ {
 			c.indptr[i] = t
+			// bizarely transferring the row elements into a slice as part of a separate loop (rather than accessing each
+			// element within the main loop (a.At(m, n) * b.At(m, n)) then ranging over them as the main loop
+			// is about twice as fast.  Possibly a result of inlining the call as compiler optimisation?
 			for ci := range row {
 				row[ci] = a.At(i, ci)
 			}

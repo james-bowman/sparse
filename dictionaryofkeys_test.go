@@ -1,7 +1,6 @@
 package sparse
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/gonum/matrix"
@@ -124,54 +123,6 @@ func TestDOKTranspose(t *testing.T) {
 	}
 }
 
-func TestOldCSRMul(t *testing.T) {
-	var tests = []struct {
-		target MatrixCreator
-		atype  MatrixCreator
-		am, an int
-		a      []float64
-		btype  MatrixCreator
-		bm, bn int
-		b      []float64
-	}{
-		{
-			target: CreateCSR,
-			atype:  CreateCSR,
-			am:     5, an: 4,
-			a: []float64{
-				7, 0, 0, 1,
-				0, 2, 0, 1,
-				6, 0, 3, 0,
-				0, 5, 0, 0,
-				0, 0, 0, 2,
-			},
-			btype: CreateDOK,
-			bm:    4, bn: 5,
-			b: []float64{
-				7, 0, 0, 1, 5,
-				0, 2, 0, 1, 5,
-				6, 0, 3, 0, 0,
-				0, 5, 0, 0, 7,
-			},
-		},
-	}
-
-	for ti, test := range tests {
-		t.Logf("**** Test Run %d.\n", ti+1)
-		expected := mat64.NewDense(test.am, test.bn, nil)
-		expected.Mul(mat64.NewDense(test.am, test.an, test.a), mat64.NewDense(test.bm, test.bn, test.b))
-
-		target := test.target(0, 0, nil)
-
-		target.(*CSR).Mul(test.atype(test.am, test.an, test.a), test.btype(test.bm, test.bn, test.b))
-
-		if !mat64.Equal(expected, target) {
-			t.Logf("Expected:\n%v\nbut received:\n%v\n", mat64.Formatted(expected), mat64.Formatted(target))
-			t.Fail()
-		}
-	}
-}
-
 type MatrixCreator func(m, n int, data []float64) mat64.Matrix
 
 func CreateDOK(m, n int, data []float64) mat64.Matrix {
@@ -214,33 +165,4 @@ func CreateDIA(m, n int, data []float64) mat64.Matrix {
 
 func CreateDense(m, n int, data []float64) mat64.Matrix {
 	return mat64.NewDense(m, n, data)
-}
-
-func createMatrix(creator MatrixCreator, r int, c int, density float32) mat64.Matrix {
-	data := make([]float64, r*c)
-
-	for i := 0; i < len(data); i++ {
-		prob := rand.Float32()
-		if prob < density {
-			data[i] = rand.Float64()
-		}
-	}
-
-	return creator(r, c, data)
-}
-
-func createMatrices(tc MatrixCreator, ac MatrixCreator, bc MatrixCreator) (target, a, b mat64.Matrix) {
-	data := []float64{
-		7, 0, 0, 1, 6,
-		0, 2, 0, 1, 4,
-		6, 0, 3, 0, 3,
-		0, 5, 0, 0, 8,
-		0, 0, 0, 2, 4,
-	}
-
-	target = tc(0, 0, nil)
-	a = ac(5, 5, data)
-	b = bc(5, 5, data)
-
-	return
 }
