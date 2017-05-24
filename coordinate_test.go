@@ -17,22 +17,22 @@ func TestCOOConversion(t *testing.T) {
 	var tests = []struct {
 		desc    string
 		create  MatrixCreator
-		convert func(a Sparser) Sparser
+		convert func(a TypeConverter) Sparser
 	}{
 		{
 			"COO -> DOK",
 			CreateCOO,
-			func(a Sparser) Sparser { return a.ToDOK() },
+			func(a TypeConverter) Sparser { return a.ToDOK() },
 		},
 		{
 			"COO -> CSR",
 			CreateCOO,
-			func(a Sparser) Sparser { return a.ToCSR() },
+			func(a TypeConverter) Sparser { return a.ToCSR() },
 		},
 		{
 			"COO -> CSC",
 			CreateCOO,
-			func(a Sparser) Sparser { return a.ToCSC() },
+			func(a TypeConverter) Sparser { return a.ToCSC() },
 		},
 	}
 
@@ -54,7 +54,7 @@ func TestCOOConversion(t *testing.T) {
 			t.Fatalf("Created matrix type does not implement Sparser")
 		}
 
-		b := test.convert(sa)
+		b := test.convert(sa.(TypeConverter))
 
 		if !mat64.Equal(a, b) {
 			t.Logf("A : %v\n", a)

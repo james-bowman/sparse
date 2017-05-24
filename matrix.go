@@ -13,7 +13,10 @@ type Sparser interface {
 
 	// NNZ returns the Number of Non Zero elements in the sparse matrix.
 	NNZ() int
+}
 
+// TypeConverter interface for converting to other matrix formats
+type TypeConverter interface {
 	// ToDense returns a mat64.Dense dense format version of the matrix.
 	ToDense() *mat64.Dense
 
@@ -35,47 +38,47 @@ type Sparser interface {
 
 // MatrixType represents a type of Matrix format.  This is used to specify target format types for conversion, etc.
 type MatrixType interface {
-	// Convert converts to the type of matrix format represented by the receiver from the specified Sparser format.
-	Convert(from Sparser) mat64.Matrix
+	// Convert converts to the type of matrix format represented by the receiver from the specified TypeConverter.
+	Convert(from TypeConverter) mat64.Matrix
 }
 
 // DenseType represents the mat64.Dense matrix type format
 type DenseType int
 
-// Convert converts the specified Sparser matrix to mat64.Dense format
-func (d DenseType) Convert(from Sparser) mat64.Matrix {
+// Convert converts the specified TypeConverter to mat64.Dense format
+func (d DenseType) Convert(from TypeConverter) mat64.Matrix {
 	return from.ToDense()
 }
 
 // DOKType represents the DOK (Dictionary Of Keys) matrix type format
 type DOKType int
 
-// Convert converts the specified Sparser matrix to DOK (Dictionary of Keys) format
-func (s DOKType) Convert(from Sparser) mat64.Matrix {
+// Convert converts the specified TypeConverter to DOK (Dictionary of Keys) format
+func (s DOKType) Convert(from TypeConverter) mat64.Matrix {
 	return from.ToDOK()
 }
 
 // COOType represents the COOrdinate matrix type format
 type COOType int
 
-// Convert converts the specified Sparser matrix to COOrdinate format
-func (s COOType) Convert(from Sparser) mat64.Matrix {
+// Convert converts the specified TypeConverter to COOrdinate format
+func (s COOType) Convert(from TypeConverter) mat64.Matrix {
 	return from.ToCOO()
 }
 
 // CSRType represents the CSR (Compressed Sparse Row) matrix type format
 type CSRType int
 
-// Convert converts the specified Sparser matrix to CSR (Compressed Sparse Row) format
-func (s CSRType) Convert(from Sparser) mat64.Matrix {
+// Convert converts the specified TypeConverter to CSR (Compressed Sparse Row) format
+func (s CSRType) Convert(from TypeConverter) mat64.Matrix {
 	return from.ToCSR()
 }
 
 // CSCType represents the CSC (Compressed Sparse Column) matrix type format
 type CSCType int
 
-// Convert converts the specified Sparser matrix to CSC (Compressed Sparse Column) format
-func (s CSCType) Convert(from Sparser) mat64.Matrix {
+// Convert converts the specified TypeConverter to CSC (Compressed Sparse Column) format
+func (s CSCType) Convert(from TypeConverter) mat64.Matrix {
 	return from.ToCSC()
 }
 

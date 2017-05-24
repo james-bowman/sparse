@@ -286,37 +286,37 @@ func TestCSRCSCConversion(t *testing.T) {
 	var tests = []struct {
 		desc    string
 		create  MatrixCreator
-		convert func(a Sparser) Sparser
+		convert func(a TypeConverter) Sparser
 	}{
 		{
 			"CSR -> CSC",
 			CreateCSR,
-			func(a Sparser) Sparser { return a.ToCSC() },
+			func(a TypeConverter) Sparser { return a.ToCSC() },
 		},
 		{
 			"CSC -> CSR",
 			CreateCSC,
-			func(a Sparser) Sparser { return a.ToCSR() },
+			func(a TypeConverter) Sparser { return a.ToCSR() },
 		},
 		{
 			"CSR -> COO",
 			CreateCSR,
-			func(a Sparser) Sparser { return a.ToCOO() },
+			func(a TypeConverter) Sparser { return a.ToCOO() },
 		},
 		{
 			"CSC -> COO",
 			CreateCSC,
-			func(a Sparser) Sparser { return a.ToCOO() },
+			func(a TypeConverter) Sparser { return a.ToCOO() },
 		},
 		{
 			"CSR -> DOK",
 			CreateCSR,
-			func(a Sparser) Sparser { return a.ToDOK() },
+			func(a TypeConverter) Sparser { return a.ToDOK() },
 		},
 		{
 			"CSC -> DOK",
 			CreateCSC,
-			func(a Sparser) Sparser { return a.ToDOK() },
+			func(a TypeConverter) Sparser { return a.ToDOK() },
 		},
 	}
 
@@ -330,7 +330,7 @@ func TestCSRCSCConversion(t *testing.T) {
 		if !ok {
 			t.Fatalf("Created matrix type does not implement Sparser")
 		}
-		b := test.convert(sa)
+		b := test.convert(sa.(TypeConverter))
 
 		if !mat64.Equal(d, b) {
 			t.Logf("d : %v\n", a)
