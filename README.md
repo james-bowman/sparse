@@ -26,14 +26,14 @@ A common practice is to construct sparse matrices using a creational format e.g.
 * CSR (Compressed Sparse Row) format
 * CSC (Compressed Sparse Column) format
 * DIA (DIAgonal) format
-* CSR dot product (matrix multiplication) of 2 matrices (with optimisations for DIA (as LHS or RHS operand) and CSR (as LHS operand only) matrix types) but supporting any implementation of gonum/mat64.Matrix interface.
+* CSR dot product (matrix multiplication) of 2 matrices (with optimisations for DIA (as LHS or RHS operand) and CSR (as LHS operand only) matrix types but supporting any implementation of gonum/mat64.Matrix interface).
 
 ## Planned
 
-* Further optimisations of CSR dot product for sparse matrix type operands, even as RHS operand ((AB)^T = A^T * B^T)
+* Further optimisations of CSR dot product for sparse matrix type operands (only considering non-zero values as with CSR operands currently), even as RHS operand ((AB)^T = B^T A^T)
 * Consider implicitly converting sparse matrix operands to CSR/CSC for arithmetic operations
 * Implement Parallel/fast matrix multiplication algorithm for sparse matrices
 * Implement further arithmetic operations e.g. add, subtract, divide, etc.
 * Further optimisation of arithmetic operations for speed and storage efficiency gains
-* Consider optionally utilising LAPACK/BLAS C libraries to perform matrix arithmetic.
+* Consider utilising LAPACK/BLAS C libraries to perform matrix arithmetic (as an option if available on host).
 * Improve memory allocation for matrix multiplication - pre-calculating sparsity pattern for product and allocate storage in advance rather than incrementally.
