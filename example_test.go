@@ -37,7 +37,7 @@ func Example() {
 		fmt.Println("DOK and converted Dense are not equal")
 	}
 
-	// Create a random 10x25 CSR (Compressed Sparse Row) matrix with
+	// Create a random 2x3 CSR (Compressed Sparse Row) matrix with
 	// density of 0.5 (half the elements will be non-zero)
 	csrMatrix := Random(CSRFormat, 2, 3, 0.5)
 
