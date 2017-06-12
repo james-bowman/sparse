@@ -137,6 +137,8 @@ func (c *CSR) ToDOK() *DOK {
 // e.g. for CSC conversion.
 func (c *CSR) ToCOO() *COO {
 	rows := make([]int, c.NNZ())
+	cols := make([]int, c.NNZ())
+	data := make([]float64, c.NNZ())
 
 	for i := 0; i < len(c.indptr)-1; i++ {
 		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
@@ -144,7 +146,10 @@ func (c *CSR) ToCOO() *COO {
 		}
 	}
 
-	coo := NewCOO(c.i, c.j, rows, c.ind, c.data)
+	copy(cols, c.ind)
+	copy(data, c.data)
+
+	coo := NewCOO(c.i, c.j, rows, cols, data)
 
 	return coo
 }
@@ -404,7 +409,9 @@ func (c *CSC) ToDOK() *DOK {
 // in the other.  NB this includes sorting the ordering of the non zero elements in the COO matrix
 // e.g. for CSR conversion.
 func (c *CSC) ToCOO() *COO {
+	rows := make([]int, c.NNZ())
 	cols := make([]int, c.NNZ())
+	data := make([]float64, c.NNZ())
 
 	for i := 0; i < len(c.indptr)-1; i++ {
 		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
@@ -412,7 +419,10 @@ func (c *CSC) ToCOO() *COO {
 		}
 	}
 
-	coo := NewCOO(c.j, c.i, c.ind, cols, c.data)
+	copy(rows, c.ind)
+	copy(data, c.data)
+
+	coo := NewCOO(c.j, c.i, rows, cols, data)
 
 	return coo
 }
