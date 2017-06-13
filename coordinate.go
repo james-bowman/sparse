@@ -182,7 +182,7 @@ func (c *COO) isColMajorOrdered(i, j int) bool {
 }
 
 // ToDense returns a mat64.Dense dense format version of the matrix.  The returned mat64.Dense
-// matrix will not share underlying storage with the receiver.
+// matrix will not share underlying storage with the receiver. nor is the receiver modified by this call
 func (c *COO) ToDense() *mat64.Dense {
 	if !c.canonicalised {
 		c.Canonicalise()
@@ -197,7 +197,7 @@ func (c *COO) ToDense() *mat64.Dense {
 }
 
 // ToDOK returns a DOK (Dictionary Of Keys) sparse format version of the matrix.  The returned DOK
-// matrix will not share underlying storage with the receiver.
+// matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
 func (c *COO) ToDOK() *DOK {
 	if !c.canonicalised {
 		c.Canonicalise()
@@ -217,9 +217,8 @@ func (c *COO) ToCOO() *COO {
 }
 
 // ToCSR returns a CSR (Compressed Sparse Row)(AKA CRS (Compressed Row Storage)) sparse format
-// version of the matrix.  The returned CSR matrix will share underlying storage with the
-// receiver so any changes to either matrices will be reflected in the other.  NB this includes
-// sorting the ordering of the non zero elements in the COO matrix e.g. for CSC conversion.
+// version of the matrix.  The returned CSR matrix will not share underlying storage with the
+// receiver nor is the receiver modified by this call.
 func (c *COO) ToCSR() *CSR {
 	rows := make([]int, len(c.rows))
 	copy(rows, c.rows)
@@ -251,15 +250,15 @@ func (c *COO) ToCSR() *CSR {
 }
 
 // ToCSC returns a CSC (Compressed Sparse Column)(AKA CCS (Compressed Column Storage)) sparse format
-// version of the matrix.  The returned CSC matrix will share underlying storage with the
-// receiver so any changes to either matrices will be reflected in the other.  NB this includes
-// sorting the ordering of the non zero elements in the COO matrix e.g. for CSR conversion.
+// version of the matrix.  The returned CSC matrix will not share underlying storage with the
+// receiver nor is the receiver modified by this call.
 func (c *COO) ToCSC() *CSC {
 	rows := make([]int, len(c.rows))
-	copy(rows, c.rows)
 	cols := make([]int, len(c.cols))
-	copy(cols, c.cols)
 	data := make([]float64, len(c.data))
+
+	copy(rows, c.rows)
+	copy(cols, c.cols)
 	copy(data, c.data)
 
 	coo := &COO{c.r, c.c, rows, cols, data, c.colMajor, c.canonicalised}
