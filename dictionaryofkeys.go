@@ -77,7 +77,7 @@ func (d *DOK) NNZ() int {
 }
 
 // ToDense returns a mat64.Dense dense format version of the matrix.  The returned mat64.Dense
-// matrix will not share underlying storage with the receiver.
+// matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
 func (d *DOK) ToDense() *mat64.Dense {
 	mat := mat64.NewDense(d.r, d.c, nil)
 
@@ -94,7 +94,7 @@ func (d *DOK) ToDOK() *DOK {
 }
 
 // ToCOO returns a COOrdinate sparse format version of the matrix.  The returned COO matrix will
-// not share underlying storage with the receiver.
+// not share underlying storage with the receiver nor is the receiver modified by this call.
 func (d *DOK) ToCOO() *COO {
 	nnz := d.NNZ()
 	rows := make([]int, nnz)
@@ -114,14 +114,14 @@ func (d *DOK) ToCOO() *COO {
 
 // ToCSR returns a CSR (Compressed Sparse Row)(AKA CRS (Compressed Row Storage)) sparse format
 // version of the matrix.  The returned CSR matrix will not share underlying storage with the
-// receiver.
+// receiver nor is the receiver modified by this call.
 func (d *DOK) ToCSR() *CSR {
 	return d.ToCOO().ToCSR()
 }
 
 // ToCSC returns a CSC (Compressed Sparse Column)(AKA CCS (Compressed Column Storage)) sparse format
 // version of the matrix.  The returned CSC matrix will not share underlying storage with the
-// receiver.
+// receiver nor is the receiver modified by this call.
 func (d *DOK) ToCSC() *CSC {
 	return d.ToCOO().ToCSC()
 }
