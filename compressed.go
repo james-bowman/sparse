@@ -40,77 +40,8 @@ func (c *compressedSparse) at(i, j int) float64 {
 	return 0
 }
 
-/*
-func (c *compressedSparse) set(i, j int, v float64) {
-	if uint(i) < 0 || uint(i) >= uint(c.i) {
-		panic(matrix.ErrRowAccess)
-	}
-	if uint(j) < 0 || uint(j) >= uint(c.j) {
-		panic(matrix.ErrColAccess)
-	}
-
-	if v == 0 {
-		// don't bother storing zero values
-		return
-	}
-
-	if c.indptr[i] == c.indptr[i+1] {
-		// row i is an empty row/col (all zero values) so add the new element
-		c.ind = append(c.ind, 0)
-		copy(c.ind[c.indptr[i+1]+1:], c.ind[c.indptr[i+1]:])
-		c.ind[c.indptr[i+1]] = j
-
-		c.data = append(c.data, 0)
-		copy(c.data[c.indptr[i+1]+1:], c.data[c.indptr[i+1]:])
-		c.data[c.indptr[i+1]] = v
-
-		for k := i + 1; k <= c.i; k++ {
-			c.indptr[k]++
-		}
-		return
-	}
-
-	for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
-		if c.ind[k] == j {
-			// if element(i, j) is already a non-zero value then simply update the existing
-			// value without altering the sparsity pattern
-			c.data[k] = v
-			return
-		}
-
-		if c.ind[k] > j {
-			// element(i, j) is mid row/col but doesn't exist in current sparsity pattern
-			// so add it
-			c.ind = append(c.ind, 0)
-			copy(c.ind[k+1:], c.ind[k:])
-			c.ind[k] = j
-
-			c.data = append(c.data, 0)
-			copy(c.data[k+1:], c.data[k:])
-			c.data[k] = v
-
-			for n := i + 1; n <= c.i; n++ {
-				c.indptr[n]++
-			}
-			return
-		}
-	}
-
-	// element(i, j) is beyond the last non-zero element of a row/col and doesn't exist
-	// in current sparsity pattern so add it
-	c.ind = append(c.ind, 0)
-	copy(c.ind[c.indptr[i+1]+1:], c.ind[c.indptr[i+1]:])
-	c.ind[c.indptr[i+1]] = j
-
-	c.data = append(c.data, 0)
-	copy(c.data[c.indptr[i+1]+1:], c.data[c.indptr[i+1]:])
-	c.data[c.indptr[i+1]] = v
-
-	for n := i + 1; n <= c.i; n++ {
-		c.indptr[n]++
-	}
-}
-*/
+// set is a generic compressed sparse method to set a matrix element for both CSR and CSC
+// matrices
 func (c *compressedSparse) set(i, j int, v float64) {
 	if uint(i) < 0 || uint(i) >= uint(c.i) {
 		panic(matrix.ErrRowAccess)
@@ -145,6 +76,8 @@ func (c *compressedSparse) set(i, j int, v float64) {
 	c.insert(i, j, v, c.indptr[i+1])
 }
 
+// insert inserts a new non-zero element into the sparse matrix, updating the
+// sparsity pattern
 func (c *compressedSparse) insert(i int, j int, v float64, insertionPoint int) {
 	c.ind = append(c.ind, 0)
 	copy(c.ind[insertionPoint+1:], c.ind[insertionPoint:])
@@ -236,6 +169,8 @@ func (c *CSR) At(m, n int) float64 {
 	return c.at(m, n)
 }
 
+// Set sets the element of the matrix located at row i and column j to value v.  Set will panic if
+// specified values for i or j fall outside the dimensions of the matrix.
 func (c *CSR) Set(m, n int, v float64) {
 	c.set(m, n, v)
 }
@@ -513,6 +448,8 @@ func (c *CSC) At(m, n int) float64 {
 	return c.at(n, m)
 }
 
+// Set sets the element of the matrix located at row i and column j to value v.  Set will panic if
+// specified values for i or j fall outside the dimensions of the matrix.
 func (c *CSC) Set(m, n int, v float64) {
 	c.set(n, m, v)
 }
