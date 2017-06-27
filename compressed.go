@@ -30,7 +30,7 @@ func (c *compressedSparse) at(i, j int) float64 {
 		panic(matrix.ErrColAccess)
 	}
 
-	// todo: consider a binary search if we can assume the data is ordered.
+	// todo: consider a binary search if we can assume the data is ordered within row (CSR)/column (CSC).
 	for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
 		if c.ind[k] == j {
 			return c.data[k]
@@ -39,6 +39,143 @@ func (c *compressedSparse) at(i, j int) float64 {
 
 	return 0
 }
+
+/*
+func (c *compressedSparse) set(i, j int, v float64) {
+	if uint(i) < 0 || uint(i) >= uint(c.i) {
+		panic(matrix.ErrRowAccess)
+	}
+	if uint(j) < 0 || uint(j) >= uint(c.j) {
+		panic(matrix.ErrColAccess)
+	}
+
+	if v == 0 {
+		// don't bother storing zero values
+		return
+	}
+
+	if c.indptr[i] == c.indptr[i+1] {
+		// row i is an empty row/col (all zero values) so add the new element
+		c.ind = append(c.ind, 0)
+		copy(c.ind[c.indptr[i+1]+1:], c.ind[c.indptr[i+1]:])
+		c.ind[c.indptr[i+1]] = j
+
+		c.data = append(c.data, 0)
+		copy(c.data[c.indptr[i+1]+1:], c.data[c.indptr[i+1]:])
+		c.data[c.indptr[i+1]] = v
+
+		for k := i + 1; k <= c.i; k++ {
+			c.indptr[k]++
+		}
+		return
+	}
+
+	for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
+		if c.ind[k] == j {
+			// if element(i, j) is already a non-zero value then simply update the existing
+			// value without altering the sparsity pattern
+			c.data[k] = v
+			return
+		}
+
+		if c.ind[k] > j {
+			// element(i, j) is mid row/col but doesn't exist in current sparsity pattern
+			// so add it
+			c.ind = append(c.ind, 0)
+			copy(c.ind[k+1:], c.ind[k:])
+			c.ind[k] = j
+
+			c.data = append(c.data, 0)
+			copy(c.data[k+1:], c.data[k:])
+			c.data[k] = v
+
+			for n := i + 1; n <= c.i; n++ {
+				c.indptr[n]++
+			}
+			return
+		}
+	}
+
+	// element(i, j) is beyond the last non-zero element of a row/col and doesn't exist
+	// in current sparsity pattern so add it
+	c.ind = append(c.ind, 0)
+	copy(c.ind[c.indptr[i+1]+1:], c.ind[c.indptr[i+1]:])
+	c.ind[c.indptr[i+1]] = j
+
+	c.data = append(c.data, 0)
+	copy(c.data[c.indptr[i+1]+1:], c.data[c.indptr[i+1]:])
+	c.data[c.indptr[i+1]] = v
+
+	for n := i + 1; n <= c.i; n++ {
+		c.indptr[n]++
+	}
+}
+*/
+func (c *compressedSparse) set(i, j int, v float64) {
+	if uint(i) < 0 || uint(i) >= uint(c.i) {
+		panic(matrix.ErrRowAccess)
+	}
+	if uint(j) < 0 || uint(j) >= uint(c.j) {
+		panic(matrix.ErrColAccess)
+	}
+
+	if v == 0 {
+		// don't bother storing zero values
+		return
+	}
+
+	for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
+		if c.ind[k] == j {
+			// if element(i, j) is already a non-zero value then simply update the existing
+			// value without altering the sparsity pattern
+			c.data[k] = v
+			return
+		}
+
+		if c.ind[k] > j {
+			// element(i, j) doesn't exist in current sparsity pattern and is mid row/col
+			// so add it
+			c.insert(i, j, v, k)
+			return
+		}
+	}
+
+	// element(i, j) doesn't exist in current sparsity pattern and is beyond the last
+	// non-zero element of a row/col or an empty row/col - so add it
+	c.insert(i, j, v, c.indptr[i+1])
+}
+
+func (c *compressedSparse) insert(i int, j int, v float64, insertionPoint int) {
+	c.ind = append(c.ind, 0)
+	copy(c.ind[insertionPoint+1:], c.ind[insertionPoint:])
+	c.ind[insertionPoint] = j
+
+	c.data = append(c.data, 0)
+	copy(c.data[insertionPoint+1:], c.data[insertionPoint:])
+	c.data[insertionPoint] = v
+
+	for n := i + 1; n <= c.i; n++ {
+		c.indptr[n]++
+	}
+}
+
+/*
+func (c *compressedSparse) MarshalBinary() ([]byte, error) {
+
+}
+
+func (c *compressedSparse) MarshalBinaryTo(w io.Writer) (int, error) {
+
+}
+
+func (c *compressedSparse) UnmarshalBinary(data []byte) error {
+
+}
+
+func (c *compressedSparse) UnmarshalBinaryFrom(r io.Reader) (int, error) {
+
+}
+*/
 
 // CSR is a Compressed Sparse Row format sparse matrix implementation (sometimes called Compressed Row
 // Storage (CRS) format) and implements the Matrix interface from gonum/matrix.  This allows large sparse
@@ -97,6 +234,10 @@ func (c *CSR) Dims() (int, int) {
 // for i or j fall outside the dimensions of the matrix.
 func (c *CSR) At(m, n int) float64 {
 	return c.at(m, n)
+}
+
+func (c *CSR) Set(m, n int, v float64) {
+	c.set(m, n, v)
 }
 
 // T transposes the matrix creating a new CSC matrix sharing the same backing data storage but switching
@@ -370,6 +511,10 @@ func (c *CSC) Dims() (int, int) {
 // for i or j fall outside the dimensions of the matrix.
 func (c *CSC) At(m, n int) float64 {
 	return c.at(n, m)
+}
+
+func (c *CSC) Set(m, n int, v float64) {
+	c.set(n, m, v)
 }
 
 // T transposes the matrix creating a new CSR matrix sharing the same backing data storage but switching
