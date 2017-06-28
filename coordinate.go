@@ -219,6 +219,7 @@ func (c *COO) ToCOO() *COO {
 // ToCSR returns a CSR (Compressed Sparse Row)(AKA CRS (Compressed Row Storage)) sparse format
 // version of the matrix.  The returned CSR matrix will not share underlying storage with the
 // receiver nor is the receiver modified by this call.
+/*
 func (c *COO) ToCSR() *CSR {
 	rows := make([]int, len(c.rows))
 	copy(rows, c.rows)
@@ -248,39 +249,56 @@ func (c *COO) ToCSR() *CSR {
 
 	return NewCSR(coo.r, coo.c, ia, coo.cols, coo.data)
 }
+*/
+func (c *COO) ToCSR() *CSR {
+	if !c.canonicalised || c.colMajor {
+		c.colMajor = false
+		c.Canonicalise()
+	}
+
+	ia := make([]int, c.r+1)
+	ja := make([]int, len(c.cols))
+	data := make([]float64, len(c.data))
+
+	var j int
+	k := 0
+	for i := 1; i < c.r+1; i++ {
+		for j = k; j < len(c.rows) && c.rows[j] < i; j++ {
+			ja[j] = c.cols[j]
+			data[j] = c.data[j]
+		}
+		k = j
+		ia[i] = j
+	}
+
+	return NewCSR(c.r, c.c, ia, ja, data)
+}
 
 // ToCSC returns a CSC (Compressed Sparse Column)(AKA CCS (Compressed Column Storage)) sparse format
 // version of the matrix.  The returned CSC matrix will not share underlying storage with the
 // receiver nor is the receiver modified by this call.
 func (c *COO) ToCSC() *CSC {
-	rows := make([]int, len(c.rows))
-	cols := make([]int, len(c.cols))
-	data := make([]float64, len(c.data))
-
-	copy(rows, c.rows)
-	copy(cols, c.cols)
-	copy(data, c.data)
-
-	coo := &COO{c.r, c.c, rows, cols, data, c.colMajor, c.canonicalised}
-
-	if !coo.canonicalised || !coo.colMajor {
-		coo.colMajor = true
-		coo.Canonicalise()
+	if !c.canonicalised || !c.colMajor {
+		c.colMajor = true
+		c.Canonicalise()
 	}
 
-	// build col pointers
 	ja := make([]int, c.c+1)
+	ia := make([]int, len(c.rows))
+	data := make([]float64, len(c.data))
+
 	var i int
 	k := 0
-	for j := 1; j < coo.c+1; j++ {
-		for i = k; i < len(coo.cols) && coo.cols[i] < j; i++ {
-			// empty
+	for j := 1; j < c.c+1; j++ {
+		for i = k; i < len(c.cols) && c.cols[i] < j; i++ {
+			ia[i] = c.rows[i]
+			data[i] = c.data[i]
 		}
 		k = i
 		ja[j] = i
 	}
 
-	return NewCSC(coo.r, coo.c, ja, coo.rows, coo.data)
+	return NewCSC(c.r, c.c, ja, ia, data)
 }
 
 // ToType returns an alternative format version fo the matrix in the format specified.

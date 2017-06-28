@@ -181,6 +181,40 @@ func (c *CSR) T() mat64.Matrix {
 	return NewCSC(c.j, c.i, c.indptr, c.ind, c.data)
 }
 
+// From copies the specified matrix into the receiver
+func (c *CSR) From(b mat64.Matrix) {
+	c.i, c.j = b.Dims()
+
+	c.indptr = make([]int, c.i+1)
+
+	k := 0
+	for i := 0; i < c.i; i++ {
+		c.indptr[i] = k
+		for j := 0; j < c.j; j++ {
+			if v := b.At(i, j); v != 0 {
+				c.ind = append(c.ind, j)
+				c.data = append(c.data, v)
+				k++
+			}
+		}
+
+	}
+	c.indptr[c.i] = k
+}
+
+func (c *CSR) Copy() mat64.Matrix {
+	i, j := c.i, c.j
+	indptr := make([]int, len(c.indptr))
+	ind := make([]int, len(c.ind))
+	data := make([]float64, len(c.data))
+
+	copy(indptr, c.indptr)
+	copy(ind, c.ind)
+	copy(data, c.data)
+
+	return NewCSR(i, j, indptr, ind, data)
+}
+
 // ToDense returns a mat64.Dense dense format version of the matrix.  The returned mat64.Dense
 // matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
 func (c *CSR) ToDense() *mat64.Dense {
@@ -218,11 +252,10 @@ func (c *CSR) ToCOO() *COO {
 	for i := 0; i < len(c.indptr)-1; i++ {
 		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
 			rows[j] = i
+			cols[j] = c.ind[j]
+			data[j] = c.data[j]
 		}
 	}
-
-	copy(cols, c.ind)
-	copy(data, c.data)
 
 	coo := NewCOO(c.i, c.j, rows, cols, data)
 
@@ -245,140 +278,6 @@ func (c *CSR) ToCSC() *CSC {
 // ToType returns an alternative format version fo the matrix in the format specified.
 func (c *CSR) ToType(matType MatrixType) mat64.Matrix {
 	return matType.Convert(c)
-}
-
-// Mul takes the matrix product (Dot product) of the supplied matrices a and b and stores the result
-// in the receiver.  If the number of columns does not equal the number of rows in b, Mul will panic.
-func (c *CSR) Mul(a, b mat64.Matrix) {
-	ar, ac := a.Dims()
-	br, bc := b.Dims()
-
-	if ac != br {
-		panic(matrix.ErrShape)
-	}
-
-	if dia, ok := a.(*DIA); ok {
-		c.mulDIA(dia, b, false)
-		return
-	}
-	if dia, ok := b.(*DIA); ok {
-		c.mulDIA(dia, a, true)
-		return
-	}
-
-	c.indptr = make([]int, ar+1)
-
-	c.i, c.j = ar, bc
-	t := 0
-
-	lhs, isCsr := a.(*CSR)
-
-	if isCsr {
-		for i := 0; i < ar; i++ {
-			c.indptr[i] = t
-			for j := 0; j < bc; j++ {
-				var v float64
-				// TODO Consider converting all Sparsers to CSR
-				for k := lhs.indptr[i]; k < lhs.indptr[i+1]; k++ {
-					v += lhs.data[k] * b.At(lhs.ind[k], j)
-				}
-				if v != 0 {
-					t++
-					c.ind = append(c.ind, j)
-					c.data = append(c.data, v)
-				}
-			}
-		}
-	} else {
-		row := make([]float64, ac)
-		for i := 0; i < ar; i++ {
-			c.indptr[i] = t
-			// bizarely transferring the row elements into a slice as part of a separate loop
-			// (rather than accessing each element within the main loop (a.At(m, n) * b.At(m, n))
-			// then ranging over them as the main loop is about twice as fast.  Possibly a
-			// result of inlining the call as compiler optimisation?
-			for ci := range row {
-				row[ci] = a.At(i, ci)
-			}
-			for j := 0; j < bc; j++ {
-				var v float64
-				for ci, e := range row {
-					v += e * b.At(ci, j)
-				}
-				if v != 0 {
-					t++
-					c.ind = append(c.ind, j)
-					c.data = append(c.data, v)
-				}
-			}
-		}
-	}
-
-	c.indptr[c.i] = t
-}
-
-// mulDIA takes the matrix product of the diagonal matrix dia and an other matrix, other and stores the result
-// in the receiver.  This method caters for the specialised case of multiplying by a diagonal matrix where
-// significant optimisation is possible due to the sparsity pattern of the matrix.  If trans is true, the method
-// will assume that other was the LHS (Left Hand Side) operand and that dia was the RHS.
-func (c *CSR) mulDIA(dia *DIA, other mat64.Matrix, trans bool) {
-	var csMat compressedSparse
-	isCS := false
-
-	if csr, ok := other.(*CSR); ok {
-		// TODO consider implicitly converting all sparsers to CSR
-		// or at least iterating only over the non-zero elements
-		csMat = csr.compressedSparse
-		isCS = true
-		c.ind = make([]int, len(csMat.ind))
-		c.data = make([]float64, len(csMat.data))
-	}
-
-	c.i, c.j = other.Dims()
-	c.indptr = make([]int, c.i+1)
-	t := 0
-	raw := dia.Diagonal()
-
-	for i := 0; i < c.i; i++ {
-		c.indptr[i] = t
-		var v float64
-
-		if isCS {
-			for k := csMat.indptr[i]; k < csMat.indptr[i+1]; k++ {
-				var rawval float64
-				if trans {
-					rawval = raw[csMat.ind[k]]
-				} else {
-					rawval = raw[i]
-				}
-				v = csMat.data[k] * rawval
-				if v != 0 {
-					c.ind[t] = csMat.ind[k]
-					c.data[t] = v
-					t++
-				}
-			}
-		} else {
-			for k := 0; k < c.j; k++ {
-				var rawval float64
-				if trans {
-					rawval = raw[k]
-				} else {
-					rawval = raw[i]
-				}
-				v = other.At(i, k) * rawval
-				if v != 0 {
-					c.ind = append(c.ind, k)
-					c.data = append(c.data, v)
-					t++
-				}
-			}
-		}
-	}
-
-	c.indptr[c.i] = t
-
-	return
 }
 
 // RowNNZ returns the Number of Non Zero values in the specified row i.  RowNNZ will panic if i is out of range.
@@ -497,11 +396,10 @@ func (c *CSC) ToCOO() *COO {
 	for i := 0; i < len(c.indptr)-1; i++ {
 		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
 			cols[j] = i
+			rows[j] = c.ind[j]
+			data[j] = c.data[j]
 		}
 	}
-
-	copy(rows, c.ind)
-	copy(data, c.data)
 
 	coo := NewCOO(c.j, c.i, rows, cols, data)
 
