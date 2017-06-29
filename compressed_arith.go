@@ -139,6 +139,8 @@ func (c *CSR) mulDIA(dia *DIA, other mat64.Matrix, trans bool) {
 	return
 }
 
+// Add adds matrices a and b together and stores the result in the receiver.
+// If matrices a and b are not the same shape then the method will panic.
 func (c *CSR) Add(a, b mat64.Matrix) {
 	ar, ac := a.Dims()
 	br, bc := b.Dims()
@@ -149,7 +151,7 @@ func (c *CSR) Add(a, b mat64.Matrix) {
 
 	// take a copy of the largest (higher NNZ if sparse or copy if dense) matrix
 	// then iterate over NZ values of smaller matrix (lower NNZ) and add elements
-	// in-place to corresponding in copy matrix.
+	// in-place to corresponding element in copied matrix.
 	lCsr, lIsCsr := a.(*CSR)
 	rCsr, rIsCsr := b.(*CSR)
 	var other *CSR

@@ -202,6 +202,7 @@ func (c *CSR) From(b mat64.Matrix) {
 	c.indptr[c.i] = k
 }
 
+// Copy copies the receiver into a new CSR matrix
 func (c *CSR) Copy() mat64.Matrix {
 	i, j := c.i, c.j
 	indptr := make([]int, len(c.indptr))
