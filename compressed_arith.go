@@ -105,11 +105,9 @@ func (c *CSR) mulCSRCSC(lhs *CSR, rhs *CSC) {
 					// empty
 				}
 				b = bi
-				rval := 0.0
 				if lhs.ind[k] == rhs.ind[bi] {
-					rval = rhs.data[bi]
+					v += lhs.data[k] * rhs.data[bi]
 				}
-				v += lhs.data[k] * rval
 			}
 			if v != 0 {
 				t++
