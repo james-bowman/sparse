@@ -226,3 +226,60 @@ func BenchmarkMulLargeCSRCSRCSR(b *testing.B) {
 	rhs := Random(CSRFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
+func BenchmarkMulLargeCSRCSRCSC(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(CSRFormat, 500, 600, 0.01)
+	rhs := Random(CSCFormat, 600, 500, 0.01)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+func BenchmarkMulLargeDenserCSRCSRDense(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(CSRFormat, 500, 600, 0.4)
+	rhs := Random(DenseFormat, 600, 500, 0.4)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+func BenchmarkMulLargeDenserCSRCSRCSR(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(CSRFormat, 500, 600, 0.4)
+	rhs := Random(CSRFormat, 600, 500, 0.4)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+func BenchmarkMulLargeDenserCSRCSRDOK(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(CSRFormat, 500, 600, 0.4)
+	rhs := Random(CSRFormat, 600, 500, 0.4)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+func BenchmarkMulLargeDenserCSRCSRCSC(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(CSRFormat, 500, 600, 0.4)
+	rhs := Random(CSCFormat, 600, 500, 0.4)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+
+func BenchmarkAddLargeCSRCSRCSR(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(CSRFormat, 500, 600, 0.01)
+	rhs := Random(CSRFormat, 500, 600, 0.01)
+	benchmarkMatrixAddition(t, lhs, rhs, b)
+}
+
+func BenchmarkAddLargeDenserCSRCSRCSR(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(CSRFormat, 500, 600, 0.4)
+	rhs := Random(CSRFormat, 500, 600, 0.4)
+	benchmarkMatrixAddition(t, lhs, rhs, b)
+}
+
+func BenchmarkAddLargeDenserCSRDenseCSR(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(DenseFormat, 500, 600, 0.4)
+	rhs := Random(CSRFormat, 500, 600, 0.4)
+	benchmarkMatrixAddition(t, lhs, rhs, b)
+}
+
+func benchmarkMatrixAddition(target *CSR, lhs mat64.Matrix, rhs mat64.Matrix, b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		target.Add(lhs, rhs)
+	}
+}

@@ -219,37 +219,6 @@ func (c *COO) ToCOO() *COO {
 // ToCSR returns a CSR (Compressed Sparse Row)(AKA CRS (Compressed Row Storage)) sparse format
 // version of the matrix.  The returned CSR matrix will not share underlying storage with the
 // receiver nor is the receiver modified by this call.
-/*
-func (c *COO) ToCSR() *CSR {
-	rows := make([]int, len(c.rows))
-	copy(rows, c.rows)
-	cols := make([]int, len(c.cols))
-	copy(cols, c.cols)
-	data := make([]float64, len(c.data))
-	copy(data, c.data)
-
-	coo := &COO{c.r, c.c, rows, cols, data, c.colMajor, c.canonicalised}
-
-	if !coo.canonicalised || coo.colMajor {
-		coo.colMajor = false
-		coo.Canonicalise()
-	}
-
-	// build row pointers
-	ia := make([]int, c.r+1)
-	var j int
-	k := 0
-	for i := 1; i < coo.r+1; i++ {
-		for j = k; j < len(coo.rows) && coo.rows[j] < i; j++ {
-			// empty
-		}
-		k = j
-		ia[i] = j
-	}
-
-	return NewCSR(coo.r, coo.c, ia, coo.cols, coo.data)
-}
-*/
 func (c *COO) ToCSR() *CSR {
 	if !c.canonicalised || c.colMajor {
 		c.colMajor = false
