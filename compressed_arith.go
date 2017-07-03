@@ -38,7 +38,6 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 		if rhs, isCSC := b.(*CSC); isCSC {
 			// handle case where matrix A is CSR and matrix B is CSC
 			c.mulCSRCSC(lhs, rhs)
-			//c.indptr[c.i] = t
 			return
 		}
 		// handle case where matrix A is CSR (matrix B can be any implementation of mat64.Matrix)
