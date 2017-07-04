@@ -62,10 +62,13 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 		row := make([]float64, ac)
 		for i := 0; i < ar; i++ {
 			c.indptr[i] = t
-			// bizarely transferring the row elements into a slice as part of a separate loop
-			// (rather than accessing each element within the main loop (a.At(m, n) * b.At(m, n))
-			// then ranging over them as the main loop is about twice as fast.  Possibly a
-			// result of inlining the call as compiler optimisation?
+			// bizarely transferring the row elements of the first operand into a slice as part
+			// of a separate loop (rather than accessing each element within the main loop
+			// (a.At(m, n) * b.At(m, n)) then ranging over them as part of the main loop is
+			// about twice as fast.  Possibly a result of compiler optimisation?
+			// This seems to have interesting implications when using formats with more expensive
+			// lookups - placing the more costly format first (and extracting its rows into a
+			// slice) appears approximately twice as fast as switching the order of the formats.
 			for ci := range row {
 				row[ci] = a.At(i, ci)
 			}
@@ -87,7 +90,7 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 }
 
 // mulCSRCSC handles special case of matrix multiplication (dot product) where the LHS matrix
-// (A) is CSR format and the RHS matrix (B) is CSC format
+// (A) is CSR format and the RHS matrix (B) is CSC format.
 func (c *CSR) mulCSRCSC(lhs *CSR, rhs *CSC) {
 	t := 0
 	for i := 0; i < c.i; i++ {
@@ -178,8 +181,6 @@ func (c *CSR) mulDIA(dia *DIA, other mat64.Matrix, trans bool) {
 	}
 
 	c.indptr[c.i] = t
-
-	return
 }
 
 // Add adds matrices a and b together and stores the result in the receiver.
@@ -192,56 +193,83 @@ func (c *CSR) Add(a, b mat64.Matrix) {
 		panic(matrix.ErrShape)
 	}
 
-	// take a copy of the largest (higher NNZ if sparse or copy if dense) matrix
-	// then iterate over NZ values of smaller matrix (lower NNZ) and add elements
-	// in-place to corresponding element in copied matrix.
 	lCsr, lIsCsr := a.(*CSR)
 	rCsr, rIsCsr := b.(*CSR)
-	var other *CSR
 
+	// TODO optimisation for DIA matrices
 	if lIsCsr && rIsCsr {
-		c.addCSR(lCsr, rCsr)
+		c.addCSRCSR(lCsr, rCsr)
 		return
 	} else if lIsCsr {
-		c.From(b)
-		other = lCsr
+		c.addCSR(lCsr, b)
+		return
 	} else if rIsCsr {
-		c.From(a)
-		other = rCsr
-	} else {
-		// dumb addition with no sparcity optimisations/savings
-		c.i, c.j = ar, ac
-		c.indptr = make([]int, c.i+1)
-		for i := 0; i < ar; i++ {
-			for j := 0; j < ac; j++ {
-				c.Set(i, j, a.At(i, j)+b.At(i, j))
-			}
-		}
+		c.addCSR(rCsr, a)
 		return
 	}
-
-	for i := 0; i < len(other.indptr)-1; i++ {
-		for j := other.indptr[i]; j < other.indptr[i+1]; j++ {
-			c.Set(i, other.ind[j], other.data[j]+c.At(i, other.ind[j]))
+	// dumb addition with no sparcity optimisations/savings
+	c.i, c.j = ar, ac
+	c.indptr = make([]int, c.i+1)
+	for i := 0; i < ar; i++ {
+		for j := 0; j < ac; j++ {
+			c.Set(i, j, a.At(i, j)+b.At(i, j))
 		}
 	}
+
 }
 
-func (c *CSR) addCSR(a, b *CSR) {
-	ar, ac := a.Dims()
-	br, bc := b.Dims()
+// addCSR adds a CSR matrix to any implementation of mat64.Matrix and stores the
+// result in the receiver.
+func (c *CSR) addCSR(csr *CSR, other mat64.Matrix) {
+	c.i, c.j = csr.Dims()
+	c.indptr = make([]int, c.i+1)
 
-	if ar != br || ac != bc {
-		panic(matrix.ErrShape)
+	t := 0
+	row := make([]float64, c.j)
+	for i := 0; i < c.i; i++ {
+		c.indptr[i] = t
+
+		for ci := range row {
+			row[ci] = other.At(i, ci)
+		}
+
+		csrStart := csr.indptr[i]
+		csrEnd := csr.indptr[i+1] - 1
+		b := csrStart
+
+		for ci, e := range row {
+			var v float64
+			var bi int
+			for bi = b; bi < csrEnd && csr.ind[bi] < ci; bi++ {
+				// empty
+			}
+			b = bi
+			if ci == csr.ind[bi] {
+				v = e + csr.data[bi]
+			} else {
+				v = e
+			}
+			if v != 0 {
+				t++
+				c.ind = append(c.ind, ci)
+				c.data = append(c.data, v)
+			}
+		}
 	}
+	c.indptr[c.i] = t
+}
 
+// addCSRCSR adds 2 CSR matrices together storing the result in the receiver.
+// This method is specially optimised to take advantage of the sparsity patterns
+// of the 2 CSR matrices.
+func (c *CSR) addCSRCSR(a, b *CSR) {
 	var larger int
 	if a.NNZ() > b.NNZ() {
 		larger = a.NNZ()
 	} else {
 		larger = b.NNZ()
 	}
-	c.i, c.j = ar, ac
+	c.i, c.j = a.Dims()
 	c.data = make([]float64, 0, larger)
 	c.indptr = make([]int, a.i+1)
 	c.ind = make([]int, 0, larger)
