@@ -92,6 +92,43 @@ func (c *compressedSparse) insert(i int, j int, v float64, insertionPoint int) {
 	}
 }
 
+// nativeSlice slices the compressed sparse matrix along its primary axis
+// i.e. row slice for CSR and column slice for CSC.  This is much more
+// efficient than a foreign slice which must scan for each slice element.
+func (c *compressedSparse) nativeSlice(i int) []float64 {
+	if i >= c.i || i < 0 {
+		panic(matrix.ErrRowAccess)
+	}
+
+	slice := make([]float64, c.j)
+
+	for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
+		slice[c.ind[j]] = c.data[j]
+	}
+
+	return slice
+}
+
+// foreignSlice slices the compressed sparse matrix along its secondary
+// axis i.e. column slice for CSR and row slice for CSC.  This is much
+// less efficient than a native slice as each element must be looked up
+// individually.  Consider converting the matrix (CSR->CSR/CSC->CSR) if
+// multiple slices along secondary axis are required so native slices
+// can be used instead.
+func (c *compressedSparse) foreignSlice(j int) []float64 {
+	if j >= c.j || j < 0 {
+		panic(matrix.ErrColAccess)
+	}
+
+	slice := make([]float64, c.i)
+
+	for i := range slice {
+		slice[i] = c.at(i, j)
+	}
+
+	return slice
+}
+
 /*
 func (c *compressedSparse) MarshalBinary() ([]byte, error) {
 
@@ -289,6 +326,20 @@ func (c *CSR) RowNNZ(i int) int {
 	return c.indptr[i+1] - c.indptr[i]
 }
 
+// RowView slices the Compressed Sparse Row matrix along its primary axis.
+// Returns a Vector containing a copy of elements of row i.
+func (c *CSR) RowView(i int) *mat64.Vector {
+	return mat64.NewVector(c.j, c.nativeSlice(i))
+}
+
+// ColView slices the Compressed Sparse Row matrix along its secondary axis.
+// Returns a Vector containing a copy of elements of column j.  ColView
+// is much slower than RowView for CSR matrices so if multiple ColView calls
+// are required, consider first converting to a CSC matrix.
+func (c *CSR) ColView(j int) *mat64.Vector {
+	return mat64.NewVector(c.i, c.foreignSlice(j))
+}
+
 // CSC is a Compressed Sparse Column format sparse matrix implementation (sometimes called Compressed Column
 // Storage (CCS) format) and implements the Matrix interface from gonum/matrix.  This allows large sparse
 // (mostly zero values) matrices to be stored efficiently in memory (only storing non-zero values).
@@ -423,4 +474,18 @@ func (c *CSC) ToCSC() *CSC {
 // ToType returns an alternative format version fo the matrix in the format specified.
 func (c *CSC) ToType(matType MatrixType) mat64.Matrix {
 	return matType.Convert(c)
+}
+
+// RowView slices the Compressed Sparse Column matrix along its secondary axis.
+// Returns a Vector containing a copy of elements of row i.  RowView
+// is much slower than ColView for CSC matrices so if multiple RowView calls
+// are required, consider first converting to a CSR matrix.
+func (c *CSC) RowView(i int) *mat64.Vector {
+	return mat64.NewVector(c.i, c.foreignSlice(i))
+}
+
+// ColView slices the Compressed Sparse Column matrix along its primary axis.
+// Returns a Vector containing a copy of elements of column i.
+func (c *CSC) ColView(j int) *mat64.Vector {
+	return mat64.NewVector(c.j, c.nativeSlice(j))
 }
