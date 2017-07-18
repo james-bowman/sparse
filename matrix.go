@@ -3,6 +3,7 @@ package sparse
 import (
 	"math/rand"
 
+	"github.com/gonum/matrix"
 	"github.com/gonum/matrix/mat64"
 )
 
@@ -119,4 +120,40 @@ func Random(t MatrixType, r int, c int, density float32) mat64.Matrix {
 	}
 
 	return NewCOO(r, c, m, n, data).ToType(t)
+}
+
+// RawRowView returns a slice representing row i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.
+func rawRowView(m mat64.Matrix, i int) []float64 {
+	r, c := m.Dims()
+
+	if i >= r || i < 0 {
+		panic(matrix.ErrRowAccess)
+	}
+
+	slice := make([]float64, c)
+
+	for j := range slice {
+		slice[j] = m.At(i, j)
+	}
+
+	return slice
+}
+
+// RawColView returns a slice representing col i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.
+func rawColView(m mat64.Matrix, j int) []float64 {
+	r, c := m.Dims()
+
+	if j >= c || j < 0 {
+		panic(matrix.ErrColAccess)
+	}
+
+	slice := make([]float64, r)
+
+	for i := range slice {
+		slice[i] = m.At(i, j)
+	}
+
+	return slice
 }

@@ -64,3 +64,40 @@ func (d *DIA) NNZ() int {
 func (d *DIA) Diagonal() []float64 {
 	return d.data
 }
+
+// RowView slices the matrix and returns a Vector containing a copy of elements
+// of row i.
+func (d *DIA) RowView(i int) *mat64.Vector {
+	return mat64.NewVector(d.m, d.slice(i))
+}
+
+// ColView slices the matrix and returns a Vector containing a copy of elements
+// of column j.
+func (d *DIA) ColView(j int) *mat64.Vector {
+	return mat64.NewVector(d.m, d.slice(j))
+}
+
+// RawRowView returns a slice representing row i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.
+func (d *DIA) RawRowView(i int) []float64 {
+	return d.slice(i)
+}
+
+// RawColView returns a slice representing col i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.
+func (d *DIA) RawColView(j int) []float64 {
+	return d.slice(j)
+}
+
+// nativeSlice slices the DIAgonal matrix.
+func (d *DIA) slice(i int) []float64 {
+	if i >= d.m || i < 0 {
+		panic(matrix.ErrRowAccess)
+	}
+
+	slice := make([]float64, d.m)
+
+	slice[i] = d.data[i]
+
+	return slice
+}

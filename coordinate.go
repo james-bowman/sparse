@@ -274,3 +274,27 @@ func (c *COO) ToCSC() *CSC {
 func (c *COO) ToType(matType MatrixType) mat64.Matrix {
 	return matType.Convert(c)
 }
+
+// RowView slices the matrix and returns a Vector containing a copy of elements
+// of row i.
+func (c *COO) RowView(i int) *mat64.Vector {
+	return mat64.NewVector(c.c, c.RawRowView(i))
+}
+
+// ColView slices the matrix and returns a Vector containing a copy of elements
+// of column i.
+func (c *COO) ColView(j int) *mat64.Vector {
+	return mat64.NewVector(c.r, c.RawColView(j))
+}
+
+// RawRowView returns a slice representing row i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.
+func (c *COO) RawRowView(i int) []float64 {
+	return rawRowView(c, i)
+}
+
+// RawColView returns a slice representing col i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.
+func (c *COO) RawColView(j int) []float64 {
+	return rawColView(c, j)
+}

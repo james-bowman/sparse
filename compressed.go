@@ -340,6 +340,20 @@ func (c *CSR) ColView(j int) *mat64.Vector {
 	return mat64.NewVector(c.i, c.foreignSlice(j))
 }
 
+// RawRowView returns a slice representing row i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.
+func (c *CSR) RawRowView(i int) []float64 {
+	return c.nativeSlice(i)
+}
+
+// RawColView returns a slice representing col i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.  RawColView
+// is much slower than RawRowView for CSR matrices so if multiple RawColView calls
+// are required, consider first converting to a CSC matrix.
+func (c *CSR) RawColView(j int) []float64 {
+	return c.foreignSlice(j)
+}
+
 // CSC is a Compressed Sparse Column format sparse matrix implementation (sometimes called Compressed Column
 // Storage (CCS) format) and implements the Matrix interface from gonum/matrix.  This allows large sparse
 // (mostly zero values) matrices to be stored efficiently in memory (only storing non-zero values).
@@ -488,4 +502,18 @@ func (c *CSC) RowView(i int) *mat64.Vector {
 // Returns a Vector containing a copy of elements of column i.
 func (c *CSC) ColView(j int) *mat64.Vector {
 	return mat64.NewVector(c.j, c.nativeSlice(j))
+}
+
+// RawRowView returns a slice representing row i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.  RawRowView
+// is much slower than RawColView for CSC matrices so if multiple RawRowView calls
+// are required, consider first converting to a CSR matrix.
+func (c *CSC) RawRowView(i int) []float64 {
+	return c.foreignSlice(i)
+}
+
+// RawColView returns a slice representing col i of the matrix.  This is a copy
+// of the data within the matrix and does not share underlying storage.
+func (c *CSC) RawColView(j int) []float64 {
+	return c.nativeSlice(j)
 }
