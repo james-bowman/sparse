@@ -181,8 +181,8 @@ func (c *CSR) T() mat64.Matrix {
 	return NewCSC(c.j, c.i, c.indptr, c.ind, c.data)
 }
 
-// From copies the specified matrix into the receiver
-func (c *CSR) From(b mat64.Matrix) {
+// Clone copies the specified matrix into the receiver
+func (c *CSR) Clone(b mat64.Matrix) {
 	c.i, c.j = b.Dims()
 
 	c.indptr = make([]int, c.i+1)
