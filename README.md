@@ -28,6 +28,7 @@ A common practice is to construct sparse matrices using a creational format e.g.
 * DIA (DIAgonal) format
 * CSR dot product (matrix multiplication) of 2 matrices (with optimisations for operands of type DIA (as LHS or RHS operand), CSR (LHS operand only) and CSC (RHS operand only when LHS operand is CSR) but supporting any implementation of gonum/mat64.Matrix interface).
 * CSR addition of 2 matrices (with optimisations for operands of type CSR but supporting any implementation of gonum/mat64.Matrix interface).
+* Row and column slicing of CSR and CSC types.
 
 ## Planned
 
@@ -38,4 +39,4 @@ A common practice is to construct sparse matrices using a creational format e.g.
 * Consider utilising LAPACK/BLAS/etc. to perform matrix arithmetic (as an option if available on host).
 * Improve memory allocation for matrix multiplication - pre-calculating sparsity pattern for product and allocate storage in advance rather than incrementally.
 * standard API for iteration over non-zero elements for each sparse format type
-* row and column slicing
+* row and column slicing of other types
