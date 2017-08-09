@@ -3,8 +3,7 @@ package sparse
 import (
 	"testing"
 
-	"github.com/gonum/matrix"
-	"github.com/gonum/matrix/mat64"
+	"github.com/gonum/gonum/mat"
 )
 
 func TestDOKConversion(t *testing.T) {
@@ -61,7 +60,7 @@ func TestDOKConversion(t *testing.T) {
 
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
-		expected := mat64.NewDense(test.m, test.n, test.output)
+		expected := mat.NewDense(test.m, test.n, test.output)
 
 		dok := NewDOK(test.m, test.n)
 		for k, v := range test.data {
@@ -69,18 +68,18 @@ func TestDOKConversion(t *testing.T) {
 		}
 
 		coo := dok.ToCOO()
-		if !(mat64.Equal(expected, coo)) {
-			t.Logf("Expected:\n%v \nbut found COO matrix:\n%v\n", mat64.Formatted(expected), mat64.Formatted(coo))
+		if !(mat.Equal(expected, coo)) {
+			t.Logf("Expected:\n%v \nbut found COO matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(coo))
 		}
 
 		csr := dok.ToCSR()
-		if !(mat64.Equal(expected, csr)) {
-			t.Logf("Expected:\n%v \nbut found CSR matrix:\n%v\n", mat64.Formatted(expected), mat64.Formatted(csr))
+		if !(mat.Equal(expected, csr)) {
+			t.Logf("Expected:\n%v \nbut found CSR matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(csr))
 		}
 
 		csc := dok.ToCSC()
-		if !(mat64.Equal(expected, csc)) {
-			t.Logf("Expected:\n%v \nbut found CSC matrix:\n%v\n", mat64.Formatted(expected), mat64.Formatted(csc))
+		if !(mat.Equal(expected, csc)) {
+			t.Logf("Expected:\n%v \nbut found CSC matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(csc))
 		}
 	}
 
@@ -113,12 +112,12 @@ func TestDOKTranspose(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
 
-		expected := mat64.NewDense(test.er, test.ec, test.result)
+		expected := mat.NewDense(test.er, test.ec, test.result)
 
 		dok := CreateDOK(test.r, test.c, test.data)
 
-		if !mat64.Equal(expected, dok.T()) {
-			t.Logf("Expected:\n %v\n but received:\n %v\n", mat64.Formatted(expected), mat64.Formatted(dok.T()))
+		if !mat.Equal(expected, dok.T()) {
+			t.Logf("Expected:\n %v\n but received:\n %v\n", mat.Formatted(expected), mat.Formatted(dok.T()))
 		}
 	}
 }
@@ -149,14 +148,14 @@ func TestDOKRowColView(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
 
-		dense := mat64.NewDense(test.r, test.c, test.data)
+		dense := mat.NewDense(test.r, test.c, test.data)
 		dok := CreateDOK(test.r, test.c, test.data).(*DOK)
 
 		for i := 0; i < test.r; i++ {
 			row := dok.RowView(i)
 			for k := 0; k < row.Len(); k++ {
 				if row.At(k, 0) != test.data[i*test.c+k] {
-					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(row), k, row.At(k, 0), i, k, mat64.Formatted(dense))
+					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(row), k, row.At(k, 0), i, k, mat.Formatted(dense))
 					t.Fail()
 				}
 			}
@@ -166,7 +165,7 @@ func TestDOKRowColView(t *testing.T) {
 			col := dok.ColView(j)
 			for k := 0; k < col.Len(); k++ {
 				if col.At(k, 0) != test.data[k*test.c+j] {
-					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(col), k, col.At(k, 0), k, j, mat64.Formatted(dense))
+					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(col), k, col.At(k, 0), k, j, mat.Formatted(dense))
 					t.Fail()
 				}
 			}
@@ -174,9 +173,9 @@ func TestDOKRowColView(t *testing.T) {
 	}
 }
 
-type MatrixCreator func(m, n int, data []float64) mat64.Matrix
+type MatrixCreator func(m, n int, data []float64) mat.Matrix
 
-func CreateDOK(m, n int, data []float64) mat64.Matrix {
+func CreateDOK(m, n int, data []float64) mat.Matrix {
 	dok := NewDOK(m, n)
 	if data != nil {
 		for i := 0; i < m; i++ {
@@ -191,21 +190,21 @@ func CreateDOK(m, n int, data []float64) mat64.Matrix {
 	return dok
 }
 
-func CreateCOO(m, n int, data []float64) mat64.Matrix {
+func CreateCOO(m, n int, data []float64) mat.Matrix {
 	return CreateDOK(m, n, data).(*DOK).ToCOO()
 }
 
-func CreateCSR(m, n int, data []float64) mat64.Matrix {
+func CreateCSR(m, n int, data []float64) mat.Matrix {
 	return CreateDOK(m, n, data).(*DOK).ToCSR()
 }
 
-func CreateCSC(m, n int, data []float64) mat64.Matrix {
+func CreateCSC(m, n int, data []float64) mat.Matrix {
 	return CreateDOK(m, n, data).(*DOK).ToCSC()
 }
 
-func CreateDIA(m, n int, data []float64) mat64.Matrix {
+func CreateDIA(m, n int, data []float64) mat.Matrix {
 	if m != n {
-		panic((matrix.ErrRowAccess))
+		panic((mat.ErrRowAccess))
 	}
 	c := make([]float64, m)
 	for i := 0; i < m; i++ {
@@ -214,6 +213,6 @@ func CreateDIA(m, n int, data []float64) mat64.Matrix {
 	return NewDIA(m, c)
 }
 
-func CreateDense(m, n int, data []float64) mat64.Matrix {
-	return mat64.NewDense(m, n, data)
+func CreateDense(m, n int, data []float64) mat.Matrix {
+	return mat.NewDense(m, n, data)
 }

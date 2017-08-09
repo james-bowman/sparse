@@ -3,7 +3,7 @@ package sparse
 import (
 	"testing"
 
-	"github.com/gonum/matrix/mat64"
+	"github.com/gonum/gonum/mat"
 )
 
 func TestCOOConversion(t *testing.T) {
@@ -39,13 +39,13 @@ func TestCOOConversion(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d. %s\n", ti+1, test.desc)
 
-		d := mat64.NewDense(r, c, data)
+		d := mat.NewDense(r, c, data)
 
 		a := test.create(r, c, data)
 
-		if !mat64.Equal(d, a) {
+		if !mat.Equal(d, a) {
 			t.Logf("A : %v\n", a)
-			t.Logf("Expected:\n%v\n but created:\n%v\n", mat64.Formatted(d), mat64.Formatted(a))
+			t.Logf("Expected:\n%v\n but created:\n%v\n", mat.Formatted(d), mat.Formatted(a))
 			t.Fail()
 		}
 
@@ -56,10 +56,10 @@ func TestCOOConversion(t *testing.T) {
 
 		b := test.convert(sa.(TypeConverter))
 
-		if !mat64.Equal(a, b) {
+		if !mat.Equal(a, b) {
 			t.Logf("A : %v\n", a)
 			t.Logf("B : %v\n", b)
-			t.Logf("Expected:\n%v\n but received:\n%v\n", mat64.Formatted(a), mat64.Formatted(b))
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(a), mat.Formatted(b))
 			t.Fail()
 		}
 	}
@@ -91,14 +91,14 @@ func TestCOORowColView(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
 
-		dense := mat64.NewDense(test.r, test.c, test.data)
+		dense := mat.NewDense(test.r, test.c, test.data)
 		coo := CreateCOO(test.r, test.c, test.data).(*COO)
 
 		for i := 0; i < test.r; i++ {
 			row := coo.RowView(i)
 			for k := 0; k < row.Len(); k++ {
 				if row.At(k, 0) != test.data[i*test.c+k] {
-					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(row), k, row.At(k, 0), i, k, mat64.Formatted(dense))
+					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(row), k, row.At(k, 0), i, k, mat.Formatted(dense))
 					t.Fail()
 				}
 			}
@@ -108,7 +108,7 @@ func TestCOORowColView(t *testing.T) {
 			col := coo.ColView(j)
 			for k := 0; k < col.Len(); k++ {
 				if col.At(k, 0) != test.data[k*test.c+j] {
-					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(col), k, col.At(k, 0), k, j, mat64.Formatted(dense))
+					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(col), k, col.At(k, 0), k, j, mat.Formatted(dense))
 					t.Fail()
 				}
 			}

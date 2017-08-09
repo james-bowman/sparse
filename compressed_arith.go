@@ -1,18 +1,17 @@
 package sparse
 
 import (
-	"github.com/gonum/matrix"
-	"github.com/gonum/matrix/mat64"
+	"github.com/gonum/gonum/mat"
 )
 
 // Mul takes the matrix product (Dot product) of the supplied matrices a and b and stores the result
 // in the receiver.  If the number of columns does not equal the number of rows in b, Mul will panic.
-func (c *CSR) Mul(a, b mat64.Matrix) {
+func (c *CSR) Mul(a, b mat.Matrix) {
 	ar, ac := a.Dims()
 	br, bc := b.Dims()
 
 	if ac != br {
-		panic(matrix.ErrShape)
+		panic(mat.ErrShape)
 	}
 
 	if dia, ok := a.(*DIA); ok {
@@ -40,7 +39,7 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 			c.mulCSRCSC(lhs, rhs)
 			return
 		}
-		// handle case where matrix A is CSR (matrix B can be any implementation of mat64.Matrix)
+		// handle case where matrix A is CSR (matrix B can be any implementation of mat.Matrix)
 		for i := 0; i < ar; i++ {
 			c.indptr[i] = t
 			for j := 0; j < bc; j++ {
@@ -58,7 +57,7 @@ func (c *CSR) Mul(a, b mat64.Matrix) {
 			}
 		}
 	} else {
-		// handle any implementation of mat64.Matrix for both matrix A and B
+		// handle any implementation of mat.Matrix for both matrix A and B
 		row := make([]float64, ac)
 		for i := 0; i < ar; i++ {
 			c.indptr[i] = t
@@ -125,7 +124,7 @@ func (c *CSR) mulCSRCSC(lhs *CSR, rhs *CSC) {
 // in the receiver.  This method caters for the specialised case of multiplying by a diagonal matrix where
 // significant optimisation is possible due to the sparsity pattern of the matrix.  If trans is true, the method
 // will assume that other was the LHS (Left Hand Side) operand and that dia was the RHS.
-func (c *CSR) mulDIA(dia *DIA, other mat64.Matrix, trans bool) {
+func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 	var csMat compressedSparse
 	isCS := false
 
@@ -185,12 +184,12 @@ func (c *CSR) mulDIA(dia *DIA, other mat64.Matrix, trans bool) {
 
 // Add adds matrices a and b together and stores the result in the receiver.
 // If matrices a and b are not the same shape then the method will panic.
-func (c *CSR) Add(a, b mat64.Matrix) {
+func (c *CSR) Add(a, b mat.Matrix) {
 	ar, ac := a.Dims()
 	br, bc := b.Dims()
 
 	if ar != br || ac != bc {
-		panic(matrix.ErrShape)
+		panic(mat.ErrShape)
 	}
 
 	lCsr, lIsCsr := a.(*CSR)
@@ -218,9 +217,9 @@ func (c *CSR) Add(a, b mat64.Matrix) {
 
 }
 
-// addCSR adds a CSR matrix to any implementation of mat64.Matrix and stores the
+// addCSR adds a CSR matrix to any implementation of mat.Matrix and stores the
 // result in the receiver.
-func (c *CSR) addCSR(csr *CSR, other mat64.Matrix) {
+func (c *CSR) addCSR(csr *CSR, other mat.Matrix) {
 	c.i, c.j = csr.Dims()
 	c.indptr = make([]int, c.i+1)
 

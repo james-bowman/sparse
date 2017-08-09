@@ -3,7 +3,7 @@ package sparse
 import (
 	"testing"
 
-	"github.com/gonum/matrix/mat64"
+	"github.com/gonum/gonum/mat"
 )
 
 func TestCSRMul(t *testing.T) {
@@ -258,7 +258,7 @@ func TestCSRMul(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
 
-		expected := mat64.NewDense(test.cm, test.cn, test.cdata)
+		expected := mat.NewDense(test.cm, test.cn, test.cdata)
 
 		a := test.atype(test.am, test.an, test.adata)
 		b := test.btype(test.bm, test.bn, test.bdata)
@@ -266,8 +266,8 @@ func TestCSRMul(t *testing.T) {
 		csr := NewCSR(0, 0, nil, nil, nil)
 		csr.Mul(a, b)
 
-		if !mat64.Equal(expected, csr) {
-			t.Logf("Expected:\n%v\n but received:\n%v\n", mat64.Formatted(expected), mat64.Formatted(csr))
+		if !mat.Equal(expected, csr) {
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csr))
 			t.Fail()
 		}
 	}
@@ -389,7 +389,7 @@ func TestCSRAdd(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
 
-		expected := mat64.NewDense(test.cm, test.cn, test.cdata)
+		expected := mat.NewDense(test.cm, test.cn, test.cdata)
 
 		a := test.atype(test.am, test.an, test.adata)
 		b := test.btype(test.bm, test.bn, test.bdata)
@@ -397,8 +397,8 @@ func TestCSRAdd(t *testing.T) {
 		csr := NewCSR(0, 0, nil, nil, nil)
 		csr.Add(a, b)
 
-		if !mat64.Equal(expected, csr) {
-			t.Logf("Expected:\n%v\n but received:\n%v\n", mat64.Formatted(expected), mat64.Formatted(csr))
+		if !mat.Equal(expected, csr) {
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csr))
 			t.Fail()
 		}
 	}

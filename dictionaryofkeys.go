@@ -1,8 +1,7 @@
 package sparse
 
 import (
-	"github.com/gonum/matrix"
-	"github.com/gonum/matrix/mat64"
+	"github.com/gonum/gonum/mat"
 )
 
 // key is used to specify the row and column of elements within the matrix.
@@ -14,8 +13,8 @@ type key struct {
 // This allows large sparse (mostly zero values) matrices to be stored efficiently in memory (only storing
 // non-zero values).  DOK matrices are good for incrementally constructing sparse matrices but poor for arithmetic
 // operations or other operations that require iterating over elements of the matrix sequentially.  As this type
-// implements the gonum mat64.Matrix interface, it may be used with any of the Gonum mat64 functions that accept
-// Matrix types as parameters in place of other matrix types included in the Gonum mat64 package e.g. mat64.Dense.
+// implements the gonum mat.Matrix interface, it may be used with any of the Gonum mat functions that accept
+// Matrix types as parameters in place of other matrix types included in the Gonum mat package e.g. mat.Dense.
 type DOK struct {
 	r        int
 	c        int
@@ -26,10 +25,10 @@ type DOK struct {
 // dimensions (rows * columns)
 func NewDOK(r, c int) *DOK {
 	if uint(r) < 0 {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(c) < 0 {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	return &DOK{r: r, c: c, elements: make(map[key]float64)}
@@ -44,28 +43,28 @@ func (d *DOK) Dims() (r, c int) {
 // for i or j fall outside the dimensions of the matrix.
 func (d *DOK) At(i, j int) float64 {
 	if uint(i) < 0 || uint(i) >= uint(d.r) {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(j) < 0 || uint(j) >= uint(d.c) {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	return d.elements[key{i, j}]
 }
 
-// T transposes the matrix.  This is an implicit transpose, wrapping the matrix in a mat64.Transpose type.
-func (d *DOK) T() mat64.Matrix {
-	return mat64.Transpose{d}
+// T transposes the matrix.  This is an implicit transpose, wrapping the matrix in a mat.Transpose type.
+func (d *DOK) T() mat.Matrix {
+	return mat.Transpose{d}
 }
 
 // Set sets the element of the matrix located at row i and column j to equal the specified value, v.  Set
 // will panic if specified values for i or j fall outside the dimensions of the matrix.
 func (d *DOK) Set(i, j int, v float64) {
 	if uint(i) < 0 || uint(i) >= uint(d.r) {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(j) < 0 || uint(j) >= uint(d.c) {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	d.elements[key{i, j}] = v
@@ -76,10 +75,10 @@ func (d *DOK) NNZ() int {
 	return len(d.elements)
 }
 
-// ToDense returns a mat64.Dense dense format version of the matrix.  The returned mat64.Dense
+// ToDense returns a mat.Dense dense format version of the matrix.  The returned mat.Dense
 // matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
-func (d *DOK) ToDense() *mat64.Dense {
-	mat := mat64.NewDense(d.r, d.c, nil)
+func (d *DOK) ToDense() *mat.Dense {
+	mat := mat.NewDense(d.r, d.c, nil)
 
 	for k, v := range d.elements {
 		mat.Set(k.i, k.j, v)
@@ -127,20 +126,20 @@ func (d *DOK) ToCSC() *CSC {
 }
 
 // ToType returns an alternative format version fo the matrix in the format specified.
-func (d *DOK) ToType(matType MatrixType) mat64.Matrix {
+func (d *DOK) ToType(matType MatrixType) mat.Matrix {
 	return matType.Convert(d)
 }
 
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
-func (d *DOK) RowView(i int) *mat64.Vector {
-	return mat64.NewVector(d.c, d.RawRowView(i))
+func (d *DOK) RowView(i int) *mat.Vector {
+	return mat.NewVector(d.c, d.RawRowView(i))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column i.
-func (d *DOK) ColView(j int) *mat64.Vector {
-	return mat64.NewVector(d.r, d.RawColView(j))
+func (d *DOK) ColView(j int) *mat.Vector {
+	return mat.NewVector(d.r, d.RawColView(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy
