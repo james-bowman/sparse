@@ -3,7 +3,7 @@ package sparse
 import (
 	"testing"
 
-	"github.com/gonum/gonum/mat"
+	"gonum.org/v1/gonum/mat"
 )
 
 func TestCSRCSCTranspose(t *testing.T) {

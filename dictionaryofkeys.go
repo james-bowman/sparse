@@ -1,7 +1,7 @@
 package sparse
 
 import (
-	"github.com/gonum/gonum/mat"
+	"gonum.org/v1/gonum/mat"
 )
 
 // key is used to specify the row and column of elements within the matrix.
@@ -132,14 +132,14 @@ func (d *DOK) ToType(matType MatrixType) mat.Matrix {
 
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
-func (d *DOK) RowView(i int) *mat.Vector {
-	return mat.NewVector(d.c, d.RawRowView(i))
+func (d *DOK) RowView(i int) *mat.VecDense {
+	return mat.NewVecDense(d.c, d.RawRowView(i))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column i.
-func (d *DOK) ColView(j int) *mat.Vector {
-	return mat.NewVector(d.r, d.RawColView(j))
+func (d *DOK) ColView(j int) *mat.VecDense {
+	return mat.NewVecDense(d.r, d.RawColView(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy

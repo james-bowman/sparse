@@ -3,7 +3,7 @@ package sparse
 import (
 	"math/rand"
 
-	"github.com/gonum/gonum/mat"
+	"gonum.org/v1/gonum/mat"
 )
 
 // Sparser is the interface for Sparse matrices.  Sparser contains the mat.Matrix interface so automatically

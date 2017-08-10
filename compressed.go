@@ -1,7 +1,7 @@
 package sparse
 
 import (
-	"github.com/gonum/gonum/mat"
+	"gonum.org/v1/gonum/mat"
 )
 
 // compressedSparse represents the common structure for representing compressed sparse
@@ -327,16 +327,16 @@ func (c *CSR) RowNNZ(i int) int {
 
 // RowView slices the Compressed Sparse Row matrix along its primary axis.
 // Returns a Vector containing a copy of elements of row i.
-func (c *CSR) RowView(i int) *mat.Vector {
-	return mat.NewVector(c.j, c.nativeSlice(i))
+func (c *CSR) RowView(i int) *mat.VecDense {
+	return mat.NewVecDense(c.j, c.nativeSlice(i))
 }
 
 // ColView slices the Compressed Sparse Row matrix along its secondary axis.
 // Returns a Vector containing a copy of elements of column j.  ColView
 // is much slower than RowView for CSR matrices so if multiple ColView calls
 // are required, consider first converting to a CSC matrix.
-func (c *CSR) ColView(j int) *mat.Vector {
-	return mat.NewVector(c.i, c.foreignSlice(j))
+func (c *CSR) ColView(j int) *mat.VecDense {
+	return mat.NewVecDense(c.i, c.foreignSlice(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy
@@ -493,14 +493,14 @@ func (c *CSC) ToType(matType MatrixType) mat.Matrix {
 // Returns a Vector containing a copy of elements of row i.  RowView
 // is much slower than ColView for CSC matrices so if multiple RowView calls
 // are required, consider first converting to a CSR matrix.
-func (c *CSC) RowView(i int) *mat.Vector {
-	return mat.NewVector(c.i, c.foreignSlice(i))
+func (c *CSC) RowView(i int) *mat.VecDense {
+	return mat.NewVecDense(c.i, c.foreignSlice(i))
 }
 
 // ColView slices the Compressed Sparse Column matrix along its primary axis.
 // Returns a Vector containing a copy of elements of column i.
-func (c *CSC) ColView(j int) *mat.Vector {
-	return mat.NewVector(c.j, c.nativeSlice(j))
+func (c *CSC) ColView(j int) *mat.VecDense {
+	return mat.NewVecDense(c.j, c.nativeSlice(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy

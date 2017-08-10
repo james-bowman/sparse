@@ -1,7 +1,7 @@
 package sparse
 
 import (
-	"github.com/gonum/gonum/mat"
+	"gonum.org/v1/gonum/mat"
 )
 
 // Mul takes the matrix product (Dot product) of the supplied matrices a and b and stores the result

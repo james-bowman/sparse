@@ -1,7 +1,7 @@
 package sparse
 
 import (
-	"github.com/gonum/gonum/mat"
+	"gonum.org/v1/gonum/mat"
 )
 
 // DIA matrix type is a specialised matrix designed to store DIAgonal values of square symmetrical
@@ -66,14 +66,14 @@ func (d *DIA) Diagonal() []float64 {
 
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
-func (d *DIA) RowView(i int) *mat.Vector {
-	return mat.NewVector(d.m, d.slice(i))
+func (d *DIA) RowView(i int) *mat.VecDense {
+	return mat.NewVecDense(d.m, d.slice(i))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column j.
-func (d *DIA) ColView(j int) *mat.Vector {
-	return mat.NewVector(d.m, d.slice(j))
+func (d *DIA) ColView(j int) *mat.VecDense {
+	return mat.NewVecDense(d.m, d.slice(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy

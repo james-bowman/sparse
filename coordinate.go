@@ -3,7 +3,7 @@ package sparse
 import (
 	"sort"
 
-	"github.com/gonum/gonum/mat"
+	"gonum.org/v1/gonum/mat"
 )
 
 // COO is a COOrdinate format sparse matrix implementation (sometimes called `Tiplet` format) and implements the
@@ -276,14 +276,14 @@ func (c *COO) ToType(matType MatrixType) mat.Matrix {
 
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
-func (c *COO) RowView(i int) *mat.Vector {
-	return mat.NewVector(c.c, c.RawRowView(i))
+func (c *COO) RowView(i int) *mat.VecDense {
+	return mat.NewVecDense(c.c, c.RawRowView(i))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column i.
-func (c *COO) ColView(j int) *mat.Vector {
-	return mat.NewVector(c.r, c.RawColView(j))
+func (c *COO) ColView(j int) *mat.VecDense {
+	return mat.NewVecDense(c.r, c.RawColView(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy

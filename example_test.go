@@ -3,7 +3,7 @@ package sparse
 import (
 	"fmt"
 
-	"github.com/gonum/gonum/mat"
+	"gonum.org/v1/gonum/mat"
 )
 
 func Example() {
