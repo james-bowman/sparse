@@ -3,16 +3,15 @@ package sparse
 import (
 	"sort"
 
-	"github.com/gonum/matrix"
-	"github.com/gonum/matrix/mat64"
+	"gonum.org/v1/gonum/mat"
 )
 
 // COO is a COOrdinate format sparse matrix implementation (sometimes called `Tiplet` format) and implements the
 // Matrix interface from gonum/matrix.  This allows large sparse (mostly zero values) matrices to be stored
 // efficiently in memory (only storing non-zero values).  COO matrices are good for constructing sparse matrices
 // incrementally and very good at converting to CSR and CSC formats but poor for arithmetic operations.  As this
-// type implements the gonum mat64.Matrix interface, it may be used with any of the Gonum mat64 functions that
-// accept Matrix types as parameters in place of other matrix types included in the Gonum mat64 package e.g. mat64.Dense.
+// type implements the gonum mat.Matrix interface, it may be used with any of the Gonum mat functions that
+// accept Matrix types as parameters in place of other matrix types included in the Gonum mat package e.g. mat.Dense.
 type COO struct {
 	r             int
 	c             int
@@ -31,10 +30,10 @@ type COO struct {
 // and vice versa.
 func NewCOO(r int, c int, rows []int, cols []int, data []float64) *COO {
 	if uint(r) < 0 {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(c) < 0 {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	coo := &COO{r: r, c: c}
@@ -47,7 +46,7 @@ func NewCOO(r int, c int, rows []int, cols []int, data []float64) *COO {
 
 			coo.Canonicalise()
 		} else {
-			panic(matrix.ErrRowAccess)
+			panic(mat.ErrRowAccess)
 		}
 	}
 
@@ -69,10 +68,10 @@ func (c *COO) Dims() (int, int) {
 // duplicate values will be summed together.
 func (c *COO) At(i, j int) float64 {
 	if uint(i) < 0 || uint(i) >= uint(c.r) {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(j) < 0 || uint(j) >= uint(c.c) {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	result := 0.0
@@ -91,7 +90,7 @@ func (c *COO) At(i, j int) float64 {
 
 // T transposes the matrix creating a new COO matrix sharing the same backing data but switching
 // column and row sizes and index slices i.e. rows become columns and columns become rows.
-func (c *COO) T() mat64.Matrix {
+func (c *COO) T() mat.Matrix {
 	return NewCOO(c.c, c.r, c.cols, c.rows, c.data)
 }
 
@@ -100,10 +99,10 @@ func (c *COO) T() mat64.Matrix {
 // are allowed.
 func (c *COO) Set(i, j int, v float64) {
 	if uint(i) < 0 || uint(i) >= uint(c.r) {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(j) < 0 || uint(j) >= uint(c.c) {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	c.rows = append(c.rows, i)
@@ -181,14 +180,14 @@ func (c *COO) isColMajorOrdered(i, j int) bool {
 	return false
 }
 
-// ToDense returns a mat64.Dense dense format version of the matrix.  The returned mat64.Dense
+// ToDense returns a mat.Dense dense format version of the matrix.  The returned mat.Dense
 // matrix will not share underlying storage with the receiver. nor is the receiver modified by this call
-func (c *COO) ToDense() *mat64.Dense {
+func (c *COO) ToDense() *mat.Dense {
 	if !c.canonicalised {
 		c.Canonicalise()
 	}
 
-	mat := mat64.NewDense(c.r, c.c, nil)
+	mat := mat.NewDense(c.r, c.c, nil)
 	for i := 0; i < len(c.data); i++ {
 		mat.Set(c.rows[i], c.cols[i], c.data[i])
 	}
@@ -271,20 +270,20 @@ func (c *COO) ToCSC() *CSC {
 }
 
 // ToType returns an alternative format version fo the matrix in the format specified.
-func (c *COO) ToType(matType MatrixType) mat64.Matrix {
+func (c *COO) ToType(matType MatrixType) mat.Matrix {
 	return matType.Convert(c)
 }
 
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
-func (c *COO) RowView(i int) *mat64.Vector {
-	return mat64.NewVector(c.c, c.RawRowView(i))
+func (c *COO) RowView(i int) *mat.VecDense {
+	return mat.NewVecDense(c.c, c.RawRowView(i))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column i.
-func (c *COO) ColView(j int) *mat64.Vector {
-	return mat64.NewVector(c.r, c.RawColView(j))
+func (c *COO) ColView(j int) *mat.VecDense {
+	return mat.NewVecDense(c.r, c.RawColView(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy

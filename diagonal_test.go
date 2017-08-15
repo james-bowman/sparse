@@ -3,7 +3,7 @@ package sparse
 import (
 	"testing"
 
-	"github.com/gonum/matrix/mat64"
+	"gonum.org/v1/gonum/mat"
 )
 
 func TestDIARowColView(t *testing.T) {
@@ -34,14 +34,14 @@ func TestDIARowColView(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
 
-		dense := mat64.NewDense(test.r, test.c, test.data)
+		dense := mat.NewDense(test.r, test.c, test.data)
 		dia := CreateDIA(test.r, test.c, test.data).(*DIA)
 
 		for i := 0; i < test.r; i++ {
 			row := dia.RowView(i)
 			for k := 0; k < row.Len(); k++ {
 				if row.At(k, 0) != test.data[i*test.c+k] {
-					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(row), k, row.At(k, 0), i, k, mat64.Formatted(dense))
+					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(row), k, row.At(k, 0), i, k, mat.Formatted(dense))
 					t.Fail()
 				}
 			}
@@ -51,7 +51,7 @@ func TestDIARowColView(t *testing.T) {
 			col := dia.ColView(j)
 			for k := 0; k < col.Len(); k++ {
 				if col.At(k, 0) != test.data[k*test.c+j] {
-					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(col), k, col.At(k, 0), k, j, mat64.Formatted(dense))
+					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(col), k, col.At(k, 0), k, j, mat.Formatted(dense))
 					t.Fail()
 				}
 			}

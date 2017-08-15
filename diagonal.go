@@ -1,8 +1,7 @@
 package sparse
 
 import (
-	"github.com/gonum/matrix"
-	"github.com/gonum/matrix/mat64"
+	"gonum.org/v1/gonum/mat"
 )
 
 // DIA matrix type is a specialised matrix designed to store DIAgonal values of square symmetrical
@@ -20,7 +19,7 @@ type DIA struct {
 // in the matrix.
 func NewDIA(m int, diagonal []float64) *DIA {
 	if uint(m) < 0 || m != len(diagonal) {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 
 	return &DIA{m: m, data: diagonal}
@@ -35,10 +34,10 @@ func (d *DIA) Dims() (int, int) {
 // for i or j fall outside the dimensions of the matrix.
 func (d *DIA) At(i, j int) float64 {
 	if uint(i) < 0 || uint(i) >= uint(d.m) {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(j) < 0 || uint(j) >= uint(d.m) {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	if i == j {
@@ -49,7 +48,7 @@ func (d *DIA) At(i, j int) float64 {
 
 // T returns the matrix transposed.  In the case of a DIA (DIAgonal) sparse matrix this method
 // simply returns the receiver as the matrix is perfectly symmetrical and transposing has no effect.
-func (d *DIA) T() mat64.Matrix {
+func (d *DIA) T() mat.Matrix {
 	return d
 }
 
@@ -67,14 +66,14 @@ func (d *DIA) Diagonal() []float64 {
 
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
-func (d *DIA) RowView(i int) *mat64.Vector {
-	return mat64.NewVector(d.m, d.slice(i))
+func (d *DIA) RowView(i int) *mat.VecDense {
+	return mat.NewVecDense(d.m, d.slice(i))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column j.
-func (d *DIA) ColView(j int) *mat64.Vector {
-	return mat64.NewVector(d.m, d.slice(j))
+func (d *DIA) ColView(j int) *mat.VecDense {
+	return mat.NewVecDense(d.m, d.slice(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy
@@ -92,7 +91,7 @@ func (d *DIA) RawColView(j int) []float64 {
 // nativeSlice slices the DIAgonal matrix.
 func (d *DIA) slice(i int) []float64 {
 	if i >= d.m || i < 0 {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 
 	slice := make([]float64, d.m)

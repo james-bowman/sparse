@@ -3,7 +3,7 @@ package sparse
 import (
 	"fmt"
 
-	"github.com/gonum/matrix/mat64"
+	"gonum.org/v1/gonum/mat"
 )
 
 func Example() {
@@ -14,7 +14,7 @@ func Example() {
 	dokMatrix.Set(0, 0, 5)
 	dokMatrix.Set(2, 1, 7)
 
-	// Demonstrate accessing values (could use mat64.Formatted() to
+	// Demonstrate accessing values (could use mat.Formatted() to
 	// pretty print but this demonstrates element access)
 	m, n := dokMatrix.Dims()
 	for i := 0; i < m; i++ {
@@ -27,13 +27,13 @@ func Example() {
 		fmt.Printf("\n")
 	}
 
-	// Convert DOK matrix to mat64.Dense just for fun
+	// Convert DOK matrix to mat.Dense just for fun
 	// (not required for upcoming multiplication operation)
 	denseMatrix := dokMatrix.ToDense()
 
 	// Confirm the two matrices in different formats are equal
-	// Using the mat64.Equal function
-	if !mat64.Equal(dokMatrix, denseMatrix) {
+	// Using the mat.Equal function
+	if !mat.Equal(dokMatrix, denseMatrix) {
 		fmt.Println("DOK and converted Dense are not equal")
 	}
 

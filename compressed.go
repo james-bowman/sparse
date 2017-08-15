@@ -1,8 +1,7 @@
 package sparse
 
 import (
-	"github.com/gonum/matrix"
-	"github.com/gonum/matrix/mat64"
+	"gonum.org/v1/gonum/mat"
 )
 
 // compressedSparse represents the common structure for representing compressed sparse
@@ -24,10 +23,10 @@ func (c *compressedSparse) NNZ() int {
 // and columns or columns and rows respectively.
 func (c *compressedSparse) at(i, j int) float64 {
 	if uint(i) < 0 || uint(i) >= uint(c.i) {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(j) < 0 || uint(j) >= uint(c.j) {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	// todo: consider a binary search if we can assume the data is ordered within row (CSR)/column (CSC).
@@ -44,10 +43,10 @@ func (c *compressedSparse) at(i, j int) float64 {
 // matrices
 func (c *compressedSparse) set(i, j int, v float64) {
 	if uint(i) < 0 || uint(i) >= uint(c.i) {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(j) < 0 || uint(j) >= uint(c.j) {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	if v == 0 {
@@ -97,7 +96,7 @@ func (c *compressedSparse) insert(i int, j int, v float64, insertionPoint int) {
 // efficient than a foreign slice which must scan for each slice element.
 func (c *compressedSparse) nativeSlice(i int) []float64 {
 	if i >= c.i || i < 0 {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 
 	slice := make([]float64, c.j)
@@ -117,7 +116,7 @@ func (c *compressedSparse) nativeSlice(i int) []float64 {
 // can be used instead.
 func (c *compressedSparse) foreignSlice(j int) []float64 {
 	if j >= c.j || j < 0 {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	slice := make([]float64, c.i)
@@ -164,9 +163,9 @@ func (c *compressedSparse) UnmarshalBinaryFrom(r io.Reader) (int, error) {
 //
 // It should be clear that CSR is like CSC except the slices are row major order rather than column major and
 // CSC is essentially the transpose of a CSR.
-// As this type implements the gonum mat64.Matrix interface, it may be used with any of the Gonum mat64
+// As this type implements the gonum mat.Matrix interface, it may be used with any of the Gonum mat
 // functions that accept Matrix types as parameters in place of other matrix types included in the Gonum
-// mat64 package e.g. mat64.Dense.
+// mat package e.g. mat.Dense.
 type CSR struct {
 	compressedSparse
 }
@@ -179,10 +178,10 @@ type CSR struct {
 // and vice versa.
 func NewCSR(r int, c int, ia []int, ja []int, data []float64) *CSR {
 	if uint(r) < 0 {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(c) < 0 {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	return &CSR{
@@ -214,12 +213,12 @@ func (c *CSR) Set(m, n int, v float64) {
 
 // T transposes the matrix creating a new CSC matrix sharing the same backing data storage but switching
 // column and row sizes and index & index pointer slices i.e. rows become columns and columns become rows.
-func (c *CSR) T() mat64.Matrix {
+func (c *CSR) T() mat.Matrix {
 	return NewCSC(c.j, c.i, c.indptr, c.ind, c.data)
 }
 
 // Clone copies the specified matrix into the receiver
-func (c *CSR) Clone(b mat64.Matrix) {
+func (c *CSR) Clone(b mat.Matrix) {
 	c.i, c.j = b.Dims()
 
 	c.indptr = make([]int, c.i+1)
@@ -240,7 +239,7 @@ func (c *CSR) Clone(b mat64.Matrix) {
 }
 
 // Copy copies the receiver into a new CSR matrix
-func (c *CSR) Copy() mat64.Matrix {
+func (c *CSR) Copy() mat.Matrix {
 	i, j := c.i, c.j
 	indptr := make([]int, len(c.indptr))
 	ind := make([]int, len(c.ind))
@@ -253,10 +252,10 @@ func (c *CSR) Copy() mat64.Matrix {
 	return NewCSR(i, j, indptr, ind, data)
 }
 
-// ToDense returns a mat64.Dense dense format version of the matrix.  The returned mat64.Dense
+// ToDense returns a mat.Dense dense format version of the matrix.  The returned mat.Dense
 // matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
-func (c *CSR) ToDense() *mat64.Dense {
-	mat := mat64.NewDense(c.i, c.j, nil)
+func (c *CSR) ToDense() *mat.Dense {
+	mat := mat.NewDense(c.i, c.j, nil)
 
 	for i := 0; i < len(c.indptr)-1; i++ {
 		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
@@ -314,30 +313,30 @@ func (c *CSR) ToCSC() *CSC {
 }
 
 // ToType returns an alternative format version fo the matrix in the format specified.
-func (c *CSR) ToType(matType MatrixType) mat64.Matrix {
+func (c *CSR) ToType(matType MatrixType) mat.Matrix {
 	return matType.Convert(c)
 }
 
 // RowNNZ returns the Number of Non Zero values in the specified row i.  RowNNZ will panic if i is out of range.
 func (c *CSR) RowNNZ(i int) int {
 	if uint(i) < 0 || uint(i) >= uint(c.i) {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	return c.indptr[i+1] - c.indptr[i]
 }
 
 // RowView slices the Compressed Sparse Row matrix along its primary axis.
 // Returns a Vector containing a copy of elements of row i.
-func (c *CSR) RowView(i int) *mat64.Vector {
-	return mat64.NewVector(c.j, c.nativeSlice(i))
+func (c *CSR) RowView(i int) *mat.VecDense {
+	return mat.NewVecDense(c.j, c.nativeSlice(i))
 }
 
 // ColView slices the Compressed Sparse Row matrix along its secondary axis.
 // Returns a Vector containing a copy of elements of column j.  ColView
 // is much slower than RowView for CSR matrices so if multiple ColView calls
 // are required, consider first converting to a CSC matrix.
-func (c *CSR) ColView(j int) *mat64.Vector {
-	return mat64.NewVector(c.i, c.foreignSlice(j))
+func (c *CSR) ColView(j int) *mat.VecDense {
+	return mat.NewVecDense(c.i, c.foreignSlice(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy
@@ -371,9 +370,9 @@ func (c *CSR) RawColView(j int) []float64 {
 //
 // It should be clear that CSC is like CSR except the slices are column major order rather than row major and CSC
 // is essentially the transpose of a CSR.
-// As this type implements the gonum mat64.Matrix interface, it may be used with any of the Gonum mat64 functions
-// that accept Matrix types as parameters in place of other matrix types included in the Gonum mat64 package
-// e.g. mat64.Dense.
+// As this type implements the gonum mat.Matrix interface, it may be used with any of the Gonum mat functions
+// that accept Matrix types as parameters in place of other matrix types included in the Gonum mat package
+// e.g. mat.Dense.
 type CSC struct {
 	compressedSparse
 }
@@ -386,10 +385,10 @@ type CSC struct {
 // and vice versa.
 func NewCSC(r int, c int, indptr []int, ind []int, data []float64) *CSC {
 	if uint(r) < 0 {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 	if uint(c) < 0 {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	return &CSC{
@@ -421,14 +420,14 @@ func (c *CSC) Set(m, n int, v float64) {
 
 // T transposes the matrix creating a new CSR matrix sharing the same backing data storage but switching
 // column and row sizes and index & index pointer slices i.e. rows become columns and columns become rows.
-func (c *CSC) T() mat64.Matrix {
+func (c *CSC) T() mat.Matrix {
 	return NewCSR(c.i, c.j, c.indptr, c.ind, c.data)
 }
 
-// ToDense returns a mat64.Dense dense format version of the matrix.  The returned mat64.Dense
+// ToDense returns a mat.Dense dense format version of the matrix.  The returned mat.Dense
 // matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
-func (c *CSC) ToDense() *mat64.Dense {
-	mat := mat64.NewDense(c.j, c.i, nil)
+func (c *CSC) ToDense() *mat.Dense {
+	mat := mat.NewDense(c.j, c.i, nil)
 
 	for i := 0; i < len(c.indptr)-1; i++ {
 		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
@@ -486,7 +485,7 @@ func (c *CSC) ToCSC() *CSC {
 }
 
 // ToType returns an alternative format version fo the matrix in the format specified.
-func (c *CSC) ToType(matType MatrixType) mat64.Matrix {
+func (c *CSC) ToType(matType MatrixType) mat.Matrix {
 	return matType.Convert(c)
 }
 
@@ -494,14 +493,14 @@ func (c *CSC) ToType(matType MatrixType) mat64.Matrix {
 // Returns a Vector containing a copy of elements of row i.  RowView
 // is much slower than ColView for CSC matrices so if multiple RowView calls
 // are required, consider first converting to a CSR matrix.
-func (c *CSC) RowView(i int) *mat64.Vector {
-	return mat64.NewVector(c.i, c.foreignSlice(i))
+func (c *CSC) RowView(i int) *mat.VecDense {
+	return mat.NewVecDense(c.i, c.foreignSlice(i))
 }
 
 // ColView slices the Compressed Sparse Column matrix along its primary axis.
 // Returns a Vector containing a copy of elements of column i.
-func (c *CSC) ColView(j int) *mat64.Vector {
-	return mat64.NewVector(c.j, c.nativeSlice(j))
+func (c *CSC) ColView(j int) *mat.VecDense {
+	return mat.NewVecDense(c.j, c.nativeSlice(j))
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy

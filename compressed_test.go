@@ -3,7 +3,7 @@ package sparse
 import (
 	"testing"
 
-	"github.com/gonum/matrix/mat64"
+	"gonum.org/v1/gonum/mat"
 )
 
 func TestCSRCSCTranspose(t *testing.T) {
@@ -33,7 +33,7 @@ func TestCSRCSCTranspose(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
 
-		expected := mat64.NewDense(test.er, test.ec, test.result)
+		expected := mat.NewDense(test.er, test.ec, test.result)
 
 		csr := CreateCSR(test.r, test.c, test.data).(*CSR)
 		csc := CreateCSC(test.r, test.c, test.data).(*CSC)
@@ -41,14 +41,14 @@ func TestCSRCSCTranspose(t *testing.T) {
 		t.Logf("CSR: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csr.i, csr.j, csr.ind, csr.indptr, csr.data)
 		t.Logf("CSC: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csc.i, csc.j, csc.ind, csc.indptr, csc.data)
 
-		if !mat64.Equal(expected, csr.T()) {
-			t.Logf("CSR is:\n%v\n", mat64.Formatted(csr))
-			t.Logf("For CSR^T, Expected:\n%v\n but received:\n%v\n", mat64.Formatted(expected), mat64.Formatted(csr.T()))
+		if !mat.Equal(expected, csr.T()) {
+			t.Logf("CSR is:\n%v\n", mat.Formatted(csr))
+			t.Logf("For CSR^T, Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csr.T()))
 			t.Fail()
 		}
-		if !mat64.Equal(expected, csc.T()) {
-			t.Logf("CSC is:\n%v\n", mat64.Formatted(csc))
-			t.Logf("For CSC^T, Expected:\n%v\n but received:\n%v\n", mat64.Formatted(expected), mat64.Formatted(csc.T()))
+		if !mat.Equal(expected, csc.T()) {
+			t.Logf("CSC is:\n%v\n", mat.Formatted(csc))
+			t.Logf("For CSC^T, Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csc.T()))
 			t.Fail()
 		}
 	}
@@ -102,7 +102,7 @@ func TestCSRCSCConversion(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d. %s\n", ti+1, test.desc)
 
-		d := mat64.NewDense(r, c, data)
+		d := mat.NewDense(r, c, data)
 
 		a := test.create(r, c, data)
 		sa, ok := a.(Sparser)
@@ -111,10 +111,10 @@ func TestCSRCSCConversion(t *testing.T) {
 		}
 		b := test.convert(sa.(TypeConverter))
 
-		if !mat64.Equal(d, b) {
+		if !mat.Equal(d, b) {
 			t.Logf("d : %v\n", a)
 			t.Logf("B : %v\n", b)
-			t.Logf("Expected:\n%v\n but received:\n%v\n", mat64.Formatted(d), mat64.Formatted(b))
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(d), mat.Formatted(b))
 			t.Fail()
 		}
 	}
@@ -238,7 +238,7 @@ func TestCSRCSCSet(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
 
-		expected := mat64.NewDense(test.r, test.c, test.result)
+		expected := mat.NewDense(test.r, test.c, test.result)
 
 		csr := CreateCSR(test.r, test.c, test.data).(*CSR)
 		csc := CreateCSC(test.r, test.c, test.data).(*CSC)
@@ -252,12 +252,12 @@ func TestCSRCSCSet(t *testing.T) {
 		t.Logf("CSR: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csr.i, csr.j, csr.ind, csr.indptr, csr.data)
 		t.Logf("CSC: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csc.i, csc.j, csc.ind, csc.indptr, csc.data)
 
-		if !mat64.Equal(expected, csr) {
-			t.Logf("For CSR.Set(), Expected:\n%v\n but received:\n%v\n", mat64.Formatted(expected), mat64.Formatted(csr))
+		if !mat.Equal(expected, csr) {
+			t.Logf("For CSR.Set(), Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csr))
 			t.Fail()
 		}
-		if !mat64.Equal(expected, csc) {
-			t.Logf("For CSC.Set(), Expected:\n%v\n but received:\n%v\n", mat64.Formatted(expected), mat64.Formatted(csc))
+		if !mat.Equal(expected, csc) {
+			t.Logf("For CSC.Set(), Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csc))
 			t.Fail()
 		}
 	}
@@ -289,7 +289,7 @@ func TestCSRCSCRowColView(t *testing.T) {
 	for ti, test := range tests {
 		t.Logf("**** Test Run %d.\n", ti+1)
 
-		dense := mat64.NewDense(test.r, test.c, test.data)
+		dense := mat.NewDense(test.r, test.c, test.data)
 		csr := CreateCSR(test.r, test.c, test.data).(*CSR)
 		csc := CreateCSC(test.r, test.c, test.data).(*CSC)
 
@@ -298,11 +298,11 @@ func TestCSRCSCRowColView(t *testing.T) {
 			row1 := csc.RowView(i)
 			for k := 0; k < row.Len(); k++ {
 				if row.At(k, 0) != test.data[i*test.c+k] {
-					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(row), k, row.At(k, 0), i, k, mat64.Formatted(dense))
+					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(row), k, row.At(k, 0), i, k, mat.Formatted(dense))
 					t.Fail()
 				}
 				if row1.At(k, 0) != test.data[i*test.c+k] {
-					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(row1), k, row1.At(k, 0), i, k, mat64.Formatted(dense))
+					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(row1), k, row1.At(k, 0), i, k, mat.Formatted(dense))
 					t.Fail()
 				}
 			}
@@ -313,11 +313,11 @@ func TestCSRCSCRowColView(t *testing.T) {
 			col1 := csc.ColView(j)
 			for k := 0; k < col.Len(); k++ {
 				if col.At(k, 0) != test.data[k*test.c+j] {
-					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(col), k, col.At(k, 0), k, j, mat64.Formatted(dense))
+					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(col), k, col.At(k, 0), k, j, mat.Formatted(dense))
 					t.Fail()
 				}
 				if col1.At(k, 0) != test.data[k*test.c+j] {
-					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat64.Formatted(col1), k, col1.At(k, 0), k, j, mat64.Formatted(dense))
+					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(col1), k, col1.At(k, 0), k, j, mat.Formatted(dense))
 					t.Fail()
 				}
 			}

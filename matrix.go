@@ -3,14 +3,13 @@ package sparse
 import (
 	"math/rand"
 
-	"github.com/gonum/matrix"
-	"github.com/gonum/matrix/mat64"
+	"gonum.org/v1/gonum/mat"
 )
 
-// Sparser is the interface for Sparse matrices.  Sparser contains the mat64.Matrix interface so automatically
-// exposes all mat64.Matrix methods.
+// Sparser is the interface for Sparse matrices.  Sparser contains the mat.Matrix interface so automatically
+// exposes all mat.Matrix methods.
 type Sparser interface {
-	mat64.Matrix
+	mat.Matrix
 
 	// NNZ returns the Number of Non Zero elements in the sparse matrix.
 	NNZ() int
@@ -18,8 +17,8 @@ type Sparser interface {
 
 // TypeConverter interface for converting to other matrix formats
 type TypeConverter interface {
-	// ToDense returns a mat64.Dense dense format version of the matrix.
-	ToDense() *mat64.Dense
+	// ToDense returns a mat.Dense dense format version of the matrix.
+	ToDense() *mat.Dense
 
 	// ToDOK returns a Dictionary Of Keys (DOK) sparse format version of the matrix.
 	ToDOK() *DOK
@@ -34,20 +33,20 @@ type TypeConverter interface {
 	ToCSC() *CSC
 
 	// ToType returns an alternative format version fo the matrix in the format specified.
-	ToType(matType MatrixType) mat64.Matrix
+	ToType(matType MatrixType) mat.Matrix
 }
 
 // MatrixType represents a type of Matrix format.  This is used to specify target format types for conversion, etc.
 type MatrixType interface {
 	// Convert converts to the type of matrix format represented by the receiver from the specified TypeConverter.
-	Convert(from TypeConverter) mat64.Matrix
+	Convert(from TypeConverter) mat.Matrix
 }
 
-// DenseType represents the mat64.Dense matrix type format
+// DenseType represents the mat.Dense matrix type format
 type DenseType int
 
-// Convert converts the specified TypeConverter to mat64.Dense format
-func (d DenseType) Convert(from TypeConverter) mat64.Matrix {
+// Convert converts the specified TypeConverter to mat.Dense format
+func (d DenseType) Convert(from TypeConverter) mat.Matrix {
 	return from.ToDense()
 }
 
@@ -55,7 +54,7 @@ func (d DenseType) Convert(from TypeConverter) mat64.Matrix {
 type DOKType int
 
 // Convert converts the specified TypeConverter to DOK (Dictionary of Keys) format
-func (s DOKType) Convert(from TypeConverter) mat64.Matrix {
+func (s DOKType) Convert(from TypeConverter) mat.Matrix {
 	return from.ToDOK()
 }
 
@@ -63,7 +62,7 @@ func (s DOKType) Convert(from TypeConverter) mat64.Matrix {
 type COOType int
 
 // Convert converts the specified TypeConverter to COOrdinate format
-func (s COOType) Convert(from TypeConverter) mat64.Matrix {
+func (s COOType) Convert(from TypeConverter) mat.Matrix {
 	return from.ToCOO()
 }
 
@@ -71,7 +70,7 @@ func (s COOType) Convert(from TypeConverter) mat64.Matrix {
 type CSRType int
 
 // Convert converts the specified TypeConverter to CSR (Compressed Sparse Row) format
-func (s CSRType) Convert(from TypeConverter) mat64.Matrix {
+func (s CSRType) Convert(from TypeConverter) mat.Matrix {
 	return from.ToCSR()
 }
 
@@ -79,7 +78,7 @@ func (s CSRType) Convert(from TypeConverter) mat64.Matrix {
 type CSCType int
 
 // Convert converts the specified TypeConverter to CSC (Compressed Sparse Column) format
-func (s CSCType) Convert(from TypeConverter) mat64.Matrix {
+func (s CSCType) Convert(from TypeConverter) mat.Matrix {
 	return from.ToCSC()
 }
 
@@ -106,7 +105,7 @@ const (
 // of non zero values.  Density is a value between 0 and 1 (0 >= density >= 1) where a density
 // of 1 will construct a matrix entirely composed of non zero values and a density of 0 will
 // have only zero values.
-func Random(t MatrixType, r int, c int, density float32) mat64.Matrix {
+func Random(t MatrixType, r int, c int, density float32) mat.Matrix {
 	d := int(density * float32(r) * float32(c))
 
 	m := make([]int, d)
@@ -124,11 +123,11 @@ func Random(t MatrixType, r int, c int, density float32) mat64.Matrix {
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy
 // of the data within the matrix and does not share underlying storage.
-func rawRowView(m mat64.Matrix, i int) []float64 {
+func rawRowView(m mat.Matrix, i int) []float64 {
 	r, c := m.Dims()
 
 	if i >= r || i < 0 {
-		panic(matrix.ErrRowAccess)
+		panic(mat.ErrRowAccess)
 	}
 
 	slice := make([]float64, c)
@@ -142,11 +141,11 @@ func rawRowView(m mat64.Matrix, i int) []float64 {
 
 // RawColView returns a slice representing col i of the matrix.  This is a copy
 // of the data within the matrix and does not share underlying storage.
-func rawColView(m mat64.Matrix, j int) []float64 {
+func rawColView(m mat.Matrix, j int) []float64 {
 	r, c := m.Dims()
 
 	if j >= c || j < 0 {
-		panic(matrix.ErrColAccess)
+		panic(mat.ErrColAccess)
 	}
 
 	slice := make([]float64, r)

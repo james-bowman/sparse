@@ -3,75 +3,75 @@ package sparse
 import (
 	"testing"
 
-	"github.com/gonum/matrix/mat64"
+	"gonum.org/v1/gonum/mat"
 )
 
 type MatMultiplyer interface {
-	Mul(a, b mat64.Matrix)
+	Mul(a, b mat.Matrix)
 }
 
-func benchmarkMatrixMultiplication(target MatMultiplyer, lhs mat64.Matrix, rhs mat64.Matrix, b *testing.B) {
+func benchmarkMatrixMultiplication(target MatMultiplyer, lhs mat.Matrix, rhs mat.Matrix, b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		target.Mul(lhs, rhs)
 	}
 }
 
 func BenchmarkMulSmallDenseDenseDense(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DenseFormat, 5, 6, 0.4)
 	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDOKDense(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DOKFormat, 5, 6, 0.4)
 	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDOKDOK(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DOKFormat, 5, 6, 0.4)
 	rhs := Random(DOKFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDenseDOK(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DenseFormat, 5, 6, 0.4)
 	rhs := Random(DOKFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseCSRDense(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(CSRFormat, 5, 6, 0.4)
 	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDenseCSR(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(CSRFormat, 5, 6, 0.4)
 	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseCSRCSR(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(CSRFormat, 5, 6, 0.4)
 	rhs := Random(CSRFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseCOODense(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(COOFormat, 5, 6, 0.4)
 	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseDenseCOO(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(COOFormat, 5, 6, 0.4)
 	rhs := Random(DenseFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulSmallDenseCOOCOO(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(COOFormat, 5, 6, 0.4)
 	rhs := Random(COOFormat, 6, 5, 0.4)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
@@ -121,49 +121,49 @@ func BenchmarkMulSmallCSRCSRCSR(b *testing.B) {
 }
 
 func BenchmarkMulLargeDenseDenseDense(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DenseFormat, 500, 600, 0.01)
 	rhs := Random(DenseFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulLargeDenseDOKDense(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DOKFormat, 500, 600, 0.01)
 	rhs := Random(DenseFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulLargeDenseDOKDOK(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DOKFormat, 500, 600, 0.01)
 	rhs := Random(DOKFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulLargeDenseDenseDOK(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DenseFormat, 500, 600, 0.01)
 	rhs := Random(DOKFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulLargeDenseCSRDense(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(CSRFormat, 500, 600, 0.01)
 	rhs := Random(DenseFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulLargeDenseDenseCSR(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DenseFormat, 500, 600, 0.01)
 	rhs := Random(CSRFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulLargeDenseCSRCSR(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(CSRFormat, 500, 600, 0.01)
 	rhs := Random(CSRFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 func BenchmarkMulLargeDenseCOODense(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(COOFormat, 500, 600, 0.01)
 	rhs := Random(DenseFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
@@ -171,14 +171,14 @@ func BenchmarkMulLargeDenseCOODense(b *testing.B) {
 
 /*
 func BenchmarkMulLargeDenseDenseCOO(b *testing.B) {
-	t := mat64.NewDense(0, 0, nil)
+	t := mat.NewDense(0, 0, nil)
 	lhs := Random(DenseFormat, 500, 600, 0.01)
 	rhs := Random(COOFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 */
 //func BenchmarkMulLargeDenseCOOCOO(b *testing.B) {
-//	t := mat64.NewDense(0, 0, nil)
+//	t := mat.NewDense(0, 0, nil)
 //	lhs := createMatrix(CreateCOO, 500, 600, 0.4)
 //	rhs := createMatrix(CreateCOO, 600, 500, 0.4)
 //	benchmarkMatrixMultiplication(t, lhs, rhs, b)
@@ -278,7 +278,7 @@ func BenchmarkAddLargeDenserCSRDenseCSR(b *testing.B) {
 	benchmarkMatrixAddition(t, lhs, rhs, b)
 }
 
-func benchmarkMatrixAddition(target *CSR, lhs mat64.Matrix, rhs mat64.Matrix, b *testing.B) {
+func benchmarkMatrixAddition(target *CSR, lhs mat.Matrix, rhs mat.Matrix, b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		target.Add(lhs, rhs)
 	}
