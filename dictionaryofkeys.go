@@ -4,6 +4,20 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+var (
+	dok *DOK
+
+	_ Sparser       = dok
+	_ TypeConverter = dok
+
+	_ mat.Matrix = dok
+
+	_ mat.ColViewer    = dok
+	_ mat.RowViewer    = dok
+	_ mat.RawColViewer = dok
+	_ mat.RawRowViewer = dok
+)
+
 // key is used to specify the row and column of elements within the matrix.
 type key struct {
 	i, j int
@@ -132,13 +146,13 @@ func (d *DOK) ToType(matType MatrixType) mat.Matrix {
 
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
-func (d *DOK) RowView(i int) *mat.VecDense {
+func (d *DOK) RowView(i int) mat.Vector {
 	return mat.NewVecDense(d.c, d.RawRowView(i))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column i.
-func (d *DOK) ColView(j int) *mat.VecDense {
+func (d *DOK) ColView(j int) mat.Vector {
 	return mat.NewVecDense(d.r, d.RawColView(j))
 }
 

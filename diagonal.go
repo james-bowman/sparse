@@ -4,6 +4,19 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+var (
+	diagonal *DIA
+
+	_ Sparser = diagonal
+
+	_ mat.Matrix = diagonal
+
+	_ mat.ColViewer    = diagonal
+	_ mat.RowViewer    = diagonal
+	_ mat.RawColViewer = diagonal
+	_ mat.RawRowViewer = diagonal
+)
+
 // DIA matrix type is a specialised matrix designed to store DIAgonal values of square symmetrical
 // matrices (all zero values except along the diagonal running top left to bottom right).  The DIA matrix
 // type is specifically designed to take advantage of the sparsity pattern of square symmetrical matrices.
@@ -66,13 +79,13 @@ func (d *DIA) Diagonal() []float64 {
 
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
-func (d *DIA) RowView(i int) *mat.VecDense {
+func (d *DIA) RowView(i int) mat.Vector {
 	return mat.NewVecDense(d.m, d.slice(i))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column j.
-func (d *DIA) ColView(j int) *mat.VecDense {
+func (d *DIA) ColView(j int) mat.Vector {
 	return mat.NewVecDense(d.m, d.slice(j))
 }
 

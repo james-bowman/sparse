@@ -4,6 +4,32 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+var (
+	csr *CSR
+
+	_ Sparser       = csr
+	_ TypeConverter = csr
+
+	_ mat.Matrix = csr
+
+	_ mat.ColViewer    = csr
+	_ mat.RowViewer    = csr
+	_ mat.RawColViewer = csr
+	_ mat.RawRowViewer = csr
+
+	csc *CSC
+
+	_ Sparser       = csc
+	_ TypeConverter = csc
+
+	_ mat.Matrix = csc
+
+	_ mat.ColViewer    = csc
+	_ mat.RowViewer    = csc
+	_ mat.RawColViewer = csc
+	_ mat.RawRowViewer = csc
+)
+
 // compressedSparse represents the common structure for representing compressed sparse
 // matrix formats e.g. CSR (Compressed Sparse Row) or CSC (Compressed Sparse Column)
 type compressedSparse struct {
@@ -327,7 +353,7 @@ func (c *CSR) RowNNZ(i int) int {
 
 // RowView slices the Compressed Sparse Row matrix along its primary axis.
 // Returns a Vector containing a copy of elements of row i.
-func (c *CSR) RowView(i int) *mat.VecDense {
+func (c *CSR) RowView(i int) mat.Vector {
 	return mat.NewVecDense(c.j, c.nativeSlice(i))
 }
 
@@ -335,7 +361,7 @@ func (c *CSR) RowView(i int) *mat.VecDense {
 // Returns a Vector containing a copy of elements of column j.  ColView
 // is much slower than RowView for CSR matrices so if multiple ColView calls
 // are required, consider first converting to a CSC matrix.
-func (c *CSR) ColView(j int) *mat.VecDense {
+func (c *CSR) ColView(j int) mat.Vector {
 	return mat.NewVecDense(c.i, c.foreignSlice(j))
 }
 
@@ -493,13 +519,13 @@ func (c *CSC) ToType(matType MatrixType) mat.Matrix {
 // Returns a Vector containing a copy of elements of row i.  RowView
 // is much slower than ColView for CSC matrices so if multiple RowView calls
 // are required, consider first converting to a CSR matrix.
-func (c *CSC) RowView(i int) *mat.VecDense {
+func (c *CSC) RowView(i int) mat.Vector {
 	return mat.NewVecDense(c.i, c.foreignSlice(i))
 }
 
 // ColView slices the Compressed Sparse Column matrix along its primary axis.
 // Returns a Vector containing a copy of elements of column i.
-func (c *CSC) ColView(j int) *mat.VecDense {
+func (c *CSC) ColView(j int) mat.Vector {
 	return mat.NewVecDense(c.j, c.nativeSlice(j))
 }
 

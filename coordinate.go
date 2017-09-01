@@ -6,6 +6,20 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+var (
+	coo *COO
+
+	_ Sparser       = coo
+	_ TypeConverter = coo
+
+	_ mat.Matrix = coo
+
+	_ mat.ColViewer    = coo
+	_ mat.RowViewer    = coo
+	_ mat.RawColViewer = coo
+	_ mat.RawRowViewer = coo
+)
+
 // COO is a COOrdinate format sparse matrix implementation (sometimes called `Tiplet` format) and implements the
 // Matrix interface from gonum/matrix.  This allows large sparse (mostly zero values) matrices to be stored
 // efficiently in memory (only storing non-zero values).  COO matrices are good for constructing sparse matrices
@@ -276,13 +290,13 @@ func (c *COO) ToType(matType MatrixType) mat.Matrix {
 
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
-func (c *COO) RowView(i int) *mat.VecDense {
+func (c *COO) RowView(i int) mat.Vector {
 	return mat.NewVecDense(c.c, c.RawRowView(i))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column i.
-func (c *COO) ColView(j int) *mat.VecDense {
+func (c *COO) ColView(j int) mat.Vector {
 	return mat.NewVecDense(c.r, c.RawColView(j))
 }
 
