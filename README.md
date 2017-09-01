@@ -28,8 +28,8 @@ A common practice is to construct sparse matrices using a creational format e.g.
 * CSR (Compressed Sparse Row) format
 * CSC (Compressed Sparse Column) format
 * DIA (DIAgonal) format
-* CSR dot product (matrix multiplication) of 2 matrices (with optimisations for operands of type DIA (as LHS or RHS operand), CSR (LHS operand only) and CSC (RHS operand only when LHS operand is CSR) but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum/mat)).
-* CSR addition of 2 matrices (with optimisations for operands of type CSR but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum/mat)).
+* CSR dot product (matrix multiplication) of 2 matrices (with optimisations for operands of type DIA (as LHS or RHS operand), CSR (LHS operand only) and CSC (RHS operand only when LHS operand is CSR) but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
+* CSR addition of 2 matrices (with optimisations for operands of type CSR but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
 * Row and column slicing of CSR and CSC types.
 
 ## Planned
