@@ -88,6 +88,26 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	c.indptr[c.i] = t
 }
 
+// MatVec computes the matrix vector product between lhs and rhs and stores
+// the result in out
+func MatVec(lhs *CSR, rhs []float64, out []float64) {
+	m, n := lhs.Dims()
+	if len(rhs) != n {
+		panic(mat.ErrShape)
+	}
+	if len(out) != m {
+		panic(mat.ErrShape)
+	}
+
+	for row := 0; row < m; row++ {
+		val := 0.0
+		for colind := lhs.indptr[row]; colind < lhs.indptr[row+1]; colind++ {
+			val += lhs.data[colind] * rhs[lhs.ind[colind]]
+		}
+		out[row] = val
+	}
+}
+
 // mulCSRCSC handles special case of matrix multiplication (dot product) where the LHS matrix
 // (A) is CSR format and the RHS matrix (B) is CSC format.
 func (c *CSR) mulCSRCSC(lhs *CSR, rhs *CSC) {
