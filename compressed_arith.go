@@ -88,9 +88,9 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	c.indptr[c.i] = t
 }
 
-// MatVec computes the matrix vector product between lhs and rhs and stores
+// MulMatRawVec computes the matrix vector product between lhs and rhs and stores
 // the result in out
-func MatVec(lhs *CSR, rhs []float64, out []float64) {
+func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
 	m, n := lhs.Dims()
 	if len(rhs) != n {
 		panic(mat.ErrShape)

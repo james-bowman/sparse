@@ -398,7 +398,7 @@ func TestCSRMatVec(t *testing.T) {
 		t.Logf("**** Test Run %d.\n", ti+1)
 		lhs := NewCSR(test.am, test.an, test.aindptr, test.aind, test.adata)
 		have := make([]float64, test.am)
-		MatVec(lhs, test.rhs, have)
+		MulMatRawVec(lhs, test.rhs, have)
 
 		for row := 0; row < test.am; row++ {
 			// NOTE: can only use precision 1e-11 b/c of printing output in numpy
