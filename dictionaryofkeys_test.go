@@ -203,14 +203,16 @@ func CreateCSC(m, n int, data []float64) mat.Matrix {
 }
 
 func CreateDIA(m, n int, data []float64) mat.Matrix {
-	if m != n {
-		panic((mat.ErrRowAccess))
+	min := n
+	if m <= n {
+		min = m
 	}
-	c := make([]float64, m)
-	for i := 0; i < m; i++ {
+
+	c := make([]float64, min)
+	for i := 0; i < min; i++ {
 		c[i] = data[i*n+i]
 	}
-	return NewDIA(m, c)
+	return NewDIA(m, n, c)
 }
 
 func CreateDense(m, n int, data []float64) mat.Matrix {
