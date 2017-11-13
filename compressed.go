@@ -11,6 +11,7 @@ var (
 	_ TypeConverter = csr
 
 	_ mat.Matrix = csr
+	_ mat.Mutable = csr
 
 	_ mat.ColViewer    = csr
 	_ mat.RowViewer    = csr
@@ -23,6 +24,7 @@ var (
 	_ TypeConverter = csc
 
 	_ mat.Matrix = csc
+	_ mat.Mutable = csc
 
 	_ mat.ColViewer    = csc
 	_ mat.RowViewer    = csc

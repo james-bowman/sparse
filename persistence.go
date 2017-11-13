@@ -2,6 +2,7 @@ package sparse
 
 import (
 	"encoding/binary"
+	"encoding"
 	"errors"
 	"io"
 	"math"
@@ -16,10 +17,8 @@ var (
 	sizeInt64   = binary.Size(int64(0))
 	sizeFloat64 = binary.Size(float64(0))
 
-	errTooBig    = errors.New("mat: resulting data slice too big")
-	errTooSmall  = errors.New("mat: input slice too small")
-	errBadBuffer = errors.New("mat: data buffer size mismatch")
-	errBadSize   = errors.New("mat: invalid dimension")
+	_ encoding.BinaryMarshaler   = (*DIA)(nil)
+	_ encoding.BinaryUnmarshaler = (*DIA)(nil)
 )
 
 // MarshalBinary binary serialises the receiver into a []byte and returns the result.
@@ -27,7 +26,8 @@ var (
 // DIA is little-endian encoded as follows:
 //   0 -  7  number of rows    (int64)
 //   8 - 15  number of columns (int64)
-//  16 - ..  diagonal matrix data elements (float64)
+// 	16 - 23  number of non zero elements (along the diagonal) (int64)
+//  24 - ..  diagonal matrix data elements (float64)
 func (m DIA) MarshalBinary() ([]byte, error) {
 	bufLen := 3*int64(sizeInt64) + int64(len(m.data))*int64(sizeFloat64)
 	if bufLen <= 0 {
@@ -95,15 +95,14 @@ func (m DIA) MarshalBinaryTo(w io.Writer) (int, error) {
 // See MarshalBinary for the on-disk layout.
 //
 // Limited checks on the validity of the binary input are performed:
-//  - matrix.ErrShape is returned if the number of rows or columns is negative,
-//  - an error is returned if the resulting Dense matrix is too
+//  - an error is returned if the resulting DIA matrix is too
 //  big for the current architecture (e.g. a 16GB matrix written by a
 //  64b application and read back from a 32b application.)
 // UnmarshalBinary does not limit the size of the unmarshaled matrix, and so
 // it should not be used on untrusted data.
 func (m *DIA) UnmarshalBinary(data []byte) error {
-	if len(data) < 2*sizeInt64 {
-		return errTooSmall
+	if len(data) < 3*sizeInt64 {
+		return errors.New("sparse: data is missing required attributes")
 	}
 
 	p := 0
@@ -136,15 +135,13 @@ func (m *DIA) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// UnmarshalBinaryFrom decodes the binary form into the receiver and returns
+// UnmarshalBinaryFrom binary deserialises the []byte into the receiver and returns
 // the number of bytes read and an error if any.
-// It panics if the receiver is a non-zero Dense matrix.
 //
 // See MarshalBinary for the on-disk layout.
 //
 // Limited checks on the validity of the binary input are performed:
-//  - matrix.ErrShape is returned if the number of rows or columns is negative,
-//  - an error is returned if the resulting Dense matrix is too
+//  - an error is returned if the resulting DIA matrix is too
 //  big for the current architecture (e.g. a 16GB matrix written by a
 //  64b application and read back from a 32b application.)
 // UnmarshalBinary does not limit the size of the unmarshaled matrix, and so
@@ -197,7 +194,7 @@ func (m *DIA) UnmarshalBinaryFrom(r io.Reader) (int, error) {
 	return n, nil
 }
 
-// readFull reads from r into buf until it has read len(buf).
+// readUntilFull reads from r into buf until it has read len(buf).
 // It returns the number of bytes copied and an error if fewer bytes were read.
 // If an EOF happens after reading fewer than len(buf) bytes, io.ErrUnexpectedEOF is returned.
 func readUntilFull(r io.Reader, buf []byte) (int, error) {

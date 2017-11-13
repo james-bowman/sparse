@@ -5,16 +5,14 @@ import (
 )
 
 var (
-	diagonal *DIA
+	_ Sparser = (*DIA)(nil)
 
-	_ Sparser = diagonal
+	_ mat.Matrix = (*DIA)(nil)
 
-	_ mat.Matrix = diagonal
-
-	_ mat.ColViewer    = diagonal
-	_ mat.RowViewer    = diagonal
-	_ mat.RawColViewer = diagonal
-	_ mat.RawRowViewer = diagonal
+	_ mat.ColViewer    = (*DIA)(nil)
+	_ mat.RowViewer    = (*DIA)(nil)
+	_ mat.RawColViewer = (*DIA)(nil)
+	_ mat.RawRowViewer = (*DIA)(nil)
 )
 
 // DIA matrix type is a specialised matrix designed to store DIAgonal values of square symmetrical

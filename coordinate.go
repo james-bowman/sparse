@@ -13,6 +13,7 @@ var (
 	_ TypeConverter = coo
 
 	_ mat.Matrix = coo
+	_ mat.Mutable = coo
 
 	_ mat.ColViewer    = coo
 	_ mat.RowViewer    = coo

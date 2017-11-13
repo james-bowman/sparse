@@ -11,6 +11,7 @@ var (
 	_ TypeConverter = dok
 
 	_ mat.Matrix = dok
+	_ mat.Mutable = dok
 
 	_ mat.ColViewer    = dok
 	_ mat.RowViewer    = dok
