@@ -43,7 +43,7 @@ func NewDIA(m int, n int, diagonal []float64) *DIA {
 
 // Dims returns the size of the matrix as the number of rows and columns
 func (d *DIA) Dims() (int, int) {
-	return d.m, d.m
+	return d.m, d.n
 }
 
 // At returns the element of the matrix located at row i and column j.  At will panic if specified values
