@@ -23,22 +23,23 @@ A common practice is to construct sparse matrices using a creational format e.g.
 
 ## Implemented Features
 
-* DOK (Dictionary Of Keys) format
-* COO (COOrdinate) format (sometimes referred to as 'triplet')
-* CSR (Compressed Sparse Row) format
-* CSC (Compressed Sparse Column) format
-* DIA (DIAgonal) format
-* CSR dot product (matrix multiplication) of 2 matrices (with optimisations for operands of type DIA (as LHS or RHS operand), CSR (LHS operand only) and CSC (RHS operand only when LHS operand is CSR) but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
+* Sparse Matrix Formats:
+    * DOK (Dictionary Of Keys) format
+    * COO (COOrdinate) format (sometimes referred to as 'triplet')
+    * CSR (Compressed Sparse Row) format
+    * CSC (Compressed Sparse Column) format
+    * DIA (DIAgonal) format
+* CSR dot product (matrix multiplication) of 2 matrices (with optimisations for operands of type DIA (as LHS or RHS operand), CSC (RHS operand only when LHS operand is CSR) and CSR (LHS operand only) but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
 * CSR addition of 2 matrices (with optimisations for operands of type CSR but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
-* Row and column slicing of CSR and CSC types.
+* Row and column slicing.
+* Implements standard Gonum API for iterating over non-zero elements
 
 ## Planned
 
 * Further optimisations of CSR dot product for sparse matrix type operands (only considering non-zero values as with CSR operands currently), even as RHS operand ((AB)^T = B^T A^T)
 * Consider implicitly converting sparse matrix operands to CSR/CSC for arithmetic operations
-* Implement Parallel/fast matrix multiplication algorithm for sparse matrices
+* Implement parallel/fast matrix multiplication algorithm for sparse matrices
 * Implement further arithmetic operations e.g. subtract, divide, element wise multiplication, etc.
-* Consider utilising LAPACK/BLAS/etc. to perform matrix arithmetic (as an option if available on host).
+* Consider using native libraries to perform matrix arithmetic (as an option if available on host).
 * Improve memory allocation for matrix multiplication - pre-calculating sparsity pattern for product and allocate storage in advance rather than incrementally.
-* standard API for iteration over non-zero elements for each sparse format type
-* row and column slicing of other types
+
