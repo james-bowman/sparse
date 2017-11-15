@@ -7,8 +7,6 @@ import (
 var (
 	_ Sparser = (*DIA)(nil)
 
-	_ mat.Matrix = (*DIA)(nil)
-
 	_ mat.ColViewer    = (*DIA)(nil)
 	_ mat.RowViewer    = (*DIA)(nil)
 	_ mat.RawColViewer = (*DIA)(nil)

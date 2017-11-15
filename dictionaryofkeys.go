@@ -10,7 +10,6 @@ var (
 	_ Sparser       = dok
 	_ TypeConverter = dok
 
-	_ mat.Matrix = dok
 	_ mat.Mutable = dok
 
 	_ mat.ColViewer    = dok
