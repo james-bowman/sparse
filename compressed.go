@@ -10,7 +10,6 @@ var (
 	_ Sparser       = csr
 	_ TypeConverter = csr
 
-	_ mat.Matrix = csr
 	_ mat.Mutable = csr
 
 	_ mat.ColViewer    = csr
@@ -23,7 +22,6 @@ var (
 	_ Sparser       = csc
 	_ TypeConverter = csc
 
-	_ mat.Matrix = csc
 	_ mat.Mutable = csc
 
 	_ mat.ColViewer    = csc
@@ -156,24 +154,6 @@ func (c *compressedSparse) foreignSlice(j int) []float64 {
 	return slice
 }
 
-/*
-func (c *compressedSparse) MarshalBinary() ([]byte, error) {
-
-}
-
-func (c *compressedSparse) MarshalBinaryTo(w io.Writer) (int, error) {
-
-}
-
-func (c *compressedSparse) UnmarshalBinary(data []byte) error {
-
-}
-
-func (c *compressedSparse) UnmarshalBinaryFrom(r io.Reader) (int, error) {
-
-}
-*/
-
 // CSR is a Compressed Sparse Row format sparse matrix implementation (sometimes called Compressed Row
 // Storage (CRS) format) and implements the Matrix interface from gonum/matrix.  This allows large sparse
 // (mostly zero values) matrices to be stored efficiently in memory (only storing non-zero values).
@@ -243,6 +223,17 @@ func (c *CSR) Set(m, n int, v float64) {
 // column and row sizes and index & index pointer slices i.e. rows become columns and columns become rows.
 func (c *CSR) T() mat.Matrix {
 	return NewCSC(c.j, c.i, c.indptr, c.ind, c.data)
+}
+
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
+// The function fn takes a row/column index and the element value of the receiver at 
+// (i, j).  The order of visiting to each non-zero element is row major.
+func (c *CSR) DoNonZero(fn func(i, j int, v float64)) {
+	for i := 0; i < len(c.indptr)-1; i++ {
+		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
+			fn(i, c.ind[j], c.data[j])
+		}
+	}
 }
 
 // Clone copies the specified matrix into the receiver
@@ -450,6 +441,17 @@ func (c *CSC) Set(m, n int, v float64) {
 // column and row sizes and index & index pointer slices i.e. rows become columns and columns become rows.
 func (c *CSC) T() mat.Matrix {
 	return NewCSR(c.i, c.j, c.indptr, c.ind, c.data)
+}
+
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
+// The function fn takes a row/column index and the element value of the receiver at 
+// (i, j).  The order of visiting to each non-zero element is column major.
+func (c *CSC) DoNonZero(fn func(i, j int, v float64)) {
+	for i := 0; i < len(c.indptr)-1; i++ {
+		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
+			fn(c.ind[j], i, c.data[j])
+		}
+	}
 }
 
 // ToDense returns a mat.Dense dense format version of the matrix.  The returned mat.Dense

@@ -324,3 +324,62 @@ func TestCSRCSCRowColView(t *testing.T) {
 		}
 	}
 }
+
+func TestCSRCSCDoNonZero(t *testing.T) {
+	var tests = []struct {
+		r, c int
+		data []float64
+	}{
+		{
+			r: 3, c: 3,
+			data: []float64{
+				1, 3, 6,
+				0, 2, 0,
+				1, 0, 3,
+			},
+		},
+		{
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 0, 4,
+				0, 0, 0, 0,
+				1, 0, 3, 8,
+			},
+		},
+		{
+			r: 4, c: 3,
+			data: []float64{
+				1, 0, 0,
+				0, 0, 0,
+				0, 0, 3,
+				4, 0, 8,
+			},
+		},
+	}
+	creatorFuncs := map[string]MatrixCreator{
+		"csr": CreateCSR,
+		"csc": CreateCSC,
+	}
+
+	for creatorKey, creator := range creatorFuncs {
+		for ti, test := range tests {
+			t.Logf("**** Test Run %d. using %s\n", ti+1, creatorKey)
+
+			matrix := creator(test.r, test.c, test.data).(Sparser)
+
+			var nnz int
+			matrix.DoNonZero(func(i, j int, v float64) {
+				if testv := test.data[i*test.c+j]; testv ==0 || testv != v {
+					t.Logf("Expected %f at (%d, %d) but received %f\n", v, i, j, testv)
+					t.Fail()
+				}
+				nnz++
+			})
+
+			if nnz != matrix.NNZ() {
+				t.Logf("Expected %d Non Zero elements but found %d", nnz, matrix.NNZ())
+				t.Fail()
+			}
+		}
+	}
+}

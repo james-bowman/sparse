@@ -9,7 +9,8 @@ import (
 // Sparser is the interface for Sparse matrices.  Sparser contains the mat.Matrix interface so automatically
 // exposes all mat.Matrix methods.
 type Sparser interface {
-	mat.Matrix
+	mat.Matrix	
+	mat.NonZeroDoer
 
 	// NNZ returns the Number of Non Zero elements in the sparse matrix.
 	NNZ() int

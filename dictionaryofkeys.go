@@ -69,7 +69,7 @@ func (d *DOK) At(i, j int) float64 {
 
 // T transposes the matrix.  This is an implicit transpose, wrapping the matrix in a mat.Transpose type.
 func (d *DOK) T() mat.Matrix {
-	return mat.Transpose{d}
+	return mat.Transpose{Matrix: d}
 }
 
 // Set sets the element of the matrix located at row i and column j to equal the specified value, v.  Set
@@ -83,6 +83,15 @@ func (d *DOK) Set(i, j int, v float64) {
 	}
 
 	d.elements[key{i, j}] = v
+}
+
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
+// The function fn takes a row/column index and the element value of the receiver at 
+// (i, j).  The order of visiting to each non-zero element in the receiver is random.
+func (d *DOK) DoNonZero(fn func(i, j int, v float64)) {
+	for k, v := range d.elements {
+		fn(k.i, k.j, v)
+	}
 }
 
 // NNZ returns the Number of Non Zero elements in the sparse matrix.

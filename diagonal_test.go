@@ -77,3 +77,56 @@ func TestDIARowColView(t *testing.T) {
 		}
 	}
 }
+
+func TestDIADoNonZero(t *testing.T) {
+	var tests = []struct {
+		r, c int
+		data []float64
+	}{
+		{
+			r: 3, c: 3,
+			data: []float64{
+				1, 0, 0,
+				0, 2, 0,
+				0, 0, 3,
+			},
+		},
+		{
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 0,
+			},
+		},
+		{
+			r: 4, c: 3,
+			data: []float64{
+				1, 0, 0,
+				0, 2, 0,
+				0, 0, 3,
+				0, 0, 0,
+			},
+		},
+	}
+
+	for ti, test := range tests {
+		t.Logf("**** Test Run %d.\n", ti+1)
+
+		matrix := CreateDIA(test.r, test.c, test.data).(*DIA)
+
+		var nnz int
+		matrix.DoNonZero(func(i, j int, v float64) {
+			if testv := test.data[i*test.c+j]; testv ==0 || testv != v {
+				t.Logf("Expected %f at (%d, %d) but received %f\n", v, i, j, testv)
+				t.Fail()
+			}
+			nnz++
+		})
+
+		if nnz != matrix.NNZ() {
+			t.Logf("Expected %d Non Zero elements but found %d", nnz, matrix.NNZ())
+			t.Fail()
+		}
+	}
+}

@@ -66,6 +66,15 @@ func (d *DIA) T() mat.Matrix {
 	return &DIA{m: d.n, n: d.m, data: d.data}
 }
 
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
+// The function fn takes a row/column index and the element value of the receiver at 
+// (i, j).  The order of visiting to each non-zero element is from top left to bottom right.
+func (d *DIA) DoNonZero(fn func(i, j int, v float64)) {
+	for i, v := range d.data {
+		fn(i, i, v)
+	}
+}
+
 // NNZ returns the Number of Non Zero elements in the sparse matrix.
 func (d *DIA) NNZ() int {
 	return len(d.data)

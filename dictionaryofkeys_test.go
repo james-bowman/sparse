@@ -70,16 +70,19 @@ func TestDOKConversion(t *testing.T) {
 		coo := dok.ToCOO()
 		if !(mat.Equal(expected, coo)) {
 			t.Logf("Expected:\n%v \nbut found COO matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(coo))
+			t.Fail()
 		}
 
 		csr := dok.ToCSR()
 		if !(mat.Equal(expected, csr)) {
 			t.Logf("Expected:\n%v \nbut found CSR matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(csr))
+			t.Fail()
 		}
 
 		csc := dok.ToCSC()
 		if !(mat.Equal(expected, csc)) {
 			t.Logf("Expected:\n%v \nbut found CSC matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(csc))
+			t.Fail()
 		}
 	}
 
@@ -118,6 +121,7 @@ func TestDOKTranspose(t *testing.T) {
 
 		if !mat.Equal(expected, dok.T()) {
 			t.Logf("Expected:\n %v\n but received:\n %v\n", mat.Formatted(expected), mat.Formatted(dok.T()))
+			t.Fail()
 		}
 	}
 }
@@ -169,6 +173,50 @@ func TestDOKRowColView(t *testing.T) {
 					t.Fail()
 				}
 			}
+		}
+	}
+}
+
+func TestDOKDoNonZero(t *testing.T) {
+	var tests = []struct {
+		r, c int
+		data []float64
+	}{
+		{
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 6, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 6,
+			},
+		},
+		{
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 7, 0,
+				0, 0, 0, 0,
+				6, 0, 3, 0,
+			},
+		},
+	}
+
+	for ti, test := range tests {
+		t.Logf("**** Test Run %d.\n", ti+1)
+
+		dok := CreateDOK(test.r, test.c, test.data).(*DOK)
+
+		var nnz int
+		dok.DoNonZero(func(i, j int, v float64) {
+			if testv := test.data[i*test.c+j]; testv ==0 || testv != v {
+				t.Logf("Expected %f at (%d, %d) but received %f\n", v, i, j, testv)
+				t.Fail()
+			}
+			nnz++
+		})
+
+		if nnz != dok.NNZ() {
+			t.Logf("Expected %d Non Zero elements but found %d", nnz, dok.NNZ())
+			t.Fail()
 		}
 	}
 }

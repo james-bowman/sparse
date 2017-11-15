@@ -73,6 +73,20 @@ func (c *COO) NNZ() int {
 	return len(c.data)
 }
 
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
+// The function fn takes a row/column index and the element value of the receiver at 
+// (i, j).  The order of visiting to each non-zero element is not guaranteed.
+func (c *COO) DoNonZero(fn func(i, j int, v float64)) {
+	if !c.canonicalised {
+		c.Canonicalise()
+	}
+	
+	nnz := c.NNZ()
+	for i := 0; i < nnz; i++ {
+		fn(c.rows[i], c.cols[i], c.data[i])
+	}
+}
+
 // Dims returns the size of the matrix as the number of rows and columns
 func (c *COO) Dims() (int, int) {
 	return c.r, c.c
