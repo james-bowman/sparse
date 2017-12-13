@@ -155,7 +155,13 @@ func (b *BinaryVec) Set(i int, j int, v float64) {
 func (b BinaryVec) String() string {
 	var buf bytes.Buffer
 
-	for i := len(b.data)-1; i >= 0; i-- {
+	width := b.length % int(wordSize)
+	if width == 0 {
+		width = 64
+	}
+	
+	fmt.Fprintf(&buf, fmt.Sprintf("%%0%db", width), b.data[len(b.data)-1])
+	for i := len(b.data)-2; i >= 0; i-- {
 		fmt.Fprintf(&buf, "%064b", b.data[i])
 	}
 	
@@ -171,19 +177,25 @@ func (b BinaryVec) String() string {
 func (b BinaryVec) Format(f fmt.State, c rune) {
 	var buf bytes.Buffer
 	var format string
+	var leadFormat string
 	switch c {
 		case 'x':
-			format = "%016x"		
+			format = ".%x"
+			leadFormat = "%x"		
 		case 'X':
-			format = "%016X"
+			format = ".%X"
+			leadFormat = "%X"
 		case 'b':
-			format = "%064b"
+			f.Write([]byte(b.String()))
+			return
 		case 's':
-			format = "%064b"
+			f.Write([]byte(b.String()))
+			return
 		default:
 			panic(fmt.Errorf("sparse: unsupported format verb '%c' for Binary vector", c))
 	}
-	for i := len(b.data)-1; i >= 0; i-- {
+	fmt.Fprintf(&buf, leadFormat, b.data[len(b.data)-1])
+	for i := len(b.data)-2; i >= 0; i-- {
 		fmt.Fprintf(&buf, format, b.data[i])
 	}
 	f.Write(buf.Bytes())
