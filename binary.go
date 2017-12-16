@@ -85,7 +85,20 @@ func (b *BinaryVec) At(i, j int) float64 {
 		panic(mat.ErrColAccess)
 	}
 
-	if b.data[i>>log2WordSize] & (1 << (uint(i) & (wordSize - 1))) != 0 {
+	if b.bitIsSet(i) {
+		return 1.0
+	}
+	return 0.0
+}
+
+// AtVec returns the value of the element at row i.  This method will panic if 
+// i > Len().  This method is part of the Gonum mat.Vector interface.
+func (b *BinaryVec) AtVec(i int) float64 {
+	if uint(i) < 0 || uint(i) >= uint(b.length) {
+		panic(mat.ErrRowAccess)
+	}
+
+	if b.bitIsSet(i) {
 		return 1.0
 	}
 	return 0.0
@@ -114,6 +127,24 @@ func (b *BinaryVec) Len() int {
 	return b.length
 }
 
+// BitIsSet tests whether the element (bit) at position i is set (equals 1) and 
+// returns true if so.  If the element (bit) is not set or has been unset (equal 
+// to 0) the the method will return false.  The method will panic if i is greater
+// than Len().
+func (b *BinaryVec) BitIsSet(i int) bool {
+	if uint(i) < 0 || uint(i) >= uint(b.length) {
+		panic(mat.ErrRowAccess)
+	}
+	return b.bitIsSet(i)
+}
+
+// bitIsSet tests whether the element (bit) at position i is set (equals 1) and 
+// returns true if so.  If the element (bit) is not set or has been unset (equal 
+// to 0) the the method will return false. 
+func (b *BinaryVec) bitIsSet(i int) bool {
+	return b.data[i>>log2WordSize] & (1 << (uint(i) & (wordSize - 1))) != 0
+}
+
 // SetBit sets the bit at the specified index (i) to 1.  If the bit is already set
 // there are no adverse effects.  The method will panic if index is larger
 // than Len()
@@ -121,17 +152,30 @@ func (b *BinaryVec) SetBit(i int) {
 	if uint(i) < 0 || uint(i) >= uint(b.length) {
 		panic(mat.ErrRowAccess)
 	}
+	b.setBit(i)
+}
+
+// setBit sets the bit at the specified index (i) to 1.  If the bit is already set
+// there are no adverse effects. 
+func (b *BinaryVec) setBit(i int) {
 	b.data[i>>log2WordSize] |= 1 << (uint(i) & (wordSize - 1))
 }
 
 // UnsetBit unsets the bit at the specified index (i) (sets it to 0).  If the bit 
-// is already unset or has simply never been set (default bit values are 0).
+// is already unset or has simply never been set (default bit values are 0)
 // there are no adverse effects.  The method will panic if index is larger
 // than Len()
 func (b *BinaryVec) UnsetBit(i int) {
 	if uint(i) < 0 || uint(i) >= uint(b.length) {
 		panic(mat.ErrRowAccess)
 	}
+	b.unsetBit(i)
+}
+
+// unsetBit unsets the bit at the specified index (i) (sets it to 0).  If the bit 
+// is already unset or has simply never been set (default bit values are 0)
+// there are no adverse effects.  
+func (b *BinaryVec) unsetBit(i int) {
 	b.data[i>>log2WordSize] &^= 1 << (uint(i) & (wordSize - 1))
 }
 
@@ -139,15 +183,32 @@ func (b *BinaryVec) UnsetBit(i int) {
 // or 0 otherwise. Set will panic if specified values for i or j fall outside the 
 // dimensions of the matrix.
 func (b *BinaryVec) Set(i int, j int, v float64) {
+	if uint(i) < 0 || uint(i) >= uint(b.length) {
+		panic(mat.ErrRowAccess)
+	}
 	if uint(j) != 0 {
 		panic(mat.ErrColAccess)
 	}
 
 	if v != 0 {
-		b.SetBit(i)
+		b.setBit(i)
 		return
 	}
-	b.UnsetBit(i)
+	b.unsetBit(i)
+}
+
+// SetVec sets the element of the vector located at row i to 1 if v != 0
+// or 0 otherwise. The method will panic if i is greater than Len().
+func (b *BinaryVec) SetVec(i int, v float64) {
+	if uint(i) < 0 || uint(i) >= uint(b.length) {
+		panic(mat.ErrRowAccess)
+	}
+
+	if v != 0 {
+		b.setBit(i)
+		return
+	}
+	b.unsetBit(i)
 }
 
 // String will output the vector as a string representation of its bits
