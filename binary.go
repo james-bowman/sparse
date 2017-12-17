@@ -215,7 +215,6 @@ func (b *BinaryVec) SetVec(i int, v float64) {
 // String will output the vector as a string representation of its bits
 // This method implements the fmt.Stringer interface.
 func (b BinaryVec) String() string {
-	//var buf bytes.Buffer
 	buf := bytes.NewBuffer(make([]byte, 0, b.Len()))
 
 	width := b.length % int(wordSize)
@@ -228,7 +227,6 @@ func (b BinaryVec) String() string {
 		fmt.Fprintf(buf, "%064b", b.data[i])
 	}
 	
-	//return string(buf.Bytes())
 	s := buf.Bytes()
 	return *(*string)(unsafe.Pointer(&s))
 }
