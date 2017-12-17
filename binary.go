@@ -3,6 +3,7 @@ package sparse
 import (
 	"fmt"
 	"bytes"
+	"unsafe"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -214,19 +215,22 @@ func (b *BinaryVec) SetVec(i int, v float64) {
 // String will output the vector as a string representation of its bits
 // This method implements the fmt.Stringer interface.
 func (b BinaryVec) String() string {
-	var buf bytes.Buffer
+	//var buf bytes.Buffer
+	buf := bytes.NewBuffer(make([]byte, 0, b.Len()))
 
 	width := b.length % int(wordSize)
 	if width == 0 {
 		width = 64
 	}
 	
-	fmt.Fprintf(&buf, fmt.Sprintf("%%0%db", width), b.data[len(b.data)-1])
+	fmt.Fprintf(buf, fmt.Sprintf("%%0%db", width), b.data[len(b.data)-1])
 	for i := len(b.data)-2; i >= 0; i-- {
-		fmt.Fprintf(&buf, "%064b", b.data[i])
+		fmt.Fprintf(buf, "%064b", b.data[i])
 	}
 	
-	return string(buf.Bytes())
+	//return string(buf.Bytes())
+	s := buf.Bytes()
+	return *(*string)(unsafe.Pointer(&s))
 }
 
 // Format outputs the vector to f and allows the output format
