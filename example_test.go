@@ -42,7 +42,7 @@ func Example() {
 	csrMatrix := Random(CSRFormat, 2, 3, 0.5)
 
 	// Create a new CSR (Compressed Sparse Row) matrix
-	csrProduct := &CSR{}
+	var csrProduct CSR
 
 	// Multiply the 2 matrices together and store the result in the
 	// receiver
