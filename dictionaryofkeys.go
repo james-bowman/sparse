@@ -84,8 +84,8 @@ func (d *DOK) Set(i, j int, v float64) {
 	d.elements[key{i, j}] = v
 }
 
-// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
-// The function fn takes a row/column index and the element value of the receiver at 
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver.
+// The function fn takes a row/column index and the element value of the receiver at
 // (i, j).  The order of visiting to each non-zero element in the receiver is random.
 func (d *DOK) DoNonZero(fn func(i, j int, v float64)) {
 	for k, v := range d.elements {
@@ -138,14 +138,14 @@ func (d *DOK) ToCOO() *COO {
 // version of the matrix.  The returned CSR matrix will not share underlying storage with the
 // receiver nor is the receiver modified by this call.
 func (d *DOK) ToCSR() *CSR {
-	return d.ToCOO().ToCSR()
+	return d.ToCOO().ToCSRReuseMem()
 }
 
 // ToCSC returns a CSC (Compressed Sparse Column)(AKA CCS (Compressed Column Storage)) sparse format
 // version of the matrix.  The returned CSC matrix will not share underlying storage with the
 // receiver nor is the receiver modified by this call.
 func (d *DOK) ToCSC() *CSC {
-	return d.ToCOO().ToCSC()
+	return d.ToCOO().ToCSCReuseMem()
 }
 
 // ToType returns an alternative format version fo the matrix in the format specified.

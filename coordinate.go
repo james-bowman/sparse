@@ -72,14 +72,14 @@ func (c *COO) NNZ() int {
 	return len(c.data)
 }
 
-// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
-// The function fn takes a row/column index and the element value of the receiver at 
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver.
+// The function fn takes a row/column index and the element value of the receiver at
 // (i, j).  The order of visiting to each non-zero element is not guaranteed.
 func (c *COO) DoNonZero(fn func(i, j int, v float64)) {
 	if !c.canonicalised {
 		c.Canonicalise()
 	}
-	
+
 	nnz := c.NNZ()
 	for i := 0; i < nnz; i++ {
 		fn(c.rows[i], c.cols[i], c.data[i])
@@ -270,6 +270,30 @@ func (c *COO) ToCSR() *CSR {
 	return NewCSR(c.r, c.c, ia, ja, data)
 }
 
+// ToCSRReuseMem returns a CSR (Compressed Sparse Row)(AKA CRS (Compressed Row Storage)) sparse format
+// version of the matrix.  Unlike with ToCSR(), The returned CSR matrix WILL share underlying storage with the
+// receiver and the receiver will be modified by this call.
+func (c *COO) ToCSRReuseMem() *CSR {
+	if !c.canonicalised || c.colMajor {
+		c.colMajor = false
+		c.Canonicalise()
+	}
+
+	ia := make([]int, c.r+1)
+
+	var j int
+	k := 0
+	for i := 1; i < c.r+1; i++ {
+		for j = k; j < len(c.rows) && c.rows[j] < i; j++ {
+			// empty
+		}
+		k = j
+		ia[i] = j
+	}
+
+	return NewCSR(c.r, c.c, ia, c.cols, c.data)
+}
+
 // ToCSC returns a CSC (Compressed Sparse Column)(AKA CCS (Compressed Column Storage)) sparse format
 // version of the matrix.  The returned CSC matrix will not share underlying storage with the
 // receiver nor is the receiver modified by this call.
@@ -295,6 +319,30 @@ func (c *COO) ToCSC() *CSC {
 	}
 
 	return NewCSC(c.r, c.c, ja, ia, data)
+}
+
+// ToCSCReuseMem returns a CSC (Compressed Sparse Column)(AKA CCS (Compressed Column Storage)) sparse format
+// version of the matrix.  Unlike with ToCSC(), The returned CSC matrix WILL share underlying storage with the
+// receiver and the receiver will be modified by this call.
+func (c *COO) ToCSCReuseMem() *CSC {
+	if !c.canonicalised || !c.colMajor {
+		c.colMajor = true
+		c.Canonicalise()
+	}
+
+	ja := make([]int, c.c+1)
+
+	var i int
+	k := 0
+	for j := 1; j < c.c+1; j++ {
+		for i = k; i < len(c.cols) && c.cols[i] < j; i++ {
+			// empty
+		}
+		k = i
+		ja[j] = i
+	}
+
+	return NewCSC(c.r, c.c, ja, c.rows, c.data)
 }
 
 // ToType returns an alternative format version fo the matrix in the format specified.

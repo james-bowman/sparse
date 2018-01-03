@@ -225,8 +225,8 @@ func (c *CSR) T() mat.Matrix {
 	return NewCSC(c.j, c.i, c.indptr, c.ind, c.data)
 }
 
-// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
-// The function fn takes a row/column index and the element value of the receiver at 
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver.
+// The function fn takes a row/column index and the element value of the receiver at
 // (i, j).  The order of visiting to each non-zero element is row major.
 func (c *CSR) DoNonZero(fn func(i, j int, v float64)) {
 	for i := 0; i < len(c.indptr)-1; i++ {
@@ -328,7 +328,7 @@ func (c *CSR) ToCSR() *CSR {
 // NB, the current implementation uses COO as an intermediate format so converts to COO before converting
 // to CSC.
 func (c *CSR) ToCSC() *CSC {
-	return c.ToCOO().ToCSC()
+	return c.ToCOO().ToCSCReuseMem()
 }
 
 // ToType returns an alternative format version fo the matrix in the format specified.
@@ -443,8 +443,8 @@ func (c *CSC) T() mat.Matrix {
 	return NewCSR(c.i, c.j, c.indptr, c.ind, c.data)
 }
 
-// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
-// The function fn takes a row/column index and the element value of the receiver at 
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver.
+// The function fn takes a row/column index and the element value of the receiver at
 // (i, j).  The order of visiting to each non-zero element is column major.
 func (c *CSC) DoNonZero(fn func(i, j int, v float64)) {
 	for i := 0; i < len(c.indptr)-1; i++ {
@@ -506,7 +506,7 @@ func (c *CSC) ToCOO() *COO {
 // NB, the current implementation uses COO as an intermediate format so converts to COO before converting
 // to CSR.
 func (c *CSC) ToCSR() *CSR {
-	return c.ToCOO().ToCSR()
+	return c.ToCOO().ToCSRReuseMem()
 }
 
 // ToCSC returns the receiver
