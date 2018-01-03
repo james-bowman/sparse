@@ -79,10 +79,10 @@ func (b *BinaryVec) Dims() (int, int) {
 // As this is a vector (only one column), j must be 0 otherwise the 
 // method panics.  This method is part of the Gonum mat.Matrix interface.
 func (b *BinaryVec) At(i, j int) float64 {
-	if uint(i) < 0 || uint(i) >= uint(b.length) {
+	if i < 0 || i >= b.length {
 		panic(mat.ErrRowAccess)
 	}
-	if uint(j) != 0 {
+	if j != 0 {
 		panic(mat.ErrColAccess)
 	}
 
@@ -95,7 +95,7 @@ func (b *BinaryVec) At(i, j int) float64 {
 // AtVec returns the value of the element at row i.  This method will panic if 
 // i > Len().  This method is part of the Gonum mat.Vector interface.
 func (b *BinaryVec) AtVec(i int) float64 {
-	if uint(i) < 0 || uint(i) >= uint(b.length) {
+	if i < 0 || i >= b.length {
 		panic(mat.ErrRowAccess)
 	}
 
@@ -133,7 +133,7 @@ func (b *BinaryVec) Len() int {
 // to 0) the the method will return false.  The method will panic if i is greater
 // than Len().
 func (b *BinaryVec) BitIsSet(i int) bool {
-	if uint(i) < 0 || uint(i) >= uint(b.length) {
+	if i < 0 || i >= b.length {
 		panic(mat.ErrRowAccess)
 	}
 	return b.bitIsSet(i)
@@ -150,7 +150,7 @@ func (b *BinaryVec) bitIsSet(i int) bool {
 // there are no adverse effects.  The method will panic if index is larger
 // than Len()
 func (b *BinaryVec) SetBit(i int) {
-	if uint(i) < 0 || uint(i) >= uint(b.length) {
+	if i < 0 || i >= b.length {
 		panic(mat.ErrRowAccess)
 	}
 	b.setBit(i)
@@ -167,7 +167,7 @@ func (b *BinaryVec) setBit(i int) {
 // there are no adverse effects.  The method will panic if index is larger
 // than Len()
 func (b *BinaryVec) UnsetBit(i int) {
-	if uint(i) < 0 || uint(i) >= uint(b.length) {
+	if i < 0 || i >= b.length {
 		panic(mat.ErrRowAccess)
 	}
 	b.unsetBit(i)
@@ -184,10 +184,10 @@ func (b *BinaryVec) unsetBit(i int) {
 // or 0 otherwise. Set will panic if specified values for i or j fall outside the 
 // dimensions of the matrix.
 func (b *BinaryVec) Set(i int, j int, v float64) {
-	if uint(i) < 0 || uint(i) >= uint(b.length) {
+	if i < 0 || i >= b.length {
 		panic(mat.ErrRowAccess)
 	}
-	if uint(j) != 0 {
+	if j != 0 {
 		panic(mat.ErrColAccess)
 	}
 
@@ -201,7 +201,7 @@ func (b *BinaryVec) Set(i int, j int, v float64) {
 // SetVec sets the element of the vector located at row i to 1 if v != 0
 // or 0 otherwise. The method will panic if i is greater than Len().
 func (b *BinaryVec) SetVec(i int, v float64) {
-	if uint(i) < 0 || uint(i) >= uint(b.length) {
+	if i < 0 || i >= b.length {
 		panic(mat.ErrRowAccess)
 	}
 
@@ -210,6 +210,28 @@ func (b *BinaryVec) SetVec(i int, v float64) {
 		return
 	}
 	b.unsetBit(i)
+}
+
+// SliceUint64 returns a new uint64.
+// The returned matrix starts at element from of the receiver and extends 
+// to - from rows. The final row in the resulting matrix is to-1.
+// Slice panics with ErrIndexOutOfRange if the slice is outside the capacity
+// of the receiver.
+func (b *BinaryVec) SliceToUint64(from, to int) uint64 {
+	if from < 0 || to <= from || to >= b.length || to - from > 64 {
+		panic(mat.ErrIndexOutOfRange)
+	}
+
+	var result uint64
+	var k uint64
+	for i := from; i < to; i++ {
+		if b.bitIsSet(i) {
+			result |= 1 << k
+		}
+		k++
+	}
+
+	return result
 }
 
 // String will output the vector as a string representation of its bits
@@ -315,10 +337,10 @@ func (b *Binary) Dims() (int, int) {
 // i (row) and j (col) must be within the dimensions of the matrix otherwise the 
 // method panics.  This method is part of the Gonum mat.Matrix interface.
 func (b *Binary) At(i int, j int) float64 {
-	if uint(j) < 0 || uint(j) >= uint(b.c) {
+	if j < 0 || j >= b.c {
 		panic(mat.ErrColAccess)
 	}
-	return b.cols[j].At(i, j)
+	return b.cols[j].AtVec(i)
 }
 
 // T performs an implicit transpose by returning the receiver inside a Transpose.
@@ -332,7 +354,7 @@ func (b *Binary) T() mat.Matrix {
 // to the vector will be reflected in the matrix and vice versa.
 // if j is outside the dimensions of the matrix the method will panic.
 func (b *Binary) ColView(j int) mat.Vector {
-	if uint(j) < 0 || uint(j) >= uint(b.c) {
+	if j < 0 || j >= b.c {
 		panic(mat.ErrColAccess)
 	}
 	return &b.cols[j]

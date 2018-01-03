@@ -210,3 +210,53 @@ func TestBinaryDistance(t *testing.T) {
 		}
 	}
 }
+
+func TestBinarySliceToUint64(t *testing.T) {
+	tests := []struct{
+		bits string
+		from int
+		to int
+		expectedSlice string
+	}{
+		{
+			bits: "0000000000000000000000000000000000111001101",
+			from: 0, 
+			to: 8,
+			expectedSlice: "11001101",
+		},
+		{
+			bits: "110101010000",
+			from: 3, 
+			to: 11,
+			expectedSlice: "10101010",
+		},
+		{
+			bits: "0101010100000000000000010001001101",
+			from: 10, 
+			to: 11,
+			expectedSlice: "1",
+		},
+		{
+			bits: "0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000100",
+			from: 2,
+			to: 66,
+			expectedSlice: "1000000000000000000000000000000000000000000000000000000000000001",
+		},
+	}
+
+	for ti, test := range tests {
+		vec, err := createBinVec(test.bits)
+
+		if err != nil {
+			t.Errorf("Test %d: failed because %v\n", ti, err)
+		}
+
+		val := vec.SliceToUint64(test.from, test.to)
+
+		result := fmt.Sprintf("%b", val)
+
+		if test.expectedSlice != result {
+			t.Errorf("Test %d: Expected %s but received %s\n", ti, test.expectedSlice, result)
+		}
+	}
+}
