@@ -1,9 +1,10 @@
 package sparse
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
 	"unsafe"
+
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -11,7 +12,7 @@ const (
 	// maxLen is the biggest slice/array len one can create on a 32/64b platform.
 	//bitLen = ^uint(0) >> 1
 	maxDataLen = ^uint(0)
-	
+
 	// the wordSize of a binary vector.  Bits are stored in slices of words.
 	wordSize = uint(64)
 
@@ -23,18 +24,18 @@ const (
 // for representing vectors of features with a binary state (1 or 0).
 // Although part of the sparse package, this type is not sparse itself
 // and stores all bits even 0s.  However, as it makes use of 64 bit
-// integers to store each set of 64 bits and then bitwise operators to 
-// manipulate the elements it will be more efficient in terms of both 
-// storage requirements and performance than a slice of bool values 
+// integers to store each set of 64 bits and then bitwise operators to
+// manipulate the elements it will be more efficient in terms of both
+// storage requirements and performance than a slice of bool values
 // (8 bits per element) or even a typical Dense matrix of float64
-// elements.  A compressed bitmap scheme could be used to take advantage 
+// elements.  A compressed bitmap scheme could be used to take advantage
 // of sparseness but may have an associated overhead.
 type BinaryVec struct {
 	length int
-	data []uint64
+	data   []uint64
 }
 
-// New creates a new BitSet with a hint that length bits will be required
+// NewBinaryVec creates a new BitSet with a hint that length bits will be required
 func NewBinaryVec(length int) *BinaryVec {
 	maxSize := (maxDataLen - wordSize + uint(1))
 	if uint(length) > maxSize {
@@ -44,7 +45,7 @@ func NewBinaryVec(length int) *BinaryVec {
 
 	vec := &BinaryVec{
 		length: length,
-		data: make([]uint64, elements),
+		data:   make([]uint64, elements),
 	}
 
 	return vec
@@ -53,7 +54,7 @@ func NewBinaryVec(length int) *BinaryVec {
 // DistanceFrom is the number of bits that are different between the
 // receiver and rhs i.e.
 // 	recevier 	= 1001001
-//	rhs 		= 1010101 
+//	rhs 		= 1010101
 // 	Distance	= 3
 // because there are three bits that are different between the 2
 // binary vectors.  This is sometimes referred to as the `Hamming
@@ -68,15 +69,15 @@ func (b *BinaryVec) DistanceFrom(rhs *BinaryVec) int {
 	return int(differences)
 }
 
-// Dims returns the dimensions of the matrix as the number of rows, columns.  
-// As this is a vector, the second value representing the number of columns 
+// Dims returns the dimensions of the matrix as the number of rows, columns.
+// As this is a vector, the second value representing the number of columns
 // will be 1. This method is part of the Gonum mat.Matrix interface
 func (b *BinaryVec) Dims() (int, int) {
 	return b.Len(), 1
 }
 
 // At returns the value of the element at row i and column j.
-// As this is a vector (only one column), j must be 0 otherwise the 
+// As this is a vector (only one column), j must be 0 otherwise the
 // method panics.  This method is part of the Gonum mat.Matrix interface.
 func (b *BinaryVec) At(i, j int) float64 {
 	if i < 0 || i >= b.length {
@@ -92,7 +93,7 @@ func (b *BinaryVec) At(i, j int) float64 {
 	return 0.0
 }
 
-// AtVec returns the value of the element at row i.  This method will panic if 
+// AtVec returns the value of the element at row i.  This method will panic if
 // i > Len().  This method is part of the Gonum mat.Vector interface.
 func (b *BinaryVec) AtVec(i int) float64 {
 	if i < 0 || i >= b.length {
@@ -128,8 +129,8 @@ func (b *BinaryVec) Len() int {
 	return b.length
 }
 
-// BitIsSet tests whether the element (bit) at position i is set (equals 1) and 
-// returns true if so.  If the element (bit) is not set or has been unset (equal 
+// BitIsSet tests whether the element (bit) at position i is set (equals 1) and
+// returns true if so.  If the element (bit) is not set or has been unset (equal
 // to 0) the the method will return false.  The method will panic if i is greater
 // than Len().
 func (b *BinaryVec) BitIsSet(i int) bool {
@@ -139,11 +140,11 @@ func (b *BinaryVec) BitIsSet(i int) bool {
 	return b.bitIsSet(i)
 }
 
-// bitIsSet tests whether the element (bit) at position i is set (equals 1) and 
-// returns true if so.  If the element (bit) is not set or has been unset (equal 
-// to 0) the the method will return false. 
+// bitIsSet tests whether the element (bit) at position i is set (equals 1) and
+// returns true if so.  If the element (bit) is not set or has been unset (equal
+// to 0) the the method will return false.
 func (b *BinaryVec) bitIsSet(i int) bool {
-	return b.data[i>>log2WordSize] & (1 << (uint(i) & (wordSize - 1))) != 0
+	return b.data[i>>log2WordSize]&(1<<(uint(i)&(wordSize-1))) != 0
 }
 
 // SetBit sets the bit at the specified index (i) to 1.  If the bit is already set
@@ -157,12 +158,12 @@ func (b *BinaryVec) SetBit(i int) {
 }
 
 // setBit sets the bit at the specified index (i) to 1.  If the bit is already set
-// there are no adverse effects. 
+// there are no adverse effects.
 func (b *BinaryVec) setBit(i int) {
 	b.data[i>>log2WordSize] |= 1 << (uint(i) & (wordSize - 1))
 }
 
-// UnsetBit unsets the bit at the specified index (i) (sets it to 0).  If the bit 
+// UnsetBit unsets the bit at the specified index (i) (sets it to 0).  If the bit
 // is already unset or has simply never been set (default bit values are 0)
 // there are no adverse effects.  The method will panic if index is larger
 // than Len()
@@ -173,15 +174,15 @@ func (b *BinaryVec) UnsetBit(i int) {
 	b.unsetBit(i)
 }
 
-// unsetBit unsets the bit at the specified index (i) (sets it to 0).  If the bit 
+// unsetBit unsets the bit at the specified index (i) (sets it to 0).  If the bit
 // is already unset or has simply never been set (default bit values are 0)
-// there are no adverse effects.  
+// there are no adverse effects.
 func (b *BinaryVec) unsetBit(i int) {
 	b.data[i>>log2WordSize] &^= 1 << (uint(i) & (wordSize - 1))
 }
 
 // Set sets the element of the matrix located at row i and column j to 1 if v != 0
-// or 0 otherwise. Set will panic if specified values for i or j fall outside the 
+// or 0 otherwise. Set will panic if specified values for i or j fall outside the
 // dimensions of the matrix.
 func (b *BinaryVec) Set(i int, j int, v float64) {
 	if i < 0 || i >= b.length {
@@ -212,13 +213,13 @@ func (b *BinaryVec) SetVec(i int, v float64) {
 	b.unsetBit(i)
 }
 
-// SliceUint64 returns a new uint64.
-// The returned matrix starts at element from of the receiver and extends 
+// SliceToUint64 returns a new uint64.
+// The returned matrix starts at element from of the receiver and extends
 // to - from rows. The final row in the resulting matrix is to-1.
 // Slice panics with ErrIndexOutOfRange if the slice is outside the capacity
 // of the receiver.
 func (b *BinaryVec) SliceToUint64(from, to int) uint64 {
-	if from < 0 || to <= from || to >= b.length || to - from > 64 {
+	if from < 0 || to <= from || to >= b.length || to-from > 64 {
 		panic(mat.ErrIndexOutOfRange)
 	}
 
@@ -243,12 +244,12 @@ func (b BinaryVec) String() string {
 	if width == 0 {
 		width = 64
 	}
-	
+
 	fmt.Fprintf(buf, fmt.Sprintf("%%0%db", width), b.data[len(b.data)-1])
-	for i := len(b.data)-2; i >= 0; i-- {
+	for i := len(b.data) - 2; i >= 0; i-- {
 		fmt.Fprintf(buf, "%064b", b.data[i])
 	}
-	
+
 	s := buf.Bytes()
 	return *(*string)(unsafe.Pointer(&s))
 }
@@ -264,23 +265,23 @@ func (b BinaryVec) Format(f fmt.State, c rune) {
 	var format string
 	var leadFormat string
 	switch c {
-		case 'x':
-			format = ".%x"
-			leadFormat = "%x"		
-		case 'X':
-			format = ".%X"
-			leadFormat = "%X"
-		case 'b':
-			f.Write([]byte(b.String()))
-			return
-		case 's':
-			f.Write([]byte(b.String()))
-			return
-		default:
-			panic(fmt.Errorf("sparse: unsupported format verb '%c' for Binary vector", c))
+	case 'x':
+		format = ".%x"
+		leadFormat = "%x"
+	case 'X':
+		format = ".%X"
+		leadFormat = "%X"
+	case 'b':
+		f.Write([]byte(b.String()))
+		return
+	case 's':
+		f.Write([]byte(b.String()))
+		return
+	default:
+		panic(fmt.Errorf("sparse: unsupported format verb '%c' for Binary vector", c))
 	}
 	fmt.Fprintf(&buf, leadFormat, b.data[len(b.data)-1])
-	for i := len(b.data)-2; i >= 0; i-- {
+	for i := len(b.data) - 2; i >= 0; i-- {
 		fmt.Fprintf(&buf, format, b.data[i])
 	}
 	f.Write(buf.Bytes())
@@ -302,11 +303,11 @@ func popcount(x uint64) (n uint64) {
 // Binary is a Binary Matrix or Bit Matrix type.
 // Although part of the sparse package, this type is not sparse itself
 // and stores all bits even 0s.  However, as it makes use of 64 bit
-// integers to store each set of 64 bits and then bitwise operators to 
-// manipulate the elements it will be more efficient in terms of both 
-// storage requirements and performance than a slice of bool values 
+// integers to store each set of 64 bits and then bitwise operators to
+// manipulate the elements it will be more efficient in terms of both
+// storage requirements and performance than a slice of bool values
 // (8 bits per element) or even a typical Dense matrix of float64
-// elements.  A compressed bitmap scheme could be used to take advantage 
+// elements.  A compressed bitmap scheme could be used to take advantage
 // of sparseness but may have an associated overhead.
 type Binary struct {
 	r, c int
@@ -327,14 +328,14 @@ func NewBinary(r, c int, vecs []BinaryVec) *Binary {
 	return &Binary{r: r, c: c, cols: vecs}
 }
 
-// Dims returns the dimensions of the matrix as the number of rows, columns.  
+// Dims returns the dimensions of the matrix as the number of rows, columns.
 // This method is part of the Gonum mat.Matrix interface
 func (b *Binary) Dims() (int, int) {
 	return b.r, b.c
 }
 
 // At returns the value of the element at row i and column k.
-// i (row) and j (col) must be within the dimensions of the matrix otherwise the 
+// i (row) and j (col) must be within the dimensions of the matrix otherwise the
 // method panics.  This method is part of the Gonum mat.Matrix interface.
 func (b *Binary) At(i int, j int) float64 {
 	if j < 0 || j >= b.c {
