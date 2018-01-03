@@ -207,7 +207,7 @@ func TestDOKDoNonZero(t *testing.T) {
 
 		var nnz int
 		dok.DoNonZero(func(i, j int, v float64) {
-			if testv := test.data[i*test.c+j]; testv ==0 || testv != v {
+			if testv := test.data[i*test.c+j]; testv == 0 || testv != v {
 				t.Logf("Expected %f at (%d, %d) but received %f\n", v, i, j, testv)
 				t.Fail()
 			}

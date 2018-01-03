@@ -33,7 +33,7 @@ func TestDIARowColView(t *testing.T) {
 			r: 4, c: 5,
 			data: []float64{
 				1, 0, 0, 0, 0,
-				0, 2, 0, 0,	0,
+				0, 2, 0, 0, 0,
 				0, 0, 3, 0, 0,
 				0, 0, 0, 4, 0,
 			},
@@ -117,7 +117,7 @@ func TestDIADoNonZero(t *testing.T) {
 
 		var nnz int
 		matrix.DoNonZero(func(i, j int, v float64) {
-			if testv := test.data[i*test.c+j]; testv ==0 || testv != v {
+			if testv := test.data[i*test.c+j]; testv == 0 || testv != v {
 				t.Logf("Expected %f at (%d, %d) but received %f\n", v, i, j, testv)
 				t.Fail()
 			}

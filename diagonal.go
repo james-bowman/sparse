@@ -17,7 +17,7 @@ var (
 // matrices (all zero values except along the diagonal running top left to bottom right).  The DIA matrix
 // type is specifically designed to take advantage of the sparsity pattern of square symmetrical matrices.
 type DIA struct {
-	m, n    int
+	m, n int
 	data []float64
 }
 
@@ -64,8 +64,8 @@ func (d *DIA) T() mat.Matrix {
 	return &DIA{m: d.n, n: d.m, data: d.data}
 }
 
-// DoNonZero calls the function fn for each of the non-zero elements of the receiver. 
-// The function fn takes a row/column index and the element value of the receiver at 
+// DoNonZero calls the function fn for each of the non-zero elements of the receiver.
+// The function fn takes a row/column index and the element value of the receiver at
 // (i, j).  The order of visiting to each non-zero element is from top left to bottom right.
 func (d *DIA) DoNonZero(fn func(i, j int, v float64)) {
 	for i, v := range d.data {

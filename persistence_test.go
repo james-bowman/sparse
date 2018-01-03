@@ -1,14 +1,14 @@
 package sparse
 
 import (
-	"testing"
 	"bytes"
 	"gonum.org/v1/gonum/mat"
+	"testing"
 )
 
 var diagonals = []struct {
 	want *DIA
-	raw []byte
+	raw  []byte
 }{
 	{
 		want: NewDIA(2, 2, []float64{1, 5}),

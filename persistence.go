@@ -1,8 +1,8 @@
 package sparse
 
 import (
-	"encoding/binary"
 	"encoding"
+	"encoding/binary"
 	"errors"
 	"io"
 	"math"
@@ -119,7 +119,7 @@ func (m *DIA) UnmarshalBinary(data []byte) error {
 	if r < 0 || c < 0 || r < nnz || c < nnz {
 		return errors.New("sparse: dimensions/data size mismatch")
 	}
-	if len(data) != int(nnz)*sizeFloat64 + 3*sizeInt64 {
+	if len(data) != int(nnz)*sizeFloat64+3*sizeInt64 {
 		return errors.New("sparse: data/buffer size mismatch")
 	}
 
@@ -147,7 +147,7 @@ func (m *DIA) UnmarshalBinary(data []byte) error {
 // UnmarshalBinary does not limit the size of the unmarshaled matrix, and so
 // it should not be used on untrusted data.
 func (m *DIA) UnmarshalBinaryFrom(r io.Reader) (int, error) {
-	var n   int
+	var n int
 	var buf [8]byte
 
 	nn, err := readUntilFull(r, buf[:])
@@ -163,7 +163,7 @@ func (m *DIA) UnmarshalBinaryFrom(r io.Reader) (int, error) {
 		return n, err
 	}
 	col := int64(binary.LittleEndian.Uint64(buf[:]))
-	
+
 	nn, err = readUntilFull(r, buf[:])
 	n += nn
 	if err != nil {
@@ -181,7 +181,7 @@ func (m *DIA) UnmarshalBinaryFrom(r io.Reader) (int, error) {
 	m.m = int(row)
 	m.n = int(col)
 	m.data = make([]float64, nnz)
-	
+
 	for i := range m.data {
 		nn, err = readUntilFull(r, buf[:])
 		n += nn
