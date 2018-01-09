@@ -17,7 +17,7 @@ Sparse matrix formats capitalise on this premise by only storing the non-zero va
 
 2. Operational - Sparse matrix formats suited to arithmetic operations e.g. multiplication.  Matrix formats in this category include CSR (Compressed Sparse Row aka CRS - Compressed Row Storage) and CSC (Compressed Sparse Column aka CCS - Compressed Column Storage)
 
-3. Specialised - Specialised matrix formats suiting specific sparsity patterns.  Matrix formats in this category include DIA (DIAgonal) for efficiently storing and manipulating symmetric diagonal matrices.
+3. Specialised - Specialised matrix formats to efficiently store and manipulate specific sparsity patterns or data types.  Matrix formats in this category include DIA (DIAgonal) for diagonal matrices (where all the non-zero elements are situated along the diagonal) and Binary (bit) vectors and matrices for binary digits (bits - 1 or 0).
 
 A common practice is to construct sparse matrices using a creational format e.g. DOK or COO and then convert them to an operational format e.g. CSR for arithmetic operations.
 
@@ -31,11 +31,11 @@ A common practice is to construct sparse matrices using a creational format e.g.
         * CSC (Compressed Sparse Column) format
         * DIA (DIAgonal) format
     * Other Formats:
-        * Binary format
+        * Binary (Bit) vectors and matrices
 * CSR dot product (matrix multiplication) of 2 matrices (with optimisations for operands of type DIA (as LHS or RHS operand), CSC (RHS operand only when LHS operand is CSR) and CSR (LHS operand only) but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
 * CSR addition of 2 matrices (with optimisations for operands of type CSR but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
 * Row and column slicing.
-* Binary Vector and Matrix types for efficient storage and processing of binary/bit vectors (where elements will be 0 or 1)
+* Binary Vector and Matrix types for efficient storage and processing of binary/bit vectors (elements are 0 or 1) requiring a single bit of memory to represent each element.
 * Implements standard Gonum API for iterating over non-zero elements
 
 ## Planned
