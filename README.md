@@ -23,15 +23,19 @@ A common practice is to construct sparse matrices using a creational format e.g.
 
 ## Implemented Features
 
-* Sparse Matrix Formats:
-    * DOK (Dictionary Of Keys) format
-    * COO (COOrdinate) format (sometimes referred to as 'triplet')
-    * CSR (Compressed Sparse Row) format
-    * CSC (Compressed Sparse Column) format
-    * DIA (DIAgonal) format
+* Implemented Formats:
+    * Sparse Matrix Formats:
+        * DOK (Dictionary Of Keys) format
+        * COO (COOrdinate) format (sometimes referred to as 'triplet')
+        * CSR (Compressed Sparse Row) format
+        * CSC (Compressed Sparse Column) format
+        * DIA (DIAgonal) format
+    * Other Formats:
+        * Binary format
 * CSR dot product (matrix multiplication) of 2 matrices (with optimisations for operands of type DIA (as LHS or RHS operand), CSC (RHS operand only when LHS operand is CSR) and CSR (LHS operand only) but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
 * CSR addition of 2 matrices (with optimisations for operands of type CSR but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
 * Row and column slicing.
+* Binary Vector and Matrix types for efficient storage and processing of binary/bit vectors (where elements will be 0 or 1)
 * Implements standard Gonum API for iterating over non-zero elements
 
 ## Planned
