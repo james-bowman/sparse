@@ -117,6 +117,13 @@ func TestCSRCSCConversion(t *testing.T) {
 			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(d), mat.Formatted(b))
 			t.Fail()
 		}
+		// check has not mutated original matrix
+		if !mat.Equal(a, b) {
+			t.Logf("A : %v\n", a)
+			t.Logf("B : %v\n", b)
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(a), mat.Formatted(b))
+			t.Fail()
+		}
 	}
 }
 
