@@ -8,6 +8,14 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+var (
+	_ mat.Matrix = (*BinaryVec)(nil)
+	_ mat.Vector = (*BinaryVec)(nil)
+
+	_ mat.Matrix    = (*Binary)(nil)
+	_ mat.ColViewer = (*Binary)(nil)
+)
+
 const (
 	// maxLen is the biggest slice/array len one can create on a 32/64b platform.
 	//bitLen = ^uint(0) >> 1
