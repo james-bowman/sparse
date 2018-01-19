@@ -9,9 +9,8 @@ import (
 )
 
 var (
-	_ Sparser     = (*VecCOO)(nil)
-	_ mat.Matrix  = (*VecCOO)(nil)
-	_ mat.Reseter = (*VecCOO)(nil)
+	_ Sparser    = (*VecCOO)(nil)
+	_ mat.Matrix = (*VecCOO)(nil)
 )
 
 // VecCOO is a sparse vector format.  It implements the mat.Vector
@@ -94,21 +93,6 @@ func (v *VecCOO) DoNonZero(fn func(i int, j int, v float64)) {
 	for i := 0; i < len(v.ind); i++ {
 		fn(v.ind[i], 0, v.data[i])
 	}
-}
-
-// Reset zeros the length of the vector so that it can be reused.
-//
-// See the Reseter interface for more information.
-func (v *VecCOO) Reset() {
-	v.len = 0
-	v.ind = v.ind[:0]
-	v.data = v.data[:0]
-}
-
-// IsZero returns whether the receiver is zero-sized. Zero-sized vectors can be the
-// receiver for size-restricted operations. VecCOO can be zeroed using Reset.
-func (v *VecCOO) IsZero() bool {
-	return v.len == 0
 }
 
 // AddVec adds the vectors a and b, placing the result in the receiver.
