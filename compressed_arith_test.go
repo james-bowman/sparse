@@ -240,75 +240,39 @@ func TestCSRMul(t *testing.T) {
 				2, 5, 0, 7,
 			},
 			btype: CreateCSC,
-			bm:    4, bn: 3,
+			bm:    4, bn: 5,
 			bdata: []float64{
-				1, 0, 6,
-				0, 2, 0,
-				7, 0, 3,
-				0, 8, 0,
+				1, 0, 6, 7, 3,
+				0, 2, 0, 2, 0,
+				7, 0, 3, 0, 1,
+				0, 8, 0, 0, 1,
 			},
-			cm: 3, cn: 3,
+			cm: 3, cn: 5,
 			cdata: []float64{
-				1, 54, 6,
-				0, 8, 0,
-				2, 66, 12,
+				1, 54, 6, 13, 9,
+				0, 8, 0, 8, 0,
+				2, 66, 12, 24, 13,
 			},
 		},
 	}
 
 	for ti, test := range tests {
-		t.Logf("**** Test Run %d.\n", ti+1)
-
 		expected := mat.NewDense(test.cm, test.cn, test.cdata)
 
 		a := test.atype(test.am, test.an, test.adata)
 		b := test.btype(test.bm, test.bn, test.bdata)
 
-		csr := NewCSR(0, 0, nil, nil, nil)
+		var csr CSR
 		csr.Mul(a, b)
 
-		if !mat.Equal(expected, csr) {
-			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csr))
+		if !mat.Equal(expected, &csr) {
+			t.Logf("Test %d:\n%v\n", ti+1, csr)
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(&csr))
 			t.Fail()
 		}
 	}
 }
 
-// Tests random generated with this python code
-//
-// import scipy.sparse as spa
-// import numpy as np
-//
-// def gen_matvec_test(m, n):
-//     lhs = spa.rand(m, n, 0.3, "csr", "float64")
-//     rhs = np.arange(1, n+1, dtype="float64")
-//     out = lhs @ rhs
-//     print(f"""
-//     {{
-//         am: {m}, an: {n},
-//         aind: []int{{
-//             {", ".join(map(str, lhs.indices))},
-//         }},
-//         aindptr: []int{{
-//             {", ".join(map(str, lhs.indptr))},
-//         }},
-//         adata: []float64{{
-//             {", ".join(map(str, lhs.data))},
-//         }},
-//         rhs: []float64{{
-//             {", ".join(map(str, rhs))},
-//         }},
-//         out: []float64{{
-//             {", ".join(map(str, out))},
-//         }},
-//     }},
-//     """)
-//
-// np.random.seed(42)
-// gen_matvec_test(5, 5)
-// gen_matvec_test(5, 4)
-// gen_matvec_test(5, 3)
-// gen_matvec_test(5, 2)
 func TestCSRMatVec(t *testing.T) {
 	var tests = []struct {
 		am, an        int

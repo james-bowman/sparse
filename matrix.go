@@ -157,3 +157,15 @@ func rawColView(m mat.Matrix, j int) []float64 {
 
 	return slice
 }
+
+type Normer interface {
+	Norm(L float64) float64
+}
+
+func Norm(m mat.Matrix, L float64) float64 {
+	if n, isNormer := m.(Normer); isNormer {
+		return n.Norm(L)
+	}
+
+	return mat.Norm(m, L)
+}

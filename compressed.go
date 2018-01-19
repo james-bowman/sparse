@@ -1,6 +1,8 @@
 package sparse
 
 import (
+	"sort"
+
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -17,6 +19,8 @@ var (
 	_ mat.RawColViewer = csr
 	_ mat.RawRowViewer = csr
 
+	_ mat.RowNonZeroDoer = csr
+
 	csc *CSC
 
 	_ Sparser       = csc
@@ -28,6 +32,8 @@ var (
 	_ mat.RowViewer    = csc
 	_ mat.RawColViewer = csc
 	_ mat.RawRowViewer = csc
+
+	_ mat.ColNonZeroDoer = csc
 )
 
 // compressedSparse represents the common structure for representing compressed sparse
@@ -37,6 +43,35 @@ type compressedSparse struct {
 	indptr []int
 	ind    []int
 	data   []float64
+}
+
+// createWorkspace creates a temporary workspace to store the result
+// of matrix operations avoiding the issue of mutating operands mid
+// operation where they overlap with the receiver
+// e.g.
+//	result.Mul(result, a)
+// createWorkspace will attempt to reuse previously allocated memory
+// for the temporary workspace where ever possible to avoid allocating
+// memory and placing strain on GC.
+func (c *compressedSparse) createWorkspace(dim int, size int, zero bool) (indptr, ind []int, data []float64) {
+	indptr = getInts(dim, zero)
+	ind = getInts(size, zero)
+	data = getFloats(size, zero)
+	return
+}
+
+// commitWorkspace commits a temporary workspace previously created
+// with createWorkspace.  This has the effect of updaing the receiver
+// with the values from the temporary workspace and returning the
+// memory used by the workspace to the pool for other operations to
+// reuse.
+func (c *compressedSparse) commitWorkspace(indptr, ind []int, data []float64) {
+	c.indptr, indptr = indptr, c.indptr
+	c.ind, ind = ind, c.ind
+	c.data, data = data, c.data
+	putInts(indptr)
+	putInts(ind)
+	putFloats(data)
 }
 
 // NNZ returns the Number of Non Zero elements in the sparse matrix.
@@ -55,12 +90,20 @@ func (c *compressedSparse) at(i, j int) float64 {
 		panic(mat.ErrColAccess)
 	}
 
-	// todo: consider a binary search if we can assume the data is ordered within row (CSR)/column (CSC).
-	for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
-		if c.ind[k] == j {
-			return c.data[k]
-		}
+	// binary search through elements (assumes dimension is sorted)
+	// TODO, small, low density or individual sparse row/columns
+	// may be faster using linear search.  Consider selecting
+	// algorithms dynamically.
+	idx := c.indptr[i] + sort.SearchInts(c.ind[c.indptr[i]:c.indptr[i+1]], j)
+	if idx < c.indptr[i+1] && c.ind[idx] == j {
+		return c.data[idx]
 	}
+
+	// for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
+	// 	if c.ind[k] == j {
+	// 		return c.data[k]
+	// 	}
+	// }
 
 	return 0
 }
@@ -80,6 +123,7 @@ func (c *compressedSparse) set(i, j int, v float64) {
 		return
 	}
 
+	// TODO switch to binary search
 	for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
 		if c.ind[k] == j {
 			// if element(i, j) is already a non-zero value then simply update the existing
@@ -230,9 +274,16 @@ func (c *CSR) T() mat.Matrix {
 // (i, j).  The order of visiting to each non-zero element is row major.
 func (c *CSR) DoNonZero(fn func(i, j int, v float64)) {
 	for i := 0; i < len(c.indptr)-1; i++ {
-		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
-			fn(i, c.ind[j], c.data[j])
-		}
+		c.DoRowNonZero(i, fn)
+	}
+}
+
+// DoRowNonZero calls the function fn for each of the non-zero elements of row i
+// in the receiver.  The function fn takes a row/column index and the element value
+// of the receiver at (i, j).
+func (c *CSR) DoRowNonZero(i int, fn func(i, j int, v float64)) {
+	for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
+		fn(i, c.ind[j], c.data[j])
 	}
 }
 
@@ -326,7 +377,7 @@ func (c *CSR) ToCSR() *CSR {
 // ToCSC returns a Compressed Sparse Column sparse format version of the matrix.  The returned CSC matrix
 // will not share underlying storage with the receiver nor is the receiver modified by this call.
 // NB, the current implementation uses COO as an intermediate format so converts to COO before converting
-// to CSC.
+// to CSC but attempts to reuse memory in the intermediate formats.
 func (c *CSR) ToCSC() *CSC {
 	return c.ToCOO().ToCSCReuseMem()
 }
@@ -345,15 +396,15 @@ func (c *CSR) RowNNZ(i int) int {
 }
 
 // RowView slices the Compressed Sparse Row matrix along its primary axis.
-// Returns a Vector containing a copy of elements of row i.
+// Returns a VecCOO sparse Vector that shares the same storage with
+// the receiver for row i.
 func (c *CSR) RowView(i int) mat.Vector {
-	return mat.NewVecDense(c.j, c.nativeSlice(i))
+	//return mat.NewVecDense(c.j, c.nativeSlice(i))
+	return NewVecCOO(c.j, c.ind[c.indptr[i]:c.indptr[i+1]], c.data[c.indptr[i]:c.indptr[i+1]])
 }
 
 // ColView slices the Compressed Sparse Row matrix along its secondary axis.
-// Returns a Vector containing a copy of elements of column j.  ColView
-// is much slower than RowView for CSR matrices so if multiple ColView calls
-// are required, consider first converting to a CSC matrix.
+// Returns a VecDense dense Vector containing a copy of elements of column j.
 func (c *CSR) ColView(j int) mat.Vector {
 	return mat.NewVecDense(c.i, c.foreignSlice(j))
 }
@@ -448,9 +499,16 @@ func (c *CSC) T() mat.Matrix {
 // (i, j).  The order of visiting to each non-zero element is column major.
 func (c *CSC) DoNonZero(fn func(i, j int, v float64)) {
 	for i := 0; i < len(c.indptr)-1; i++ {
-		for j := c.indptr[i]; j < c.indptr[i+1]; j++ {
-			fn(c.ind[j], i, c.data[j])
-		}
+		c.DoColNonZero(i, fn)
+	}
+}
+
+// DoColNonZero calls the function fn for each of the non-zero elements of column j
+// in the receiver.  The function fn takes a row/column index and the element value
+// of the receiver at (i, j).
+func (c *CSC) DoColNonZero(j int, fn func(i, j int, v float64)) {
+	for i := c.indptr[j]; i < c.indptr[j+1]; i++ {
+		fn(c.ind[i], j, c.data[i])
 	}
 }
 
@@ -504,7 +562,7 @@ func (c *CSC) ToCOO() *COO {
 // ToCSR returns a Compressed Sparse Row sparse format version of the matrix.  The returned CSR matrix
 // will not share underlying storage with the receiver nor is the receiver modified by this call.
 // NB, the current implementation uses COO as an intermediate format so converts to COO before converting
-// to CSR.
+// to CSR but attempts to reuse memory in the intermediate formats.
 func (c *CSC) ToCSR() *CSR {
 	return c.ToCOO().ToCSRReuseMem()
 }
@@ -520,17 +578,17 @@ func (c *CSC) ToType(matType MatrixType) mat.Matrix {
 }
 
 // RowView slices the Compressed Sparse Column matrix along its secondary axis.
-// Returns a Vector containing a copy of elements of row i.  RowView
-// is much slower than ColView for CSC matrices so if multiple RowView calls
-// are required, consider first converting to a CSR matrix.
+// Returns a VecDense dense Vector containing a copy of elements of row i.
 func (c *CSC) RowView(i int) mat.Vector {
 	return mat.NewVecDense(c.i, c.foreignSlice(i))
 }
 
 // ColView slices the Compressed Sparse Column matrix along its primary axis.
-// Returns a Vector containing a copy of elements of column i.
+// Returns a VecCOO sparse Vector that shares the same underlying storage as
+// column i of the receiver.
 func (c *CSC) ColView(j int) mat.Vector {
-	return mat.NewVecDense(c.j, c.nativeSlice(j))
+	//return mat.NewVecDense(c.j, c.nativeSlice(j))
+	return NewVecCOO(c.j, c.ind[c.indptr[j]:c.indptr[j+1]], c.data[c.indptr[j]:c.indptr[j+1]])
 }
 
 // RawRowView returns a slice representing row i of the matrix.  This is a copy
