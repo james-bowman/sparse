@@ -158,10 +158,20 @@ func rawColView(m mat.Matrix, j int) []float64 {
 	return slice
 }
 
+// Normer is an interface for calculating the Norm of a matrix.
+// This allows matrices to implement format specific Norm
+// implementations optimised for each format processing only non-zero
+// elements for different sparsity patterns across sparse matrix formats.
 type Normer interface {
 	Norm(L float64) float64
 }
 
+// Norm returns the norm of the matrix as a scalar value.  This
+// implementation is able to take advantage of sparse matrix types
+// and only process non-zero values providing the supplied matrix
+// implements the Normer interface.  If the supplied matrix does
+// not implement Normer then the function will invoke mat.Norm()
+// to process the matrix.
 func Norm(m mat.Matrix, L float64) float64 {
 	if n, isNormer := m.(Normer); isNormer {
 		return n.Norm(L)
