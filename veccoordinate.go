@@ -194,6 +194,23 @@ func (v *VecCOO) addVecSparse(a *VecCOO, alpha float64, b *VecCOO) {
 // receiver.
 func (v *VecCOO) ScaleVec(alpha float64, a mat.Vector) {
 	v.len = a.Len()
+
+	if alpha == 0 {
+		v.ind = v.ind[:0]
+		v.data = v.data[:0]
+		return
+	}
+
+	if s, isSparse := a.(*VecCOO); isSparse {
+		ind, data := v.createWorkspace(s.NNZ(), false)
+		copy(ind, s.ind)
+		for i, val := range s.data {
+			data[i] = alpha * val
+		}
+		v.commitWorkspace(ind, data)
+		return
+	}
+
 	ind, data := v.createWorkspace(0, false)
 
 	for i := 0; i < v.len; i++ {
