@@ -7,7 +7,7 @@
 <!--[![wercker status](https://app.wercker.com/status/33d6c1400cca054635f46a8f44c14c42/s/master "wercker status")](https://app.wercker.com/project/byKey/33d6c1400cca054635f46a8f44c14c42) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/james-bowman/nlp)](https://goreportcard.com/report/github.com/james-bowman/nlp) [![Sourcegraph Badge](https://sourcegraph.com/github.com/james-bowman/nlp/-/badge.svg)](https://sourcegraph.com/github.com/james-bowman/nlp?badge)-->
 
-Implementations of selected sparse matrix formats for linear algebra supporting scientific and machine learning applications.
+Implementations of selected sparse matrix formats for linear algebra supporting scientific and machine learning applications compatible with the APIs in the [Gonum](http://www.gonum.org/) library.
 
 Machine learning applications typically model entities as vectors of numerical features so that they may be compared and analysed quantitively.  Typically the majority of the elements in these vectors are zeros. In the case of text mining applications, each document within a corpus is represented as a vector and its features represent the vocabulary of unique words.  A corpus of several thousand documents might utilise a vocabulary of hundreds of thousands (or perhaps even millions) of unique words but each document will typically only contain a couple of hundred unique words.  This means the number of non-zero values in the matrix might only be around 1%.
 
@@ -25,16 +25,25 @@ A common practice is to construct sparse matrices using a creational format e.g.
 
 * Implemented Formats:
     * Sparse Matrix Formats:
-        * DOK (Dictionary Of Keys) format
-        * COO (COOrdinate) format (sometimes referred to as 'triplet')
-        * CSR (Compressed Sparse Row) format
-        * CSC (Compressed Sparse Column) format
-        * DIA (DIAgonal) format
+        * [DOK (Dictionary Of Keys)](https://en.wikipedia.org/wiki/Sparse_matrix#Dictionary_of_keys_(DOK)) format
+        * [COO (COOrdinate)](https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO)) format (sometimes referred to as 'triplet')
+        * [CSR (Compressed Sparse Row)](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format)) format
+        * [CSC (Compressed Sparse Column)](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_column_(CSC_or_CCS)) format
+        * [DIA (DIAgonal)](https://en.wikipedia.org/wiki/Sparse_matrix#Diagonal) format
         * sparse vectors
     * Other Formats:
-        * Binary (Bit) vectors and matrices
-* CSR dot product (matrix multiplication) of 2 matrices (with optimisations for operands of type DIA (as LHS or RHS operand), CSC (RHS operand only when LHS operand is CSR) and CSR (LHS operand only) but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
-* CSR addition of 2 matrices (with optimisations for operands of type CSR but supporting any implementation of [Matrix](https://github.com/gonum/gonum/blob/d7342e68fbbe64d7dbbdc0feb4ecf60500444cdc/mat/matrix.go) interface from [gonum](https://github.com/gonum/gonum)).
+        * [Binary (Bit) vectors](https://en.wikipedia.org/wiki/Bit_array) and matrices
+* CSR dot product (matrix multiplication) of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with optimisations for the following scenarios:
+    * CSR * DIA
+    * DIA * CSR
+    * DIA * mat.Matrix
+    * mat.Matrix * DIA
+    * CSR * CSC
+    * CSR * mat.Matrix
+* CSR addition of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with optimisations for the following scenarios:
+    * CSR + CSR
+    * CSR + mat.Matrix
+    * mat.Matrix + CSR
 * Row and column slicing.
 * Binary Vector and Matrix types for efficient storage and processing of binary/bit vectors (elements are 0 or 1) requiring a single bit of memory to represent each element.
 * sparse optimised implementations of scalar vector dot product and normalisation (e.g. L2 norm).
