@@ -11,6 +11,7 @@ import (
 var (
 	_ Sparser    = (*VecCOO)(nil)
 	_ mat.Matrix = (*VecCOO)(nil)
+	_ mat.Vector = (*VecCOO)(nil)
 )
 
 // VecCOO is a sparse vector format.  It implements the mat.Vector
