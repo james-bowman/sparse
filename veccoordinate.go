@@ -276,23 +276,32 @@ func (v *VecCOO) Norm(L float64) float64 {
 // are sparse VecCOO then Dot will only process non-zero elements
 // otherwise this method simply delegates to mat.Dot()
 func Dot(a, b mat.Vector) float64 {
-	if av, ok := a.(*VecCOO); ok {
-		if bv, ok := b.(*VecCOO); ok {
-			la := a.Len()
-			lb := b.Len()
-			if la != lb {
-				panic(mat.ErrShape)
-			}
-			return dotSparse(av, bv)
+	av, aok := a.(*VecCOO)
+	bv, bok := b.(*VecCOO)
+
+	if aok || bok {
+		la := a.Len()
+		lb := b.Len()
+		if la != lb {
+			panic(mat.ErrShape)
+		}
+		if aok && bok {
+			return dotSparseSparse(av, bv)
+		}
+		if aok {
+			return dotSparse(av, b)
+		}
+		if bok {
+			return dotSparse(bv, a)
 		}
 	}
 	return mat.Dot(a, b)
 }
 
-// dotSparse returns the sum of the element-wise product of a and
-// b where a and b are both sparse VecCOO vectors.  dotSparse
+// dotSparseSparse returns the sum of the element-wise product of
+// a and b where a and b are both sparse VecCOO vectors.  dotSparse
 // will only process non-zero elements in the vectors.
-func dotSparse(a, b *VecCOO) float64 {
+func dotSparseSparse(a, b *VecCOO) float64 {
 	var result float64
 	var lhs, rhs *VecCOO
 
@@ -317,6 +326,17 @@ func dotSparse(a, b *VecCOO) float64 {
 		}
 	}
 
+	return result
+}
+
+// dotSparse returns the sum of the element-wise multiplication
+// of a and b where a is sparse and b is any implementation of
+// mat.Vector.
+func dotSparse(a *VecCOO, b mat.Vector) float64 {
+	var result float64
+	for i, ind := range a.ind {
+		result += a.data[i] * b.AtVec(ind)
+	}
 	return result
 }
 
