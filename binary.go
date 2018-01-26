@@ -117,7 +117,7 @@ func (b *BinaryVec) AtVec(i int) float64 {
 // T performs an implicit transpose by returning the receiver inside a Transpose.
 // This method is part of the Gonum mat.Matrix interface
 func (b *BinaryVec) T() mat.Matrix {
-	return mat.Transpose{Matrix: b}
+	return mat.TransposeVec{Vector: b}
 }
 
 // NNZ returns the Number of Non-Zero elements (bits).  This is the number of set
