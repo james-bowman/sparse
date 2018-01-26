@@ -64,7 +64,8 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 			// bizarely transferring the row elements of the first operand into a slice as part
 			// of a separate loop (rather than accessing each element within the main loop
 			// (a.At(m, n) * b.At(m, n)) then ranging over them as part of the main loop is
-			// about twice as fast.  Possibly a result of compiler optimisation?
+			// about twice as fast.  This is related to lining the data up into CPU
+			// cache rather than accessing from RAM.
 			// This seems to have interesting implications when using formats with more expensive
 			// lookups - placing the more costly format first (and extracting its rows into a
 			// slice) appears approximately twice as fast as switching the order of the formats.
