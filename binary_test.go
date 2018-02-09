@@ -260,3 +260,38 @@ func TestBinarySliceToUint64(t *testing.T) {
 		}
 	}
 }
+
+func TestBinary(t *testing.T) {
+	tests := []struct {
+		b *Binary
+	}{
+		{
+			b: NewBinary(4, 3, []BinaryVec{
+				BinaryVec{length: 4, data: []uint64{1}},
+				BinaryVec{length: 4, data: []uint64{15}},
+				BinaryVec{length: 4, data: []uint64{10}},
+			}),
+		},
+	}
+
+	for ti, test := range tests {
+		r, c := test.b.Dims()
+		tb := test.b.T()
+		tr, tc := tb.Dims()
+
+		if tr != c && tc != r {
+			t.Errorf("Test %d: Dimensions of transpose (%dx%d) do not match original (%dx%d)", ti, tr, tc, r, c)
+		}
+
+		for j := 0; j < c; j++ {
+			v := test.b.ColView(j).(*BinaryVec)
+			for i := 0; i < r; i++ {
+				vv := v.BitIsSet(i)
+				bv := test.b.At(i, j) == 1
+				if vv != bv {
+					t.Errorf("Test %d: Values don't match - Expected %t but found %t", ti, vv, bv)
+				}
+			}
+		}
+	}
+}
