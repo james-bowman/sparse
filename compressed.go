@@ -308,20 +308,6 @@ func (c *CSR) Clone(b mat.Matrix) {
 	c.indptr[c.i] = k
 }
 
-// Copy copies the receiver into a new CSR matrix
-func (c *CSR) Copy() mat.Matrix {
-	i, j := c.i, c.j
-	indptr := make([]int, len(c.indptr))
-	ind := make([]int, len(c.ind))
-	data := make([]float64, len(c.data))
-
-	copy(indptr, c.indptr)
-	copy(ind, c.ind)
-	copy(data, c.data)
-
-	return NewCSR(i, j, indptr, ind, data)
-}
-
 // ToDense returns a mat.Dense dense format version of the matrix.  The returned mat.Dense
 // matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
 func (c *CSR) ToDense() *mat.Dense {

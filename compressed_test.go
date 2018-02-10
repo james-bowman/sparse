@@ -65,37 +65,47 @@ func TestCSRCSCConversion(t *testing.T) {
 	var tests = []struct {
 		desc    string
 		create  MatrixCreator
-		convert func(a TypeConverter) Sparser
+		convert func(a TypeConverter) mat.Matrix
 	}{
 		{
 			"CSR -> CSC",
 			CreateCSR,
-			func(a TypeConverter) Sparser { return a.ToCSC() },
+			func(a TypeConverter) mat.Matrix { return a.ToCSC() },
 		},
 		{
 			"CSC -> CSR",
 			CreateCSC,
-			func(a TypeConverter) Sparser { return a.ToCSR() },
+			func(a TypeConverter) mat.Matrix { return a.ToCSR() },
 		},
 		{
 			"CSR -> COO",
 			CreateCSR,
-			func(a TypeConverter) Sparser { return a.ToCOO() },
+			func(a TypeConverter) mat.Matrix { return a.ToCOO() },
 		},
 		{
 			"CSC -> COO",
 			CreateCSC,
-			func(a TypeConverter) Sparser { return a.ToCOO() },
+			func(a TypeConverter) mat.Matrix { return a.ToCOO() },
 		},
 		{
 			"CSR -> DOK",
 			CreateCSR,
-			func(a TypeConverter) Sparser { return a.ToDOK() },
+			func(a TypeConverter) mat.Matrix { return a.ToDOK() },
 		},
 		{
 			"CSC -> DOK",
 			CreateCSC,
-			func(a TypeConverter) Sparser { return a.ToDOK() },
+			func(a TypeConverter) mat.Matrix { return a.ToDOK() },
+		},
+		{
+			"CSR -> Dense",
+			CreateCSR,
+			func(a TypeConverter) mat.Matrix { return a.ToDense() },
+		},
+		{
+			"CSC -> Dense",
+			CreateCSC,
+			func(a TypeConverter) mat.Matrix { return a.ToDense() },
 		},
 	}
 
@@ -105,11 +115,7 @@ func TestCSRCSCConversion(t *testing.T) {
 		d := mat.NewDense(r, c, data)
 
 		a := test.create(r, c, data)
-		sa, ok := a.(Sparser)
-		if !ok {
-			t.Fatalf("Created matrix type does not implement Sparser")
-		}
-		b := test.convert(sa.(TypeConverter))
+		b := test.convert(a.(TypeConverter))
 
 		if !mat.Equal(d, b) {
 			t.Logf("d : %v\n", a)
@@ -325,6 +331,68 @@ func TestCSRCSCRowColView(t *testing.T) {
 				}
 				if col1.At(k, 0) != test.data[k*test.c+j] {
 					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(col1), k, col1.At(k, 0), k, j, mat.Formatted(dense))
+					t.Fail()
+				}
+			}
+		}
+	}
+}
+
+func TestCSRCSCRawRowColView(t *testing.T) {
+	var tests = []struct {
+		r, c int
+		data []float64
+	}{
+		{
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 6,
+			},
+		},
+		{
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 3, 0,
+			},
+		},
+	}
+
+	for ti, test := range tests {
+		t.Logf("**** Test Run %d.\n", ti+1)
+
+		dense := mat.NewDense(test.r, test.c, test.data)
+		csr := CreateCSR(test.r, test.c, test.data).(*CSR)
+		csc := CreateCSC(test.r, test.c, test.data).(*CSC)
+
+		for i := 0; i < test.r; i++ {
+			row := csr.RawRowView(i)
+			row1 := csc.RawRowView(i)
+			for k := 0; k < len(row); k++ {
+				if row[k] != test.data[i*test.c+k] {
+					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", row, k, row[k], i, k, mat.Formatted(dense))
+					t.Fail()
+				}
+				if row1[k] != test.data[i*test.c+k] {
+					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", row1, k, row1[k], i, k, mat.Formatted(dense))
+					t.Fail()
+				}
+			}
+		}
+
+		for j := 0; j < test.c; j++ {
+			col := csr.RawColView(j)
+			col1 := csc.RawColView(j)
+			for k := 0; k < len(col); k++ {
+				if col[k] != test.data[k*test.c+j] {
+					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", col, k, col[k], k, j, mat.Formatted(dense))
+					t.Fail()
+				}
+				if col1[k] != test.data[k*test.c+j] {
+					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", col1, k, col1[k], k, j, mat.Formatted(dense))
 					t.Fail()
 				}
 			}
