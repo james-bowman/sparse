@@ -4,15 +4,20 @@ import (
 	"sync"
 )
 
+const (
+	pooledFloatSize = 200
+	pooledIntSize   = 200
+)
+
 var (
 	floatPool = sync.Pool{
 		New: func() interface{} {
-			return make([]float64, 200)
+			return make([]float64, pooledFloatSize)
 		},
 	}
 	intPool = sync.Pool{
 		New: func() interface{} {
-			return make([]int, 200)
+			return make([]int, pooledIntSize)
 		},
 	}
 )
@@ -41,7 +46,9 @@ func getFloats(l int, clear bool) []float64 {
 // workspace pool. putFloats must not be called with a slice
 // where references to the underlying data have been kept.
 func putFloats(w []float64) {
-	floatPool.Put(w)
+	if cap(w) > pooledFloatSize {
+		floatPool.Put(w)
+	}
 }
 
 // getInts returns a []ints of length l. If clear is true,
@@ -66,5 +73,7 @@ func getInts(l int, clear bool) []int {
 
 // putInts replaces a used []int into the pool.
 func putInts(w []int) {
-	intPool.Put(w)
+	if cap(w) > pooledIntSize {
+		intPool.Put(w)
+	}
 }
