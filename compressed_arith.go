@@ -4,8 +4,11 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-// Mul takes the matrix product (Dot product) of the supplied matrices a and b and stores the result
-// in the receiver.  If the number of columns does not equal the number of rows in b, Mul will panic.
+// Mul takes the matrix product of the supplied matrices a and b and stores the result
+// in the receiver.  Some specific optimisations are available for operands of certain
+// sparse formats e.g. CSR * CSR uses Gustavson Algorithm (ACM 1978) for fast
+// sparse matrix multiplication.
+// If the number of columns does not equal the number of rows in b, Mul will panic.
 func (c *CSR) Mul(a, b mat.Matrix) {
 	ar, ac := a.Dims()
 	br, bc := b.Dims()
@@ -27,12 +30,17 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	// TODO: handle cases where both matrices are DIA
 
 	lhs, isCsr := a.(*CSR)
-	rhs, isCsc := b.(*CSC)
-
-	if isCsr && isCsc {
-		// handle case where matrix A is CSR and matrix B is CSC
-		c.mulCSRCSC(lhs, rhs)
-		return
+	if isCsr {
+		if rhs, isRCsr := b.(*CSR); isRCsr {
+			// handle case where matrix A is CSR and matrix B is CSR
+			c.mulCSRCSR(lhs, rhs)
+			return
+		}
+		if rhs, isCsc := b.(*CSC); isCsc {
+			// handle case where matrix A is CSR and matrix B is CSC
+			c.mulCSRCSC(lhs, rhs)
+			return
+		}
 	}
 
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
@@ -110,6 +118,37 @@ func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
 		}
 		out[row] = val
 	}
+}
+
+// mulCSRCSR handles CSR = CSR * CSR using Gustavson Algorithm (ACM 1978)
+func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
+	ar, _ := lhs.Dims()
+	_, bc := rhs.Dims()
+	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
+	indptr[0] = 0
+
+	x := make([]float64, bc)
+
+	// rows in C
+	for i := 0; i < ar; i++ {
+		// each t in row B[i]
+		for t := lhs.indptr[i]; t < lhs.indptr[i+1]; t++ {
+			// each j in row A[t]
+			for j := rhs.indptr[lhs.ind[t]]; j < rhs.indptr[lhs.ind[t]+1]; j++ {
+				x[rhs.ind[j]] += lhs.data[t] * rhs.data[j]
+			}
+		}
+		for j, v := range x {
+			if v != 0 {
+				ind = append(ind, j)
+				data = append(data, v)
+			}
+			x[j] = 0
+		}
+		indptr[i+1] = len(ind)
+	}
+	c.i, c.j = ar, bc
+	c.commitWorkspace(indptr, ind, data)
 }
 
 // mulCSRCSC handles special case of matrix multiplication (dot product) where the LHS matrix

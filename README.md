@@ -33,14 +33,15 @@ A common practice is to construct sparse matrices using a creational format e.g.
         * sparse vectors
     * Other Formats:
         * [Binary (Bit) vectors](https://en.wikipedia.org/wiki/Bit_array) and matrices
-* CSR dot product (matrix multiplication) of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with optimisations for the following scenarios:
+* CSR matrix product from multiplication of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with specific optimisations for the following scenarios:
     * CSR * DIA
     * DIA * CSR
     * DIA * mat.Matrix
     * mat.Matrix * DIA
+    * CSR * CSR
     * CSR * CSC
     * CSR * mat.Matrix
-* CSR addition of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with optimisations for the following scenarios:
+* CSR result from addition of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with specific optimisations for the following scenarios:
     * CSR + CSR
     * CSR + mat.Matrix
     * mat.Matrix + CSR
