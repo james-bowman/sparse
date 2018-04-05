@@ -1,8 +1,38 @@
 package sparse
 
 import (
+	"github.com/james-bowman/sparse/blas"
 	"gonum.org/v1/gonum/mat"
 )
+
+// createWorkspace creates a temporary workspace to store the result
+// of matrix operations avoiding the issue of mutating operands mid
+// operation where they overlap with the receiver
+// e.g.
+//	result.Mul(result, a)
+// createWorkspace will attempt to reuse previously allocated memory
+// for the temporary workspace where ever possible to avoid allocating
+// memory and placing strain on GC.
+func (c *CSR) createWorkspace(dim int, size int, zero bool) (indptr, ind []int, data []float64) {
+	indptr = getInts(dim, zero)
+	ind = getInts(size, zero)
+	data = getFloats(size, zero)
+	return
+}
+
+// commitWorkspace commits a temporary workspace previously created
+// with createWorkspace.  This has the effect of updaing the receiver
+// with the values from the temporary workspace and returning the
+// memory used by the workspace to the pool for other operations to
+// reuse.
+func (c *CSR) commitWorkspace(indptr, ind []int, data []float64) {
+	c.matrix.Indptr, indptr = indptr, c.matrix.Indptr
+	c.matrix.Ind, ind = ind, c.matrix.Ind
+	c.matrix.Data, data = data, c.matrix.Data
+	putInts(indptr)
+	putInts(ind)
+	putFloats(data)
+}
 
 // Mul takes the matrix product of the supplied matrices a and b and stores the result
 // in the receiver.  Some specific optimisations are available for operands of certain
@@ -54,8 +84,8 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 				var v float64
 				// TODO Consider converting all LHS Sparser args to CSR
 				// TODO Consider converting all RHS Sparser args to CSC
-				for k := lhs.indptr[i]; k < lhs.indptr[i+1]; k++ {
-					v += lhs.data[k] * b.At(lhs.ind[k], j)
+				for k := lhs.matrix.Indptr[i]; k < lhs.matrix.Indptr[i+1]; k++ {
+					v += lhs.matrix.Data[k] * b.At(lhs.matrix.Ind[k], j)
 				}
 				if v != 0 {
 					t++
@@ -96,7 +126,7 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	}
 
 	indptr[ar] = t
-	c.i, c.j = ar, bc
+	c.matrix.I, c.matrix.J = ar, bc
 	c.commitWorkspace(indptr, ind, data)
 }
 
@@ -111,13 +141,7 @@ func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
 		panic(mat.ErrShape)
 	}
 
-	for row := 0; row < m; row++ {
-		val := 0.0
-		for colind := lhs.indptr[row]; colind < lhs.indptr[row+1]; colind++ {
-			val += lhs.data[colind] * rhs[lhs.ind[colind]]
-		}
-		out[row] = val
-	}
+	blas.Usmv(false, 1, lhs.RawMatrix(), rhs, 1, out, 1)
 }
 
 // mulCSRCSR handles CSR = CSR * CSR using Gustavson Algorithm (ACM 1978)
@@ -125,33 +149,32 @@ func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
 	ar, _ := lhs.Dims()
 	_, bc := rhs.Dims()
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
-	indptr[0] = 0
 
 	x := make([]float64, bc)
 
 	// rows in C
 	for i := 0; i < ar; i++ {
-		// each t in row B[i]
-		for t := lhs.indptr[i]; t < lhs.indptr[i+1]; t++ {
-			// each j in row A[t]
-			for j := rhs.indptr[lhs.ind[t]]; j < rhs.indptr[lhs.ind[t]+1]; j++ {
-				x[rhs.ind[j]] += lhs.data[t] * rhs.data[j]
+		// each element t in row i of A
+		for t := lhs.matrix.Indptr[i]; t < lhs.matrix.Indptr[i+1]; t++ {
+			// each element j in row [A.Ind[t]] of B
+			for j := rhs.matrix.Indptr[lhs.matrix.Ind[t]]; j < rhs.matrix.Indptr[lhs.matrix.Ind[t]+1]; j++ {
+				x[rhs.matrix.Ind[j]] += lhs.matrix.Data[t] * rhs.matrix.Data[j]
 			}
 		}
 		for j, v := range x {
 			if v != 0 {
 				ind = append(ind, j)
 				data = append(data, v)
+				x[j] = 0
 			}
-			x[j] = 0
 		}
 		indptr[i+1] = len(ind)
 	}
-	c.i, c.j = ar, bc
+	c.matrix.I, c.matrix.J = ar, bc
 	c.commitWorkspace(indptr, ind, data)
 }
 
-// mulCSRCSC handles special case of matrix multiplication (dot product) where the LHS matrix
+// mulCSRCSC handles special case of matrix multiplication where the LHS matrix
 // (A) is CSR format and the RHS matrix (B) is CSC format.
 func (c *CSR) mulCSRCSC(lhs *CSR, rhs *CSC) {
 	ar, _ := lhs.Dims()
@@ -163,18 +186,18 @@ func (c *CSR) mulCSRCSC(lhs *CSR, rhs *CSC) {
 		indptr[i] = t
 		for j := 0; j < bc; j++ {
 			var v float64
-			rhsStart := rhs.indptr[j]
-			rhsEnd := rhs.indptr[j+1] - 1
+			rhsStart := rhs.matrix.Indptr[j]
+			rhsEnd := rhs.matrix.Indptr[j+1] - 1
 			b := rhsStart
 
-			for k := lhs.indptr[i]; k < lhs.indptr[i+1]; k++ {
+			for k := lhs.matrix.Indptr[i]; k < lhs.matrix.Indptr[i+1]; k++ {
 				var bi int
-				for bi = b; bi < rhsEnd && rhs.ind[bi] < lhs.ind[k]; bi++ {
+				for bi = b; bi < rhsEnd && rhs.matrix.Ind[bi] < lhs.matrix.Ind[k]; bi++ {
 					// empty
 				}
 				b = bi
-				if lhs.ind[k] == rhs.ind[bi] {
-					v += lhs.data[k] * rhs.data[bi]
+				if lhs.matrix.Ind[k] == rhs.matrix.Ind[bi] {
+					v += lhs.matrix.Data[k] * rhs.matrix.Data[bi]
 				}
 			}
 			if v != 0 {
@@ -185,7 +208,7 @@ func (c *CSR) mulCSRCSC(lhs *CSR, rhs *CSC) {
 		}
 	}
 	indptr[ar] = t
-	c.i, c.j = ar, bc
+	c.matrix.I, c.matrix.J = ar, bc
 	c.commitWorkspace(indptr, ind, data)
 }
 
@@ -194,16 +217,16 @@ func (c *CSR) mulCSRCSC(lhs *CSR, rhs *CSC) {
 // significant optimisation is possible due to the sparsity pattern of the matrix.  If trans is true, the method
 // will assume that other was the LHS (Left Hand Side) operand and that dia was the RHS.
 func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
-	var csMat compressedSparse
+	var csMat blas.SparseMatrix
 	isCS := false
 	var size int
 
 	if csr, ok := other.(*CSR); ok {
 		// TODO consider implicitly converting all sparsers to CSR
 		// or at least iterating only over the non-zero elements
-		csMat = csr.compressedSparse
+		csMat = csr.matrix
 		isCS = true
-		size = len(csMat.ind)
+		size = len(csMat.Ind)
 	}
 
 	rows, cols := other.Dims()
@@ -217,16 +240,16 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 		var v float64
 
 		if isCS {
-			for k := csMat.indptr[i]; k < csMat.indptr[i+1]; k++ {
+			for k := csMat.Indptr[i]; k < csMat.Indptr[i+1]; k++ {
 				var rawval float64
 				if trans {
-					rawval = raw[csMat.ind[k]]
+					rawval = raw[csMat.Ind[k]]
 				} else {
 					rawval = raw[i]
 				}
-				v = csMat.data[k] * rawval
+				v = csMat.Data[k] * rawval
 				if v != 0 {
-					ind[t] = csMat.ind[k]
+					ind[t] = csMat.Ind[k]
 					data[t] = v
 					t++
 				}
@@ -250,7 +273,7 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 	}
 	indptr[rows] = t
 
-	c.i, c.j = rows, cols
+	c.matrix.I, c.matrix.J = rows, cols
 	c.commitWorkspace(indptr, ind, data)
 }
 
@@ -293,7 +316,7 @@ func (c *CSR) Add(a, b mat.Matrix) {
 		}
 		indptr = append(indptr, offset)
 	}
-	c.i, c.j = ar, ac
+	c.matrix.I, c.matrix.J = ar, ac
 	c.commitWorkspace(indptr, ind, data)
 }
 
@@ -303,42 +326,32 @@ func (c *CSR) addCSR(csr *CSR, other mat.Matrix) {
 	ar, ac := csr.Dims()
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
 
-	t := 0
-	//row := make([]float64, ac)
 	row := getFloats(ac, false)
+	a := csr.RawMatrix()
+
 	for i := 0; i < ar; i++ {
-		indptr[i] = t
+		begin := csr.matrix.Indptr[i]
+		end := csr.matrix.Indptr[i+1]
 
-		for ci := range row {
-			row[ci] = other.At(i, ci)
+		if bDense, isDense := other.(*mat.Dense); isDense {
+			row = bDense.RawRowView(i)
+			blas.Usaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
+		} else {
+			row = mat.Row(row, i, other)
+			blas.Usaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
 		}
 
-		csrStart := csr.indptr[i]
-		csrEnd := csr.indptr[i+1] - 1
-		b := csrStart
-
-		for ci, e := range row {
-			var v float64
-			var bi int
-			for bi = b; bi < csrEnd && csr.ind[bi] < ci; bi++ {
-				// empty
-			}
-			b = bi
-			if ci == csr.ind[bi] {
-				v = e + csr.data[bi]
-			} else {
-				v = e
-			}
+		for j, v := range row {
 			if v != 0 {
-				t++
-				ind = append(ind, ci)
+				ind = append(ind, j)
 				data = append(data, v)
+				row[j] = 0
 			}
 		}
+		indptr[i+1] = len(ind)
 	}
 	putFloats(row)
-	indptr[ar] = t
-	c.i, c.j = ar, ac
+	c.matrix.I, c.matrix.J = ar, ac
 	c.commitWorkspace(indptr, ind, data)
 }
 
@@ -349,25 +362,25 @@ func (c *CSR) addCSRCSR(a, b *CSR) {
 	ar, ac := a.Dims()
 	indptr, ind, data := c.createWorkspace(ar+1, 0, true)
 
-	for row, start1 := range a.indptr[0 : len(a.indptr)-1] {
+	for row, start1 := range a.matrix.Indptr[0 : len(a.matrix.Indptr)-1] {
 		indptr[row+1] = indptr[row]
-		start2 := b.indptr[row]
-		end1 := a.indptr[row+1]
-		end2 := b.indptr[row+1]
+		start2 := b.matrix.Indptr[row]
+		end1 := a.matrix.Indptr[row+1]
+		end2 := b.matrix.Indptr[row+1]
 		if start1 == end1 {
 			if start2 == end2 {
 				continue
 			}
 			for k := start2; k < end2; k++ {
-				data = append(data, b.data[k])
-				ind = append(ind, b.ind[k])
+				data = append(data, b.matrix.Data[k])
+				ind = append(ind, b.matrix.Ind[k])
 				indptr[row+1]++
 			}
 			continue
 		} else if start2 == end2 {
 			for k := start1; k < end1; k++ {
-				data = append(data, a.data[k])
-				ind = append(ind, a.ind[k])
+				data = append(data, a.matrix.Data[k])
+				ind = append(ind, a.matrix.Ind[k])
 				indptr[row+1]++
 			}
 			continue
@@ -379,39 +392,39 @@ func (c *CSR) addCSRCSR(a, b *CSR) {
 				break
 			} else if i == end1 {
 				for k := j; k < end2; k++ {
-					data = append(data, b.data[k])
-					ind = append(ind, b.ind[k])
+					data = append(data, b.matrix.Data[k])
+					ind = append(ind, b.matrix.Ind[k])
 					indptr[row+1]++
 				}
 				break
 			} else if j == end2 {
 				for k := i; k < end1; k++ {
-					data = append(data, a.data[k])
-					ind = append(ind, a.ind[k])
+					data = append(data, a.matrix.Data[k])
+					ind = append(ind, a.matrix.Ind[k])
 					indptr[row+1]++
 				}
 				break
 			}
-			if a.ind[i] == b.ind[j] {
-				val := a.data[i] + b.data[j]
+			if a.matrix.Ind[i] == b.matrix.Ind[j] {
+				val := a.matrix.Data[i] + b.matrix.Data[j]
 				data = append(data, val)
-				ind = append(ind, a.ind[i])
+				ind = append(ind, a.matrix.Ind[i])
 				indptr[row+1]++
 				i++
 				j++
-			} else if a.ind[i] < b.ind[j] {
-				data = append(data, a.data[i])
-				ind = append(ind, a.ind[i])
+			} else if a.matrix.Ind[i] < b.matrix.Ind[j] {
+				data = append(data, a.matrix.Data[i])
+				ind = append(ind, a.matrix.Ind[i])
 				indptr[row+1]++
 				i++
 			} else {
-				data = append(data, b.data[j])
-				ind = append(ind, b.ind[j])
+				data = append(data, b.matrix.Data[j])
+				ind = append(ind, b.matrix.Ind[j])
 				indptr[row+1]++
 				j++
 			}
 		}
 	}
-	c.i, c.j = ar, ac
+	c.matrix.I, c.matrix.J = ar, ac
 	c.commitWorkspace(indptr, ind, data)
 }

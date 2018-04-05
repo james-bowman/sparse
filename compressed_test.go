@@ -38,9 +38,6 @@ func TestCSRCSCTranspose(t *testing.T) {
 		csr := CreateCSR(test.r, test.c, test.data).(*CSR)
 		csc := CreateCSC(test.r, test.c, test.data).(*CSC)
 
-		t.Logf("CSR: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csr.i, csr.j, csr.ind, csr.indptr, csr.data)
-		t.Logf("CSC: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csc.i, csc.j, csc.ind, csc.indptr, csc.data)
-
 		if !mat.Equal(expected, csr.T()) {
 			t.Logf("CSR is:\n%v\n", mat.Formatted(csr))
 			t.Logf("For CSR^T, Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csr.T()))
@@ -256,14 +253,8 @@ func TestCSRCSCSet(t *testing.T) {
 		csr := CreateCSR(test.r, test.c, test.data).(*CSR)
 		csc := CreateCSC(test.r, test.c, test.data).(*CSC)
 
-		t.Logf("CSR: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csr.i, csr.j, csr.ind, csr.indptr, csr.data)
-		t.Logf("CSC: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csc.i, csc.j, csc.ind, csc.indptr, csc.data)
-
 		csr.Set(test.i, test.j, test.v)
 		csc.Set(test.i, test.j, test.v)
-
-		t.Logf("CSR: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csr.i, csr.j, csr.ind, csr.indptr, csr.data)
-		t.Logf("CSC: r: %d, c: %d, ind: %v, indptr: %v, data: %v", csc.i, csc.j, csc.ind, csc.indptr, csc.data)
 
 		if !mat.Equal(expected, csr) {
 			t.Logf("For CSR.Set(), Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csr))
@@ -338,6 +329,7 @@ func TestCSRCSCRowColView(t *testing.T) {
 	}
 }
 
+/*
 func TestCSRCSCRawRowColView(t *testing.T) {
 	var tests = []struct {
 		r, c int
@@ -399,6 +391,7 @@ func TestCSRCSCRawRowColView(t *testing.T) {
 		}
 	}
 }
+*/
 
 func TestCSRCSCDoNonZero(t *testing.T) {
 	var tests = []struct {
