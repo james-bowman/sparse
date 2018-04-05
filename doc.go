@@ -13,6 +13,6 @@ Sparse matrix formats can broadly be divided into 3 main categories:
 
 A common practice is to construct sparse matrices using a creational format e.g. DOK or COO and then convert them to an operational format e.g. CSR for arithmetic operations.
 
-All sparse matrix implementations in this package implement the mat64.Matrix interface defined within the gonum/mat64 package and so may be used interchangeably with matrix types defined within the package e.g. mat64.Dense.
+All sparse matrix implementations in this package implement the Matrix interface defined within the gonum/mat package and so may be used interchangeably with matrix types defined within the package e.g. mat.Dense, mat.VecDense, etc.
 */
 package sparse
