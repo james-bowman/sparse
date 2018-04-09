@@ -4,4 +4,4 @@
 [![Sourcegraph](https://sourcegraph.com/github.com/james-bowman/sparse/blas/-/badge.svg)](https://sourcegraph.com/github.com/james-bowman/sparse/blas?badge)
 
 Implementation of sparse BLAS (Basic Linear Algebra Subprograms) routines in Go for 
-sparse matrix arithmetic.
+sparse matrix arithmetic.  See http://www.netlib.org/blas/blast-forum/chapter3.pdf for more details.
