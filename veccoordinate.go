@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/gonum/floats"
+	"github.com/james-bowman/sparse/blas"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -94,6 +95,92 @@ func (v *VecCOO) DoNonZero(fn func(i int, j int, v float64)) {
 	for i := 0; i < len(v.ind); i++ {
 		fn(v.ind[i], 0, v.data[i])
 	}
+}
+
+// Gather gathers the entries from the supplied mat.VecDense structure
+// that have corresponding non-zero entries in the receiver into the
+// receiver.  The method will panic if denseVector is not the same
+// length as the receiver.
+func (v *VecCOO) Gather(denseVector *mat.VecDense) {
+	if v.len != denseVector.Len() {
+		panic(mat.ErrShape)
+	}
+	vec := denseVector.RawVector()
+	blas.Usga(vec.Data, vec.Inc, v.data, v.ind)
+}
+
+// GatherAndZero gathers the entries from the supplied mat.VecDense
+// structure that have corresponding non-zero entries in the receiver
+// into the receiver and then zeros those entries in denseVector.
+// The method will panic if denseVector is not the same length
+// as the receiver.
+func (v *VecCOO) GatherAndZero(denseVector *mat.VecDense) {
+	if v.len != denseVector.Len() {
+		panic(mat.ErrShape)
+	}
+
+	vec := denseVector.RawVector()
+	blas.Usgz(vec.Data, vec.Inc, v.data, v.ind)
+}
+
+// Scatter scatters elements from the receiver into the supplied mat.VecDense
+// structure, denseVector and returns a pointer to it.  If denseVector is nil,
+// a new mat.VecDense structure will be created of the same length as the
+// receiver.  The method will panic if denseVector is not the same length
+// as the receiver (unless it is nil)
+func (v *VecCOO) Scatter(denseVector *mat.VecDense) *mat.VecDense {
+	if denseVector != nil && v.len != denseVector.Len() {
+		panic(mat.ErrShape)
+	}
+	if denseVector == nil {
+		denseVector = mat.NewVecDense(v.len, nil)
+	}
+	vec := denseVector.RawVector()
+	blas.Ussc(v.data, vec.Data, vec.Inc, v.ind)
+	return denseVector
+}
+
+// CloneVec clones the supplied mat.Vector, a into the receiver, overwriting
+// the previous values of the receiver.  If the receiver is of a different
+// length from a, it will be resized to accomodate the values from a.
+func (v *VecCOO) CloneVec(a mat.Vector) {
+	if v == a {
+		return
+	}
+	v.len = a.Len()
+
+	if sv, isSparse := a.(*VecCOO); isSparse {
+		size := len(sv.ind)
+		if size > cap(v.ind) {
+			v.ind = make([]int, size)
+			v.data = make([]float64, size)
+		} else {
+			v.ind = v.ind[:size]
+			v.data = v.data[:size]
+		}
+		for i, val := range sv.ind {
+			v.ind[i] = val
+			v.data[i] = sv.data[i]
+		}
+		return
+	}
+
+	v.ind = v.ind[:0]
+	v.data = v.data[:0]
+
+	for i := 0; i < v.len; i++ {
+		val := a.AtVec(i)
+		if val != 0 {
+			v.ind = append(v.ind, i)
+			v.data = append(v.data, val)
+		}
+	}
+}
+
+// ToDense converts the sparse vector to a dense vector
+// The returned dense matrix is a new copy of the receiver.
+func (v *VecCOO) ToDense() *mat.VecDense {
+	return v.Scatter(nil)
 }
 
 // AddVec adds the vectors a and b, placing the result in the receiver.
@@ -271,29 +358,37 @@ func (v *VecCOO) Norm(L float64) float64 {
 	return floats.Norm(v.data, L)
 }
 
-// Dot returns the sum of the element-wise product of a and b.
-// Dot panics if the matrix sizes are unequal.  If both vectors
-// are sparse VecCOO then Dot will only process non-zero elements
-// otherwise this method simply delegates to mat.Dot()
+// Dot returns the sum of the element-wise product (dot product) of a and b.
+// Dot panics if the matrix sizes are unequal.  For sparse vectors, Dot will
+// only process non-zero elements otherwise this method simply delegates to
+// mat.Dot()
 func Dot(a, b mat.Vector) float64 {
-	av, aok := a.(*VecCOO)
-	bv, bok := b.(*VecCOO)
+	if a.Len() != b.Len() {
+		panic(mat.ErrShape)
+	}
 
-	if aok || bok {
-		la := a.Len()
-		lb := b.Len()
-		if la != lb {
-			panic(mat.ErrShape)
+	as, aIsSparse := a.(*VecCOO)
+	bs, bIsSparse := b.(*VecCOO)
+
+	if aIsSparse {
+		if bIsSparse {
+			// bdense := make([]float64, bs.Len())
+			// blas.Ussc(bs.data, bdense, 1, bs.ind)
+			// return blas.Usdot(as.data, as.ind, bdense, 1)
+			dotSparseSparse(as, bs)
 		}
-		if aok && bok {
-			return dotSparseSparse(av, bv)
+		if bdense, bIsDense := b.(mat.RawVectorer); bIsDense {
+			raw := bdense.RawVector()
+			return blas.Usdot(as.data, as.ind, raw.Data, raw.Inc)
 		}
-		if aok {
-			return dotSparse(av, b)
+		return dotSparse(as, b)
+	}
+	if bIsSparse {
+		if adense, aIsDense := a.(mat.RawVectorer); aIsDense {
+			raw := adense.RawVector()
+			return blas.Usdot(bs.data, bs.ind, raw.Data, raw.Inc)
 		}
-		if bok {
-			return dotSparse(bv, a)
-		}
+		return dotSparse(bs, a)
 	}
 	return mat.Dot(a, b)
 }

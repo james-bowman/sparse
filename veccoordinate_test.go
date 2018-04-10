@@ -30,7 +30,7 @@ func TestVecCOOAdd(t *testing.T) {
 		result.AddVec(test.a, test.b)
 
 		if !mat.Equal(test.r, &result) {
-			t.Errorf("Test %d: Incorrect result for add - expected:\n%v\nbut received:\n%v\n", ti, mat.Formatted(test.r), mat.Formatted(&result))
+			t.Errorf("Test %d: Incorrect result for add - expected:\n%v\nbut received:\n%v\n", ti+1, mat.Formatted(test.r), mat.Formatted(&result))
 		}
 	}
 }
@@ -86,7 +86,7 @@ func TestVecCOOAddScaled(t *testing.T) {
 		result.AddScaledVec(test.a, test.alpha, test.b)
 
 		if !mat.Equal(test.r, &result) {
-			t.Errorf("Test %d: Incorrect result for addScaled - expected:\n%v\nbut received:\n%v\n", ti, mat.Formatted(test.r), mat.Formatted(&result))
+			t.Errorf("Test %d: Incorrect result for addScaled - expected:\n%v\nbut received:\n%v\n", ti+1, mat.Formatted(test.r), mat.Formatted(&result))
 		}
 	}
 }
@@ -135,7 +135,7 @@ func TestVecCOOScale(t *testing.T) {
 		result.ScaleVec(test.alpha, test.b)
 
 		if !mat.Equal(test.r, &result) {
-			t.Errorf("Test %d: Incorrect result for Scale - expected:\n%v\nbut received:\n%v\n", ti, mat.Formatted(test.r), mat.Formatted(&result))
+			t.Errorf("Test %d: Incorrect result for Scale - expected:\n%v\nbut received:\n%v\n", ti+1, mat.Formatted(test.r), mat.Formatted(&result))
 		}
 	}
 }
@@ -156,6 +156,16 @@ func TestDot(t *testing.T) {
 			b: NewVecCOO(6, []int{0, 1, 3}, []float64{1, 1, 2}),
 			r: 5,
 		},
+		{
+			a: mat.NewVecDense(6, []float64{0, 1, 0, 2, 1, 0}),
+			b: NewVecCOO(6, []int{0, 1, 3}, []float64{1, 1, 2}),
+			r: 5,
+		},
+		{
+			a: NewVecCOO(6, []int{1, 3, 4}, []float64{1, 2, 1}),
+			b: mat.NewVecDense(6, []float64{1, 1, 0, 2, 0, 0}),
+			r: 5,
+		},
 	}
 
 	for ti, test := range tests {
@@ -163,7 +173,7 @@ func TestDot(t *testing.T) {
 		result := Dot(test.a, test.b)
 
 		if result != test.r {
-			t.Errorf("Test %d: Incorrect result for Dot - expected:\n%v\nbut received:\n%v\n", ti, test.r, result)
+			t.Errorf("Test %d: Incorrect result for Dot - expected:\n%v\nbut received:\n%v\n", ti+1, test.r, result)
 		}
 	}
 }
@@ -188,7 +198,7 @@ func TestVecCOONorm(t *testing.T) {
 		result := Norm(test.a, 2)
 
 		if test.result != result {
-			t.Errorf("Test %d: Incorrect result for Norm - expected:\n%v\nbut received:\n%v\n", ti, test.result, result)
+			t.Errorf("Test %d: Incorrect result for Norm - expected:\n%v\nbut received:\n%v\n", ti+1, test.result, result)
 		}
 	}
 }
@@ -212,15 +222,217 @@ func TestVecCOODoNonZero(t *testing.T) {
 		var nnz int
 		test.data.DoNonZero(func(i, j int, v float64) {
 			if testv := test.data.At(i, j); testv == 0 || testv != v {
-				t.Logf("test %d: Expected %f at (%d, %d) but received %f\n", ti, v, i, j, testv)
+				t.Logf("test %d: Expected %f at (%d, %d) but received %f\n", ti+1, v, i, j, testv)
 				t.Fail()
 			}
 			nnz++
 		})
 
 		if nnz != test.data.NNZ() {
-			t.Logf("Test %d: Expected %d Non Zero elements but found %d", ti, nnz, test.data.NNZ())
+			t.Logf("Test %d: Expected %d Non Zero elements but found %d", ti+1, nnz, test.data.NNZ())
 			t.Fail()
+		}
+	}
+}
+
+func TestVecGather(t *testing.T) {
+	tests := []struct {
+		length   int
+		ind      []int
+		data     []float64
+		src      []float64
+		expected []float64
+	}{
+		{
+			length:   5,
+			ind:      []int{1, 2, 4},
+			data:     []float64{0, 0, 0},
+			src:      []float64{1, 0, 2, 3, 4},
+			expected: []float64{0, 0, 2, 0, 4},
+		},
+		{
+			length:   5,
+			ind:      []int{1, 2, 4},
+			data:     []float64{1, 1, 1},
+			src:      []float64{1, 0, 2, 3, 4},
+			expected: []float64{0, 0, 2, 0, 4},
+		},
+	}
+
+	for ti, test := range tests {
+		src := mat.NewVecDense(test.length, test.src)
+		dst := NewVecCOO(test.length, test.ind, test.data)
+		dst.Gather(src)
+
+		for i := 0; i < test.length; i++ {
+			if test.expected[i] != dst.AtVec(i) {
+				t.Errorf("Test %d: Mismatch at index %d, Expected %v but received %v", ti+1, i, test.expected[i], dst.AtVec(i))
+			}
+		}
+	}
+}
+
+func TestVecGatherAndZero(t *testing.T) {
+	tests := []struct {
+		length   int
+		ind      []int
+		data     []float64
+		src      []float64
+		expected []float64
+	}{
+		{
+			length:   5,
+			ind:      []int{1, 2, 4},
+			data:     []float64{0, 0, 0},
+			src:      []float64{1, 0, 2, 3, 4},
+			expected: []float64{0, 0, 2, 0, 4},
+		},
+		{
+			length:   5,
+			ind:      []int{1, 2, 4},
+			data:     []float64{1, 1, 1},
+			src:      []float64{1, 0, 2, 3, 4},
+			expected: []float64{0, 0, 2, 0, 4},
+		},
+	}
+
+	for ti, test := range tests {
+		src := mat.NewVecDense(test.length, test.src)
+		dst := NewVecCOO(test.length, test.ind, test.data)
+		dst.GatherAndZero(src)
+
+		for i := 0; i < test.length; i++ {
+			if test.expected[i] != dst.AtVec(i) {
+				t.Errorf("Test %d: Mismatch at index %d, Expected %v but received %v", ti+1, i, test.expected[i], dst.AtVec(i))
+			}
+		}
+		for _, v := range test.ind {
+			if src.AtVec(v) != 0 {
+				t.Errorf("Test %d: Expected 0 at index %d but found %v", ti+1, v, src.AtVec(v))
+			}
+		}
+	}
+}
+
+func TestVecScatter(t *testing.T) {
+	tests := []struct {
+		length   int
+		ind      []int
+		data     []float64
+		dst      *mat.VecDense
+		expected []float64
+	}{
+		{
+			length:   5,
+			ind:      []int{1, 2, 4},
+			data:     []float64{1, 2, 3},
+			dst:      mat.NewVecDense(5, []float64{0, 0, 0, 0, 0}),
+			expected: []float64{0, 1, 2, 0, 3},
+		},
+		{
+			length:   5,
+			ind:      []int{1, 2, 4},
+			data:     []float64{1, 1, 1},
+			dst:      mat.NewVecDense(5, []float64{0, 0, 2, 3, 4}),
+			expected: []float64{0, 1, 1, 3, 1},
+		},
+		{
+			length:   5,
+			ind:      []int{1, 2, 4},
+			data:     []float64{1, 1, 1},
+			dst:      nil,
+			expected: []float64{0, 1, 1, 0, 1},
+		},
+	}
+
+	for ti, test := range tests {
+		src := NewVecCOO(test.length, test.ind, test.data)
+		result := src.Scatter(test.dst)
+
+		for i := 0; i < test.length; i++ {
+			if test.dst != nil && test.expected[i] != test.dst.AtVec(i) {
+				t.Errorf("Test %d: Mismatch at index %d, Expected %v but received %v", ti+1, i, test.expected[i], test.dst.AtVec(i))
+			}
+			if test.expected[i] != result.AtVec(i) {
+				t.Errorf("Test %d: Mismatch result at index %d, Expected %v but received %v", ti+1, i, test.expected[i], result.AtVec(i))
+			}
+		}
+	}
+}
+
+func TestCloneVec(t *testing.T) {
+	basicSparse := NewVecCOO(5, []int{0, 2, 3}, []float64{1, 2, 3})
+
+	tests := []struct {
+		src      mat.Vector
+		rcv      *VecCOO
+		expected *VecCOO
+	}{
+		{ // test src == rcv
+			src:      basicSparse,
+			rcv:      basicSparse,
+			expected: basicSparse,
+		},
+		{ // test rcv empty
+			src:      basicSparse,
+			rcv:      &VecCOO{},
+			expected: basicSparse,
+		},
+		{ // test src capacity > rcv
+			src:      basicSparse,
+			rcv:      NewVecCOO(4, []int{1}, []float64{1}),
+			expected: basicSparse,
+		},
+		{ // test src capacity < rcv
+			src:      basicSparse,
+			rcv:      NewVecCOO(7, []int{0, 1, 3, 4}, []float64{1, 2, 3, 4}),
+			expected: basicSparse,
+		},
+		{ // test src as dense vector
+			src:      mat.NewVecDense(5, []float64{1, 0, 2, 3, 0}),
+			rcv:      basicSparse,
+			expected: basicSparse,
+		},
+	}
+
+	for ti, test := range tests {
+		test.rcv.CloneVec(test.src)
+
+		if test.expected.Len() != test.rcv.Len() {
+			t.Errorf("Test %d: Expected length of %d but received %d", ti, test.expected.Len(), test.rcv.Len())
+		}
+
+		for i := 0; i < test.expected.Len(); i++ {
+			if test.expected.AtVec(i) != test.rcv.AtVec(i) {
+				t.Errorf("Test %d: Expected %f at index %d but received %f", ti, test.expected.AtVec(i), i, test.rcv.AtVec(i))
+			}
+		}
+	}
+}
+
+func TestVecToVecDense(t *testing.T) {
+	tests := []struct {
+		length   int
+		ind      []int
+		data     []float64
+		expected []float64
+	}{
+		{
+			length:   5,
+			ind:      []int{1, 2, 4},
+			data:     []float64{1, 2, 3},
+			expected: []float64{0, 1, 2, 0, 3},
+		},
+	}
+
+	for ti, test := range tests {
+		src := NewVecCOO(test.length, test.ind, test.data)
+		result := src.ToDense()
+
+		for i := 0; i < test.length; i++ {
+			if test.expected[i] != result.AtVec(i) {
+				t.Errorf("Test %d: Mismatch result at index %d, Expected %v but received %v", ti+1, i, test.expected[i], result.AtVec(i))
+			}
 		}
 	}
 }
