@@ -24,7 +24,7 @@ A common practice is to construct sparse matrices using a creational format e.g.
 
 ## Implemented Features
 
-* Implementation of Sparse BLAS standard routines (http://www.netlib.org/blas/blast-forum/chapter3.pdf)
+* Implementation of Sparse BLAS standard routines (<http://www.netlib.org/blas/blast-forum/chapter3.pdf>)
 * Implemented Formats:
     * Sparse Matrix Formats:
         * [DOK (Dictionary Of Keys)](https://en.wikipedia.org/wiki/Sparse_matrix#Dictionary_of_keys_(DOK)) format
