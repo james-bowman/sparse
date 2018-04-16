@@ -11,7 +11,7 @@ func Usdot(x []float64, indx []int, y []float64, incy int) float64 {
 	return dot
 }
 
-// Usaxpy (Sparse update (y <- a * x + y)) scales the sparse vector x by
+// Usaxpy (Sparse update (y <- alpha * x + y)) scales the sparse vector x by
 // alpha and adds the result to the dense vector y.  indx is used as the index
 // values to gather and incy as the stride for y.
 func Usaxpy(alpha float64, x []float64, indx []int, y []float64, incy int) {
