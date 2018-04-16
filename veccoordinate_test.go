@@ -336,13 +336,6 @@ func TestVecScatter(t *testing.T) {
 			dst:      mat.NewVecDense(5, []float64{0, 0, 2, 3, 4}),
 			expected: []float64{0, 1, 1, 3, 1},
 		},
-		{
-			length:   5,
-			ind:      []int{1, 2, 4},
-			data:     []float64{1, 1, 1},
-			dst:      nil,
-			expected: []float64{0, 1, 1, 0, 1},
-		},
 	}
 
 	for ti, test := range tests {

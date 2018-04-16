@@ -124,16 +124,11 @@ func (v *VecCOO) GatherAndZero(denseVector *mat.VecDense) {
 }
 
 // Scatter scatters elements from the receiver into the supplied mat.VecDense
-// structure, denseVector and returns a pointer to it.  If denseVector is nil,
-// a new mat.VecDense structure will be created of the same length as the
-// receiver.  The method will panic if denseVector is not the same length
-// as the receiver (unless it is nil)
+// structure, denseVector and returns a pointer to it.  The method will panic
+// if denseVector is not the same length as the receiver (unless it is nil)
 func (v *VecCOO) Scatter(denseVector *mat.VecDense) *mat.VecDense {
-	if denseVector != nil && v.len != denseVector.Len() {
+	if v.len != denseVector.Len() {
 		panic(mat.ErrShape)
-	}
-	if denseVector == nil {
-		denseVector = mat.NewVecDense(v.len, nil)
 	}
 	vec := denseVector.RawVector()
 	blas.Ussc(v.data, vec.Data, vec.Inc, v.ind)
@@ -180,7 +175,7 @@ func (v *VecCOO) CloneVec(a mat.Vector) {
 // ToDense converts the sparse vector to a dense vector
 // The returned dense matrix is a new copy of the receiver.
 func (v *VecCOO) ToDense() *mat.VecDense {
-	return v.Scatter(nil)
+	return v.Scatter(mat.NewVecDense(v.len, nil))
 }
 
 // AddVec adds the vectors a and b, placing the result in the receiver.
