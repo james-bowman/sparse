@@ -6,7 +6,7 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-func TestVecCOOAdd(t *testing.T) {
+func TestVectorAdd(t *testing.T) {
 	tests := []struct {
 		a mat.Vector
 		b mat.Vector
@@ -18,14 +18,14 @@ func TestVecCOOAdd(t *testing.T) {
 			r: mat.NewVecDense(6, []float64{1, 2, 0, 3, 1, 0}),
 		},
 		{
-			a: NewVecCOO(6, []int{1, 3, 4}, []float64{1, 2, 1}),
-			b: NewVecCOO(6, []int{0, 1, 3}, []float64{1, 1, 1}),
+			a: NewVector(6, []int{1, 3, 4}, []float64{1, 2, 1}),
+			b: NewVector(6, []int{0, 1, 3}, []float64{1, 1, 1}),
 			r: mat.NewVecDense(6, []float64{1, 2, 0, 3, 1, 0}),
 		},
 	}
 
 	for ti, test := range tests {
-		var result VecCOO
+		var result Vector
 
 		result.AddVec(test.a, test.b)
 
@@ -35,7 +35,7 @@ func TestVecCOOAdd(t *testing.T) {
 	}
 }
 
-func TestVecCOOAddScaled(t *testing.T) {
+func TestVectorAddScaled(t *testing.T) {
 	tests := []struct {
 		a     mat.Vector
 		alpha float64
@@ -61,27 +61,27 @@ func TestVecCOOAddScaled(t *testing.T) {
 			r:     mat.NewVecDense(6, []float64{2, 3, 0, 4, 1, 0}),
 		},
 		{
-			a:     NewVecCOO(6, []int{1, 3, 4}, []float64{1, 2, 1}),
+			a:     NewVector(6, []int{1, 3, 4}, []float64{1, 2, 1}),
 			alpha: 0,
-			b:     NewVecCOO(6, []int{0, 1, 3}, []float64{1, 1, 1}),
+			b:     NewVector(6, []int{0, 1, 3}, []float64{1, 1, 1}),
 			r:     mat.NewVecDense(6, []float64{0, 1, 0, 2, 1, 0}),
 		},
 		{
-			a:     NewVecCOO(6, []int{1, 3, 4}, []float64{1, 2, 1}),
+			a:     NewVector(6, []int{1, 3, 4}, []float64{1, 2, 1}),
 			alpha: 1,
-			b:     NewVecCOO(6, []int{0, 1, 3}, []float64{1, 1, 1}),
+			b:     NewVector(6, []int{0, 1, 3}, []float64{1, 1, 1}),
 			r:     mat.NewVecDense(6, []float64{1, 2, 0, 3, 1, 0}),
 		},
 		{
-			a:     NewVecCOO(6, []int{1, 3, 4}, []float64{1, 2, 1}),
+			a:     NewVector(6, []int{1, 3, 4}, []float64{1, 2, 1}),
 			alpha: 2,
-			b:     NewVecCOO(6, []int{0, 1, 3}, []float64{1, 1, 1}),
+			b:     NewVector(6, []int{0, 1, 3}, []float64{1, 1, 1}),
 			r:     mat.NewVecDense(6, []float64{2, 3, 0, 4, 1, 0}),
 		},
 	}
 
 	for ti, test := range tests {
-		var result VecCOO
+		var result Vector
 
 		result.AddScaledVec(test.a, test.alpha, test.b)
 
@@ -91,7 +91,7 @@ func TestVecCOOAddScaled(t *testing.T) {
 	}
 }
 
-func TestVecCOOScale(t *testing.T) {
+func TestVectorScale(t *testing.T) {
 	tests := []struct {
 		alpha float64
 		b     mat.Vector
@@ -114,23 +114,23 @@ func TestVecCOOScale(t *testing.T) {
 		},
 		{
 			alpha: 0,
-			b:     NewVecCOO(6, []int{0, 1, 3}, []float64{1, 1, 1}),
+			b:     NewVector(6, []int{0, 1, 3}, []float64{1, 1, 1}),
 			r:     mat.NewVecDense(6, []float64{0, 0, 0, 0, 0, 0}),
 		},
 		{
 			alpha: 1,
-			b:     NewVecCOO(6, []int{0, 1, 3}, []float64{1, 2, 4}),
+			b:     NewVector(6, []int{0, 1, 3}, []float64{1, 2, 4}),
 			r:     mat.NewVecDense(6, []float64{1, 2, 0, 4, 0, 0}),
 		},
 		{
 			alpha: 2,
-			b:     NewVecCOO(6, []int{0, 1, 3}, []float64{1, 2, 1}),
+			b:     NewVector(6, []int{0, 1, 3}, []float64{1, 2, 1}),
 			r:     mat.NewVecDense(6, []float64{2, 4, 0, 2, 0, 0}),
 		},
 	}
 
 	for ti, test := range tests {
-		var result VecCOO
+		var result Vector
 
 		result.ScaleVec(test.alpha, test.b)
 
@@ -152,17 +152,17 @@ func TestDot(t *testing.T) {
 			r: 5,
 		},
 		{
-			a: NewVecCOO(6, []int{1, 3, 4}, []float64{1, 2, 1}),
-			b: NewVecCOO(6, []int{0, 1, 3}, []float64{1, 1, 2}),
+			a: NewVector(6, []int{1, 3, 4}, []float64{1, 2, 1}),
+			b: NewVector(6, []int{0, 1, 3}, []float64{1, 1, 2}),
 			r: 5,
 		},
 		{
 			a: mat.NewVecDense(6, []float64{0, 1, 0, 2, 1, 0}),
-			b: NewVecCOO(6, []int{0, 1, 3}, []float64{1, 1, 2}),
+			b: NewVector(6, []int{0, 1, 3}, []float64{1, 1, 2}),
 			r: 5,
 		},
 		{
-			a: NewVecCOO(6, []int{1, 3, 4}, []float64{1, 2, 1}),
+			a: NewVector(6, []int{1, 3, 4}, []float64{1, 2, 1}),
 			b: mat.NewVecDense(6, []float64{1, 1, 0, 2, 0, 0}),
 			r: 5,
 		},
@@ -178,7 +178,7 @@ func TestDot(t *testing.T) {
 	}
 }
 
-func TestVecCOONorm(t *testing.T) {
+func TestVectorNorm(t *testing.T) {
 	tests := []struct {
 		a      mat.Vector
 		result float64
@@ -188,7 +188,7 @@ func TestVecCOONorm(t *testing.T) {
 			result: 3.741657386773941,
 		},
 		{
-			a:      NewVecCOO(6, []int{1, 2, 4}, []float64{1, 3, 2}),
+			a:      NewVector(6, []int{1, 2, 4}, []float64{1, 3, 2}),
 			result: 3.7416573867739413,
 		},
 	}
@@ -203,18 +203,18 @@ func TestVecCOONorm(t *testing.T) {
 	}
 }
 
-func TestVecCOODoNonZero(t *testing.T) {
+func TestVectorDoNonZero(t *testing.T) {
 	var tests = []struct {
 		nnz  int
-		data *VecCOO
+		data *Vector
 	}{
 		{
 			nnz:  3,
-			data: NewVecCOO(6, []int{1, 2, 4}, []float64{1, 3, 2}),
+			data: NewVector(6, []int{1, 2, 4}, []float64{1, 3, 2}),
 		},
 		{
 			nnz:  0,
-			data: NewVecCOO(6, []int{}, []float64{}),
+			data: NewVector(6, []int{}, []float64{}),
 		},
 	}
 
@@ -261,7 +261,7 @@ func TestVecGather(t *testing.T) {
 
 	for ti, test := range tests {
 		src := mat.NewVecDense(test.length, test.src)
-		dst := NewVecCOO(test.length, test.ind, test.data)
+		dst := NewVector(test.length, test.ind, test.data)
 		dst.Gather(src)
 
 		for i := 0; i < test.length; i++ {
@@ -298,7 +298,7 @@ func TestVecGatherAndZero(t *testing.T) {
 
 	for ti, test := range tests {
 		src := mat.NewVecDense(test.length, test.src)
-		dst := NewVecCOO(test.length, test.ind, test.data)
+		dst := NewVector(test.length, test.ind, test.data)
 		dst.GatherAndZero(src)
 
 		for i := 0; i < test.length; i++ {
@@ -339,7 +339,7 @@ func TestVecScatter(t *testing.T) {
 	}
 
 	for ti, test := range tests {
-		src := NewVecCOO(test.length, test.ind, test.data)
+		src := NewVector(test.length, test.ind, test.data)
 		result := src.Scatter(test.dst)
 
 		for i := 0; i < test.length; i++ {
@@ -354,12 +354,12 @@ func TestVecScatter(t *testing.T) {
 }
 
 func TestCloneVec(t *testing.T) {
-	basicSparse := NewVecCOO(5, []int{0, 2, 3}, []float64{1, 2, 3})
+	basicSparse := NewVector(5, []int{0, 2, 3}, []float64{1, 2, 3})
 
 	tests := []struct {
 		src      mat.Vector
-		rcv      *VecCOO
-		expected *VecCOO
+		rcv      *Vector
+		expected *Vector
 	}{
 		{ // test src == rcv
 			src:      basicSparse,
@@ -368,17 +368,17 @@ func TestCloneVec(t *testing.T) {
 		},
 		{ // test rcv empty
 			src:      basicSparse,
-			rcv:      &VecCOO{},
+			rcv:      &Vector{},
 			expected: basicSparse,
 		},
 		{ // test src capacity > rcv
 			src:      basicSparse,
-			rcv:      NewVecCOO(4, []int{1}, []float64{1}),
+			rcv:      NewVector(4, []int{1}, []float64{1}),
 			expected: basicSparse,
 		},
 		{ // test src capacity < rcv
 			src:      basicSparse,
-			rcv:      NewVecCOO(7, []int{0, 1, 3, 4}, []float64{1, 2, 3, 4}),
+			rcv:      NewVector(7, []int{0, 1, 3, 4}, []float64{1, 2, 3, 4}),
 			expected: basicSparse,
 		},
 		{ // test src as dense vector
@@ -419,7 +419,7 @@ func TestVecToVecDense(t *testing.T) {
 	}
 
 	for ti, test := range tests {
-		src := NewVecCOO(test.length, test.ind, test.data)
+		src := NewVector(test.length, test.ind, test.data)
 		result := src.ToDense()
 
 		for i := 0; i < test.length; i++ {

@@ -231,8 +231,7 @@ func (c *CSR) RowView(i int) mat.Vector {
 	if i >= c.matrix.I || i < 0 {
 		panic(mat.ErrRowAccess)
 	}
-	//return mat.NewVecDense(c.j, c.nativeSlice(i))
-	return NewVecCOO(
+	return NewVector(
 		c.matrix.J,
 		c.matrix.Ind[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
 		c.matrix.Data[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
@@ -250,7 +249,6 @@ func (c *CSR) ColView(j int) mat.Vector {
 		slice[i] = c.At(i, j)
 	}
 	return mat.NewVecDense(c.matrix.I, slice)
-	//return mat.NewVecDense(c.matrix.I, slice)
 }
 
 // ScatterRow returns a slice representing row i of the matrix in dense format.  This
@@ -267,7 +265,6 @@ func (c *CSR) ScatterRow(i int) []float64 {
 		c.matrix.Ind[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
 	)
 	return x
-	//return c.nativeSlice(i)
 }
 
 // CSC is a Compressed Sparse Column format sparse matrix implementation (sometimes called Compressed Column
@@ -445,7 +442,6 @@ func (c *CSC) RowView(i int) mat.Vector {
 		slice[j] = c.At(i, j)
 	}
 	return mat.NewVecDense(c.matrix.I, slice)
-	//return mat.NewVecDense(c.matrix.I, slice)
 }
 
 // ColView slices the Compressed Sparse Column matrix along its primary axis.
@@ -455,8 +451,7 @@ func (c *CSC) ColView(j int) mat.Vector {
 	if j >= c.matrix.I || j < 0 {
 		panic(mat.ErrColAccess)
 	}
-	//return mat.NewVecDense(c.j, c.nativeSlice(j))
-	return NewVecCOO(
+	return NewVector(
 		c.matrix.J,
 		c.matrix.Ind[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]],
 		c.matrix.Data[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]],
@@ -477,5 +472,4 @@ func (c *CSC) ScatterCol(j int) []float64 {
 		c.matrix.Ind[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]],
 	)
 	return x
-	//return c.nativeSlice(i)
 }

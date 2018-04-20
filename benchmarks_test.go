@@ -1,8 +1,10 @@
 package sparse
 
 import (
+	"math/rand"
 	"testing"
 
+	"github.com/james-bowman/sparse/blas"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -282,4 +284,144 @@ func benchmarkMatrixAddition(target *CSR, lhs mat.Matrix, rhs mat.Matrix, b *tes
 	for n := 0; n < b.N; n++ {
 		target.Add(lhs, rhs)
 	}
+}
+
+func BenchmarkMulBLASLargeDenseCSRDense(b *testing.B) {
+	ar, ac := 500, 600
+	t := mat.NewDense(ar, ar, nil)
+	lhs := Random(CSRFormat, ar, ac, 0.01).(*CSR)
+	rhs := Random(DenseFormat, ac, ar, 0.01).(*mat.Dense)
+
+	a := lhs.RawMatrix()
+
+	rawB := rhs.RawMatrix()
+	rawC := t.RawMatrix()
+
+	for n := 0; n < b.N; n++ {
+		blas.Usmm(false, ar, 1, a, rawB.Data, rawB.Stride, rawC.Data, rawC.Stride)
+	}
+}
+
+func BenchmarkMulBLASLargeDenseCSRCSC(b *testing.B) {
+	ar, ac := 500, 600
+	t := mat.NewDense(ar, ar, nil)
+	lhs := Random(CSRFormat, ar, ac, 0.01).(*CSR)
+	rhs := Random(CSCFormat, ac, ar, 0.01).(*CSC)
+
+	a := lhs.RawMatrix()
+	br := rhs.RawMatrix()
+
+	rawC := t.RawMatrix()
+	y := make([]float64, ac)
+
+	for n := 0; n < b.N; n++ {
+		for i := 0; i < ar; i++ {
+			ind := br.Ind[br.Indptr[i]:br.Indptr[i+1]]
+			blas.Ussc(br.Data[br.Indptr[i]:br.Indptr[i+1]], y, 1, ind)
+			blas.Usmv(false, 1, a, y, 1, rawC.Data[i:], rawC.Stride)
+			for _, v := range ind {
+				y[v] = 0
+			}
+		}
+	}
+}
+
+func BenchmarkMulBLASLargeCSCCSRCSC(b *testing.B) {
+	ar, ac := 500, 600
+
+	lhs := Random(CSRFormat, ar, ac, 0.01).(*CSR)
+	rhs := Random(CSCFormat, ac, ar, 0.01).(*CSC)
+
+	a := lhs.RawMatrix()
+	br := rhs.RawMatrix()
+
+	indptr := make([]int, ar+1)
+	indptr[0] = 0
+	var indx []int
+	var data []float64
+
+	y := make([]float64, ac)
+	z := make([]float64, ar)
+
+	for n := 0; n < b.N; n++ {
+		for i := 0; i < ar; i++ {
+			ind := br.Ind[br.Indptr[i]:br.Indptr[i+1]]
+			blas.Ussc(br.Data[br.Indptr[i]:br.Indptr[i+1]], y, 1, ind)
+			blas.Usmv(false, 1, a, y, 1, z, 1)
+
+			for k, v := range z {
+				if v != 0 {
+					data = append(data, v)
+					ind = append(indx, k)
+					z[k] = 0
+				}
+			}
+			indptr[i+1] = len(data)
+		}
+	}
+	NewCSC(ar, ar, indptr, indx, data)
+}
+
+// dot is a package level variable to hold the result of dot benchmark to prevent
+// compiler from optimising out the call.
+var dot float64
+
+func BenchmarkDot(b *testing.B) {
+	rnd := rand.New(rand.NewSource(0))
+	population := 0.3
+	dim := 100000000
+
+	adata := make([]float64, dim)
+	bdata := make([]float64, dim)
+
+	pop := int(float64(dim) * population)
+	for i := 1; i <= pop; i++ {
+		adata[rnd.Intn(dim)] = float64(i)
+		bdata[rnd.Intn(dim)] = float64(i)
+	}
+
+	benchmarks := []struct {
+		name string
+		af   vector
+		bf   vector
+		fn   func(mat.Vector, mat.Vector) float64
+	}{
+		{name: "Mat Dense Dense", af: denseVec, bf: denseVec, fn: mat.Dot},
+		{name: "Mat Sparse Sparse", af: sparseVec, bf: sparseVec, fn: mat.Dot},
+		{name: "Mat Dense Sparse", af: denseVec, bf: sparseVec, fn: mat.Dot},
+		{name: "Mat Sparse Dense", af: denseVec, bf: sparseVec, fn: mat.Dot},
+
+		{name: "Sparse Sparse Sparse", af: sparseVec, bf: sparseVec, fn: Dot},
+		{name: "Sparse Sparse Dense", af: sparseVec, bf: denseVec, fn: Dot},
+		{name: "Sparse Dense Sparse", af: denseVec, bf: sparseVec, fn: Dot},
+		{name: "Sparse Dense Dense", af: denseVec, bf: denseVec, fn: Dot},
+	}
+
+	for _, bench := range benchmarks {
+		av := bench.af(adata)
+		bv := bench.bf(bdata)
+
+		b.Run(bench.name, func(b *testing.B) {
+			dot = bench.fn(av, bv)
+		})
+	}
+}
+
+type vector func([]float64) mat.Vector
+
+func sparseVec(s []float64) mat.Vector {
+	var data []float64
+	var ind []int
+
+	for i, v := range s {
+		if v != 0 {
+			data = append(data, v)
+			ind = append(ind, i)
+		}
+	}
+	return NewVector(len(s), ind, data)
+}
+
+func denseVec(s []float64) mat.Vector {
+	return mat.NewVecDense(len(s), s)
 }

@@ -10,30 +10,30 @@ import (
 )
 
 var (
-	_ Sparser    = (*VecCOO)(nil)
-	_ mat.Matrix = (*VecCOO)(nil)
-	_ mat.Vector = (*VecCOO)(nil)
+	_ Sparser    = (*Vector)(nil)
+	_ mat.Matrix = (*Vector)(nil)
+	_ mat.Vector = (*Vector)(nil)
 )
 
-// VecCOO is a sparse vector format.  It implements the mat.Vector
+// Vector is a sparse vector format.  It implements the mat.Vector
 // interface but is optimised for sparsely populated vectors where
 // most of the elements contain zero values by only storing and
 // processing the non-zero values.  The format is similar to the
 // triplet format used by COO matrices (and CSR/CSC) but only uses
 // 2 arrays because the vector is 1 dimensional rather than 2.
-type VecCOO struct {
+type Vector struct {
 	len  int
 	ind  []int
 	data []float64
 }
 
-// NewVecCOO returns a new sparse vector of length len with
+// NewVector returns a new sparse vector of length len with
 // elements specified by ind[] containing the values conatined
-// within data.  VecCOO will reuse the same storage as the slices
+// within data.  Vector will reuse the same storage as the slices
 // passed in and so any changes to the vector will be reflected
 // in the slices and vice versa.
-func NewVecCOO(len int, ind []int, data []float64) *VecCOO {
-	return &VecCOO{
+func NewVector(len int, ind []int, data []float64) *Vector {
+	return &Vector{
 		len:  len,
 		ind:  ind,
 		data: data,
@@ -42,12 +42,12 @@ func NewVecCOO(len int, ind []int, data []float64) *VecCOO {
 
 // Dims returns the dimensions of the vector.  This will be
 // equivalent to Len(), 1
-func (v *VecCOO) Dims() (r, c int) {
+func (v *Vector) Dims() (r, c int) {
 	return v.len, 1
 }
 
 // At returns the element at r, c.  At will panic if c != 0.
-func (v *VecCOO) At(r, c int) float64 {
+func (v *Vector) At(r, c int) float64 {
 	if c != 0 {
 		panic(mat.ErrColAccess)
 	}
@@ -55,17 +55,17 @@ func (v *VecCOO) At(r, c int) float64 {
 }
 
 // T returns the transpose of the receiver.
-func (v *VecCOO) T() mat.Matrix {
+func (v *Vector) T() mat.Matrix {
 	return mat.TransposeVec{Vector: v}
 }
 
 // NNZ returns the number of non-zero elements in the vector.
-func (v *VecCOO) NNZ() int {
+func (v *Vector) NNZ() int {
 	return len(v.data)
 }
 
 // AtVec returns the i'th element of the Vector.
-func (v *VecCOO) AtVec(i int) float64 {
+func (v *Vector) AtVec(i int) float64 {
 	if i < 0 || i >= v.len {
 		panic(mat.ErrRowAccess)
 	}
@@ -84,14 +84,14 @@ func (v *VecCOO) AtVec(i int) float64 {
 }
 
 // Len returns the length of the vector
-func (v *VecCOO) Len() int {
+func (v *Vector) Len() int {
 	return v.len
 }
 
 // DoNonZero calls the function fn for each of the non-zero elements of the receiver.
 // The function fn takes a row/column index and the element value of the receiver at
 // (i, j).
-func (v *VecCOO) DoNonZero(fn func(i int, j int, v float64)) {
+func (v *Vector) DoNonZero(fn func(i int, j int, v float64)) {
 	for i := 0; i < len(v.ind); i++ {
 		fn(v.ind[i], 0, v.data[i])
 	}
@@ -101,7 +101,7 @@ func (v *VecCOO) DoNonZero(fn func(i int, j int, v float64)) {
 // that have corresponding non-zero entries in the receiver into the
 // receiver.  The method will panic if denseVector is not the same
 // length as the receiver.
-func (v *VecCOO) Gather(denseVector *mat.VecDense) {
+func (v *Vector) Gather(denseVector *mat.VecDense) {
 	if v.len != denseVector.Len() {
 		panic(mat.ErrShape)
 	}
@@ -114,7 +114,7 @@ func (v *VecCOO) Gather(denseVector *mat.VecDense) {
 // into the receiver and then zeros those entries in denseVector.
 // The method will panic if denseVector is not the same length
 // as the receiver.
-func (v *VecCOO) GatherAndZero(denseVector *mat.VecDense) {
+func (v *Vector) GatherAndZero(denseVector *mat.VecDense) {
 	if v.len != denseVector.Len() {
 		panic(mat.ErrShape)
 	}
@@ -126,7 +126,7 @@ func (v *VecCOO) GatherAndZero(denseVector *mat.VecDense) {
 // Scatter scatters elements from the receiver into the supplied mat.VecDense
 // structure, denseVector and returns a pointer to it.  The method will panic
 // if denseVector is not the same length as the receiver (unless it is nil)
-func (v *VecCOO) Scatter(denseVector *mat.VecDense) *mat.VecDense {
+func (v *Vector) Scatter(denseVector *mat.VecDense) *mat.VecDense {
 	if v.len != denseVector.Len() {
 		panic(mat.ErrShape)
 	}
@@ -138,13 +138,13 @@ func (v *VecCOO) Scatter(denseVector *mat.VecDense) *mat.VecDense {
 // CloneVec clones the supplied mat.Vector, a into the receiver, overwriting
 // the previous values of the receiver.  If the receiver is of a different
 // length from a, it will be resized to accomodate the values from a.
-func (v *VecCOO) CloneVec(a mat.Vector) {
+func (v *Vector) CloneVec(a mat.Vector) {
 	if v == a {
 		return
 	}
 	v.len = a.Len()
 
-	if sv, isSparse := a.(*VecCOO); isSparse {
+	if sv, isSparse := a.(*Vector); isSparse {
 		size := len(sv.ind)
 		if size > cap(v.ind) {
 			v.ind = make([]int, size)
@@ -174,15 +174,15 @@ func (v *VecCOO) CloneVec(a mat.Vector) {
 
 // ToDense converts the sparse vector to a dense vector
 // The returned dense matrix is a new copy of the receiver.
-func (v *VecCOO) ToDense() *mat.VecDense {
+func (v *Vector) ToDense() *mat.VecDense {
 	return v.Scatter(mat.NewVecDense(v.len, nil))
 }
 
 // AddVec adds the vectors a and b, placing the result in the receiver.
 // AddVec will panic if a and b are not the same length.  If a and b
-// are both sparse VecCOO vectors then AddVec will only process the
+// are both sparse Vector vectors then AddVec will only process the
 // non-zero elements.
-func (v *VecCOO) AddVec(a, b mat.Vector) {
+func (v *Vector) AddVec(a, b mat.Vector) {
 	ar := a.Len()
 	br := b.Len()
 
@@ -193,8 +193,8 @@ func (v *VecCOO) AddVec(a, b mat.Vector) {
 	v.len = ar
 
 	// Sparse specific optimised implementation
-	sa, aIsSparse := a.(*VecCOO)
-	sb, bIsSparse := b.(*VecCOO)
+	sa, aIsSparse := a.(*Vector)
+	sb, bIsSparse := b.(*Vector)
 	if aIsSparse && bIsSparse {
 		v.addVecSparse(sa, 1, sb)
 		return
@@ -216,9 +216,9 @@ func (v *VecCOO) AddVec(a, b mat.Vector) {
 }
 
 // addVecSparse adds the vectors a and alpha*b.  This method is
-// optimised for processing sparse VecCOO vectors and only processes
+// optimised for processing sparse Vector vectors and only processes
 // non-zero elements.
-func (v *VecCOO) addVecSparse(a *VecCOO, alpha float64, b *VecCOO) {
+func (v *Vector) addVecSparse(a *Vector, alpha float64, b *Vector) {
 	ind, data := v.createWorkspace(0, false)
 
 	var i, j int
@@ -275,7 +275,7 @@ func (v *VecCOO) addVecSparse(a *VecCOO, alpha float64, b *VecCOO) {
 
 // ScaleVec scales the vector a by alpha, placing the result in the
 // receiver.
-func (v *VecCOO) ScaleVec(alpha float64, a mat.Vector) {
+func (v *Vector) ScaleVec(alpha float64, a mat.Vector) {
 	v.len = a.Len()
 
 	if alpha == 0 {
@@ -284,7 +284,7 @@ func (v *VecCOO) ScaleVec(alpha float64, a mat.Vector) {
 		return
 	}
 
-	if s, isSparse := a.(*VecCOO); isSparse {
+	if s, isSparse := a.(*Vector); isSparse {
 		ind, data := v.createWorkspace(s.NNZ(), false)
 		copy(ind, s.ind)
 		for i, val := range s.data {
@@ -309,7 +309,7 @@ func (v *VecCOO) ScaleVec(alpha float64, a mat.Vector) {
 // AddScaledVec adds the vectors a and alpha*b, placing the result
 // in the receiver.  AddScaledVec will panic if a and b are not the
 // same length.
-func (v *VecCOO) AddScaledVec(a mat.Vector, alpha float64, b mat.Vector) {
+func (v *Vector) AddScaledVec(a mat.Vector, alpha float64, b mat.Vector) {
 	ar := a.Len()
 	br := b.Len()
 
@@ -320,8 +320,8 @@ func (v *VecCOO) AddScaledVec(a mat.Vector, alpha float64, b mat.Vector) {
 	v.len = ar
 
 	// Sparse specific optimised implementation
-	sa, aIsSparse := a.(*VecCOO)
-	sb, bIsSparse := b.(*VecCOO)
+	sa, aIsSparse := a.(*Vector)
+	sb, bIsSparse := b.(*Vector)
 	if aIsSparse && bIsSparse {
 		v.addVecSparse(sa, alpha, sb)
 		return
@@ -342,7 +342,7 @@ func (v *VecCOO) AddScaledVec(a mat.Vector, alpha float64, b mat.Vector) {
 // Norm calculates the Norm of the vector only processing the
 // non-zero elements.
 // See Normer interface for more details.
-func (v *VecCOO) Norm(L float64) float64 {
+func (v *Vector) Norm(L float64) float64 {
 	if L == 2 {
 		twoNorm := math.Pow(math.Abs(v.data[0]), 2)
 		for i := 1; i < len(v.data); i++ {
@@ -362,8 +362,8 @@ func Dot(a, b mat.Vector) float64 {
 		panic(mat.ErrShape)
 	}
 
-	as, aIsSparse := a.(*VecCOO)
-	bs, bIsSparse := b.(*VecCOO)
+	as, aIsSparse := a.(*Vector)
+	bs, bIsSparse := b.(*Vector)
 
 	if aIsSparse {
 		if bIsSparse {
@@ -389,11 +389,11 @@ func Dot(a, b mat.Vector) float64 {
 }
 
 // dotSparseSparse returns the sum of the element-wise product of
-// a and b where a and b are both sparse VecCOO vectors.  dotSparse
+// a and b where a and b are both sparse Vector vectors.  dotSparse
 // will only process non-zero elements in the vectors.
-func dotSparseSparse(a, b *VecCOO) float64 {
+func dotSparseSparse(a, b *Vector) float64 {
 	var result float64
-	var lhs, rhs *VecCOO
+	var lhs, rhs *Vector
 
 	if a.NNZ() < b.NNZ() {
 		lhs, rhs = a, b
@@ -422,7 +422,7 @@ func dotSparseSparse(a, b *VecCOO) float64 {
 // dotSparse returns the sum of the element-wise multiplication
 // of a and b where a is sparse and b is any implementation of
 // mat.Vector.
-func dotSparse(a *VecCOO, b mat.Vector) float64 {
+func dotSparse(a *Vector, b mat.Vector) float64 {
 	var result float64
 	for i, ind := range a.ind {
 		result += a.data[i] * b.AtVec(ind)
@@ -438,7 +438,7 @@ func dotSparse(a *VecCOO, b mat.Vector) float64 {
 // createWorkspace will attempt to reuse previously allocated memory
 // for the temporary workspace where ever possible to avoid allocating
 // memory and placing strain on GC.
-func (v *VecCOO) createWorkspace(size int, zero bool) ([]int, []float64) {
+func (v *Vector) createWorkspace(size int, zero bool) ([]int, []float64) {
 	ind := getInts(size, zero)
 	data := getFloats(size, zero)
 
@@ -450,7 +450,7 @@ func (v *VecCOO) createWorkspace(size int, zero bool) ([]int, []float64) {
 // with the values from the temporary workspace and returning the
 // memory used by the workspace to the pool for other operations to
 // reuse.
-func (v *VecCOO) commitWorkspace(indexes []int, data []float64) {
+func (v *Vector) commitWorkspace(indexes []int, data []float64) {
 	v.ind, indexes = indexes, v.ind
 	v.data, data = data, v.data
 	putInts(indexes)

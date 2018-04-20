@@ -54,10 +54,6 @@ A common practice is to construct sparse matrices using a creational format e.g.
 
 ## Planned
 
-* Further optimisations of CSR dot product for sparse matrix type operands (only considering non-zero values as with CSR operands currently), even as RHS operand ((AB)^T = B^T A^T)
-* Consider implicitly converting sparse matrix operands to CSR/CSC for arithmetic operations
 * Implement parallel/fast matrix multiplication algorithm for sparse matrices
 * Implement further arithmetic operations e.g. subtract, divide, element wise multiplication, etc.
-* Consider using native libraries to perform matrix arithmetic (as an option if available on host).
 * Improve memory allocation for matrix multiplication - pre-calculating sparsity pattern for product and allocate storage in advance rather than incrementally.
-
