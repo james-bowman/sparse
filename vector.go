@@ -370,7 +370,7 @@ func Dot(a, b mat.Vector) float64 {
 			// bdense := make([]float64, bs.Len())
 			// blas.Ussc(bs.data, bdense, 1, bs.ind)
 			// return blas.Usdot(as.data, as.ind, bdense, 1)
-			dotSparseSparse(as, bs)
+			return dotSparseSparse(as, bs)
 		}
 		if bdense, bIsDense := b.(mat.RawVectorer); bIsDense {
 			raw := bdense.RawVector()
