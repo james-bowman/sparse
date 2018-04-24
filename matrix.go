@@ -3,6 +3,7 @@ package sparse
 import (
 	"math/rand"
 
+	"github.com/james-bowman/sparse/blas"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -178,4 +179,67 @@ func Norm(m mat.Matrix, L float64) float64 {
 	}
 
 	return mat.Norm(m, L)
+}
+
+// ConvertibleSparser is an interface which aggregates the TypeConverter and Sparser
+// interfaces.  It is used
+type BlasCompatibleSparser interface {
+	Sparser
+	RawMatrix() *blas.SparseMatrix
+}
+
+func MulMatVec(transA bool, alpha float64, a BlasCompatibleSparser, x *mat.VecDense, y *mat.VecDense) *mat.VecDense {
+	return nil
+}
+
+// MulMatMat (c = alpha * a * b + c) performs sparse matrix multiplication with another matrix and
+// stores the result in a mat.Dense matrix.  c is a *mat.Dense, if c is nil, a new mat.Dense
+// of the correct dimensions (Ar x Bc) will be allocated and returned as the result from the
+// function. b is an implementation of mat.Matrix and a is a sparse matrix of type CSR, CSC or
+// a format that implements the BlasCompatibleSparser interface).  Matrix A
+// will be scaled by alpha.  If transA is true, the matrix A will be transposed as part of the
+// operation.  The function will panic if Ac != Br or if (C != nil and (ar != Cr or Bc != Cc))
+func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix, c *mat.Dense) *mat.Dense {
+	// A is m x n (or n x m if transA), B is n x k, C is m x k
+	ar, ac := a.Dims()
+	if transA {
+		ar, ac = ac, ar
+	}
+	br, bc := b.Dims()
+
+	if ac != br {
+		panic(mat.ErrShape)
+	}
+	if c == nil {
+		c = mat.NewDense(ar, bc, nil)
+	} else {
+		cr, cc := c.Dims()
+		if ar != cr || bc != cc {
+			panic(mat.ErrShape)
+		}
+	}
+	craw := c.RawMatrix()
+
+	var araw *blas.SparseMatrix
+	if as, ok := a.(*CSC); ok {
+		// as CSC is the natural transpose of CSR, we will transpose here to CSR
+		// then transpose back during the multiplication operation
+		araw = as.T().(*CSR).RawMatrix()
+		transA = !transA
+	} else {
+		araw = a.RawMatrix()
+	}
+
+	if bd, bIsDense := b.(*mat.Dense); bIsDense {
+		braw := bd.RawMatrix()
+		blas.Usmm(transA, bc, alpha, araw, braw.Data, braw.Stride, craw.Data, craw.Stride)
+		return c
+	}
+
+	col := make([]float64, br)
+	for j := 0; j < bc; j++ {
+		col := mat.Col(col, j, b)
+		blas.Usmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
+	}
+	return c
 }

@@ -1,6 +1,7 @@
 package sparse
 
 import (
+	"github.com/james-bowman/sparse/blas"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -96,6 +97,12 @@ func (d *DOK) DoNonZero(fn func(i, j int, v float64)) {
 // NNZ returns the Number of Non Zero elements in the sparse matrix.
 func (d *DOK) NNZ() int {
 	return len(d.elements)
+}
+
+// RawMatrix converts the matrix to a CSR matrix and returns a pointer to
+// the underlying blas sparse matrix.
+func (d *DOK) RawMatrix() *blas.SparseMatrix {
+	return d.ToCSR().RawMatrix()
 }
 
 // ToDense returns a mat.Dense dense format version of the matrix.  The returned mat.Dense

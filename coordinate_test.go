@@ -62,6 +62,13 @@ func TestCOOConversion(t *testing.T) {
 			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(a), mat.Formatted(b))
 			t.Fail()
 		}
+
+		if !mat.Equal(d, a) {
+			t.Logf("D : %v\n", d)
+			t.Logf("A : %v\n", a)
+			t.Logf("Original matrix changed - Expected:\n%v\n but received:\n%v\n", mat.Formatted(d), mat.Formatted(a))
+			t.Fail()
+		}
 	}
 }
 
@@ -165,6 +172,65 @@ func TestCOODoNonZero(t *testing.T) {
 		if nnz != matrix.NNZ() {
 			t.Logf("Expected %d Non Zero elements but found %d", nnz, matrix.NNZ())
 			t.Fail()
+		}
+	}
+}
+
+func TestCOOTranspose(t *testing.T) {
+	tests := []struct {
+		m     *COO
+		r     int
+		c     int
+		data  []float64
+		er    int
+		ec    int
+		edata []float64
+	}{
+		{
+			m: NewCOO(
+				3, 4,
+				[]int{0, 1, 2, 2},
+				[]int{0, 1, 2, 3},
+				[]float64{1, 2, 3, 6},
+			),
+			er: 4, ec: 3,
+			edata: []float64{
+				1, 0, 0,
+				0, 2, 0,
+				0, 0, 3,
+				0, 0, 6},
+		},
+		{
+			m: NewCOO(
+				3, 4,
+				[]int{0, 2, 1, 2},
+				[]int{0, 2, 1, 3},
+				[]float64{1, 3, 2, 6},
+			),
+			er: 4, ec: 3,
+			edata: []float64{
+				1, 0, 0,
+				0, 2, 0,
+				0, 0, 3,
+				0, 0, 6},
+		},
+	}
+
+	for ti, test := range tests {
+		orig := mat.DenseCopyOf(test.m)
+
+		e := mat.NewDense(test.er, test.ec, test.edata)
+
+		tr := test.m.T()
+
+		if !mat.Equal(e, tr) {
+			t.Errorf("Test %d: Expected\n%v\nBut received\n%v\n", ti, mat.Formatted(e), mat.Formatted(tr))
+		}
+
+		nt := tr.T()
+
+		if !mat.Equal(orig, nt) {
+			t.Errorf("Test %d: Transpose back Expected\n%v\nBut received\n%v\n", ti, mat.Formatted(orig), mat.Formatted(nt))
 		}
 	}
 }

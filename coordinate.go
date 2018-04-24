@@ -3,6 +3,7 @@ package sparse
 import (
 	"sort"
 
+	"github.com/james-bowman/sparse/blas"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -116,10 +117,29 @@ func (c *COO) At(i, j int) float64 {
 	return result
 }
 
-// T transposes the matrix creating a new COO matrix sharing the same backing data but switching
+// T transposes the matrix creating a new COO matrix, allocating new storage, but switching
 // column and row sizes and index slices i.e. rows become columns and columns become rows.
 func (c *COO) T() mat.Matrix {
-	return NewCOO(c.c, c.r, c.cols, c.rows, c.data)
+	// TODO Should transpose operation copy data or reuse same underlying storage
+	// as original matrix so that updates to one are reflected in the other as with
+	// other matrix formats?
+	// If the latter, need to make sure internal sorts/canonicalisation don't screw
+	// with other matrices sharing storage.
+	size := len(c.data)
+	cols := make([]int, size)
+	rows := make([]int, size)
+	data := make([]float64, size)
+	copy(cols, c.cols)
+	copy(rows, c.rows)
+	copy(data, c.data)
+
+	return NewCOO(c.c, c.r, cols, rows, data)
+}
+
+// RawMatrix converts the matrix into a CSR matrix and returns a pointer
+// to the underlying blas sparse matrix.
+func (c *COO) RawMatrix() *blas.SparseMatrix {
+	return c.ToCSR().RawMatrix()
 }
 
 // Set sets the element of the matrix located at row i and column j to equal the specified value, v.  Set
@@ -145,8 +165,8 @@ func (c *COO) Set(i, j int, v float64) {
 // and improves performance for operations.
 func (c *COO) Canonicalise() {
 	sort.Sort(c)
-
 	//  Remove duplicates (summing values of duplicate elements)
+
 	k := 0
 	for i := 1; i < len(c.data); i++ {
 		if (c.rows[k] != c.rows[i]) || (c.cols[k] != c.cols[i]) {
@@ -156,7 +176,7 @@ func (c *COO) Canonicalise() {
 			c.data[k] += c.data[i]
 		}
 	}
-
+	c.rows, c.cols, c.data = c.rows[:k+1], c.cols[:k+1], c.data[:k+1]
 	c.canonicalised = true
 }
 
