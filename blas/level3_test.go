@@ -5,7 +5,7 @@ import (
 )
 
 // A is m x n, B is n x k, C is m x k
-func TestUsmm(t *testing.T) {
+func TestDusmm(t *testing.T) {
 	tests := []struct {
 		transA bool
 		alpha  float64
@@ -136,7 +136,7 @@ func TestUsmm(t *testing.T) {
 	}
 
 	for ti, test := range tests {
-		Usmm(test.transA, test.ec, test.alpha, test.a, test.bData, test.bc, test.cData, test.cc)
+		Dusmm(test.transA, test.ec, test.alpha, test.a, test.bData, test.bc, test.cData, test.cc)
 
 		for i, v := range test.eData {
 			if v != test.cData[i] {

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestUsmv(t *testing.T) {
+func TestDusmv(t *testing.T) {
 	tests := []struct {
 		transA   bool
 		alpha    float64
@@ -118,7 +118,7 @@ func TestUsmv(t *testing.T) {
 	}
 
 	for ti, test := range tests {
-		Usmv(test.transA, test.alpha, test.a, test.x, test.incx, test.y, test.incy)
+		Dusmv(test.transA, test.alpha, test.a, test.x, test.incx, test.y, test.incy)
 
 		for i, v := range test.expected {
 			if v != test.y[i] {

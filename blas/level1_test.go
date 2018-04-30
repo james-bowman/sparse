@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestUsdot(t *testing.T) {
+func TestDusdot(t *testing.T) {
 	tests := []struct {
 		x        []float64
 		indx     []int
@@ -34,7 +34,7 @@ func TestUsdot(t *testing.T) {
 	}
 
 	for ti, test := range tests {
-		dot := Usdot(test.x, test.indx, test.y, test.incy)
+		dot := Dusdot(test.x, test.indx, test.y, test.incy)
 
 		if dot != test.expected {
 			t.Errorf("Test %d: Wanted %f but received %f", ti+1, test.expected, dot)
@@ -42,7 +42,7 @@ func TestUsdot(t *testing.T) {
 	}
 }
 
-func TestUsaxpy(t *testing.T) {
+func TestDusaxpy(t *testing.T) {
 	tests := []struct {
 		alpha    float64
 		x        []float64
@@ -88,7 +88,7 @@ func TestUsaxpy(t *testing.T) {
 	}
 
 	for ti, test := range tests {
-		Usaxpy(test.alpha, test.x, test.indx, test.y, test.incy)
+		Dusaxpy(test.alpha, test.x, test.indx, test.y, test.incy)
 
 		for i, y := range test.y {
 			if y != test.expected[i] {
@@ -98,7 +98,7 @@ func TestUsaxpy(t *testing.T) {
 	}
 }
 
-func TestUsga(t *testing.T) {
+func TestDusga(t *testing.T) {
 	tests := []struct {
 		x        []float64
 		indx     []int
@@ -128,7 +128,7 @@ func TestUsga(t *testing.T) {
 	}
 
 	for ti, test := range tests {
-		Usga(test.y, test.incy, test.x, test.indx)
+		Dusga(test.y, test.incy, test.x, test.indx)
 
 		for i := range test.indx {
 			if test.x[i] != test.expected[i] {
@@ -138,7 +138,7 @@ func TestUsga(t *testing.T) {
 	}
 }
 
-func TestUsgz(t *testing.T) {
+func TestDusgz(t *testing.T) {
 	tests := []struct {
 		x        []float64
 		indx     []int
@@ -168,7 +168,7 @@ func TestUsgz(t *testing.T) {
 	}
 
 	for ti, test := range tests {
-		Usgz(test.y, test.incy, test.x, test.indx)
+		Dusgz(test.y, test.incy, test.x, test.indx)
 
 		for i, v := range test.indx {
 			if test.x[i] != test.expected[i] {
@@ -181,7 +181,7 @@ func TestUsgz(t *testing.T) {
 	}
 }
 
-func TestUssc(t *testing.T) {
+func TestDussc(t *testing.T) {
 	tests := []struct {
 		x        []float64
 		indx     []int
@@ -216,7 +216,7 @@ func TestUssc(t *testing.T) {
 	}
 
 	for ti, test := range tests {
-		Ussc(test.x, test.y, test.incy, test.indx)
+		Dussc(test.x, test.y, test.incy, test.indx)
 
 		for i, y := range test.y {
 			if y != test.expected[i] {

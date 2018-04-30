@@ -298,7 +298,7 @@ func BenchmarkMulBLASLargeDenseCSRDense(b *testing.B) {
 	rawC := t.RawMatrix()
 
 	for n := 0; n < b.N; n++ {
-		blas.Usmm(false, ar, 1, a, rawB.Data, rawB.Stride, rawC.Data, rawC.Stride)
+		blas.Dusmm(false, ar, 1, a, rawB.Data, rawB.Stride, rawC.Data, rawC.Stride)
 	}
 }
 
@@ -317,8 +317,8 @@ func BenchmarkMulBLASLargeDenseCSRCSC(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		for i := 0; i < ar; i++ {
 			ind := br.Ind[br.Indptr[i]:br.Indptr[i+1]]
-			blas.Ussc(br.Data[br.Indptr[i]:br.Indptr[i+1]], y, 1, ind)
-			blas.Usmv(false, 1, a, y, 1, rawC.Data[i:], rawC.Stride)
+			blas.Dussc(br.Data[br.Indptr[i]:br.Indptr[i+1]], y, 1, ind)
+			blas.Dusmv(false, 1, a, y, 1, rawC.Data[i:], rawC.Stride)
 			for _, v := range ind {
 				y[v] = 0
 			}
@@ -346,8 +346,8 @@ func BenchmarkMulBLASLargeCSCCSRCSC(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		for i := 0; i < ar; i++ {
 			ind := br.Ind[br.Indptr[i]:br.Indptr[i+1]]
-			blas.Ussc(br.Data[br.Indptr[i]:br.Indptr[i+1]], y, 1, ind)
-			blas.Usmv(false, 1, a, y, 1, z, 1)
+			blas.Dussc(br.Data[br.Indptr[i]:br.Indptr[i+1]], y, 1, ind)
+			blas.Dusmv(false, 1, a, y, 1, z, 1)
 
 			for k, v := range z {
 				if v != 0 {

@@ -141,7 +141,7 @@ func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
 		panic(mat.ErrShape)
 	}
 
-	blas.Usmv(false, 1, lhs.RawMatrix(), rhs, 1, out, 1)
+	blas.Dusmv(false, 1, lhs.RawMatrix(), rhs, 1, out, 1)
 }
 
 // mulCSRCSR handles CSR = CSR * CSR using Gustavson Algorithm (ACM 1978)
@@ -335,10 +335,10 @@ func (c *CSR) addCSR(csr *CSR, other mat.Matrix) {
 
 		if bDense, isDense := other.(*mat.Dense); isDense {
 			row = bDense.RawRowView(i)
-			blas.Usaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
+			blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
 		} else {
 			row = mat.Row(row, i, other)
-			blas.Usaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
+			blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
 		}
 
 		for j, v := range row {
@@ -424,6 +424,69 @@ func (c *CSR) addCSRCSR(a, b *CSR) {
 				j++
 			}
 		}
+	}
+	c.matrix.I, c.matrix.J = ar, ac
+	c.commitWorkspace(indptr, ind, data)
+}
+
+func (c *CSR) addCSRCSR2(lhs, rhs *CSR) {
+	ar, _ := lhs.Dims()
+	_, bc := rhs.Dims()
+
+	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
+	indptr[0] = 0
+
+	x := make([]float64, bc)
+
+	// rows in C
+	for i := 0; i < ar; i++ {
+		// each t in row B[i]
+		for j := lhs.matrix.Indptr[i]; j < lhs.matrix.Indptr[i+1]; j++ {
+			x[lhs.matrix.Ind[j]] += lhs.matrix.Data[j]
+		}
+		for j := rhs.matrix.Indptr[i]; j < rhs.matrix.Indptr[i+1]; j++ {
+			x[rhs.matrix.Ind[j]] += rhs.matrix.Data[j]
+		}
+		for j, v := range x {
+			if v != 0 {
+				data = append(data, v)
+				ind = append(ind, j)
+				x[j] = 0
+			}
+		}
+		indptr[i+1] = len(ind)
+	}
+	c.matrix.I, c.matrix.J = ar, bc
+	c.commitWorkspace(indptr, ind, data)
+}
+
+func (c *CSR) addCSRCSR3(lhs, rhs *CSR) {
+	ar, ac := lhs.Dims()
+
+	indptr, ind, data := c.createWorkspace(ar+1, 0, true)
+
+	a := lhs.RawMatrix()
+	b := rhs.RawMatrix()
+
+	y := make([]float64, ac)
+
+	for i := 0; i < ar; i++ {
+		begin := a.Indptr[i]
+		end := a.Indptr[i+1]
+		blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], y, 1)
+
+		begin = b.Indptr[i]
+		end = b.Indptr[i+1]
+		blas.Dusaxpy(1, b.Data[begin:end], b.Ind[begin:end], y, 1)
+
+		for yi, yv := range y {
+			if yv != 0 {
+				ind = append(ind, yi)
+				data = append(data, yv)
+				y[yi] = 0
+			}
+		}
+		indptr[i+1] = len(ind)
 	}
 	c.matrix.I, c.matrix.J = ar, ac
 	c.commitWorkspace(indptr, ind, data)

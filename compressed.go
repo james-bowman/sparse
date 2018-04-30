@@ -266,7 +266,7 @@ func (c *CSR) ScatterRow(i int, row []float64) []float64 {
 	if row == nil {
 		row = make([]float64, c.matrix.J)
 	}
-	blas.Ussc(
+	blas.Dussc(
 		c.matrix.Data[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
 		row,
 		1,
@@ -481,7 +481,7 @@ func (c *CSC) ScatterCol(j int, col []float64) []float64 {
 	if col == nil {
 		col = make([]float64, c.matrix.J)
 	}
-	blas.Ussc(
+	blas.Dussc(
 		c.matrix.Data[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]],
 		col,
 		1,

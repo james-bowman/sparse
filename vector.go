@@ -106,7 +106,7 @@ func (v *Vector) Gather(denseVector *mat.VecDense) {
 		panic(mat.ErrShape)
 	}
 	vec := denseVector.RawVector()
-	blas.Usga(vec.Data, vec.Inc, v.data, v.ind)
+	blas.Dusga(vec.Data, vec.Inc, v.data, v.ind)
 }
 
 // GatherAndZero gathers the entries from the supplied mat.VecDense
@@ -120,7 +120,7 @@ func (v *Vector) GatherAndZero(denseVector *mat.VecDense) {
 	}
 
 	vec := denseVector.RawVector()
-	blas.Usgz(vec.Data, vec.Inc, v.data, v.ind)
+	blas.Dusgz(vec.Data, vec.Inc, v.data, v.ind)
 }
 
 // Scatter scatters elements from the receiver into the supplied mat.VecDense
@@ -131,7 +131,7 @@ func (v *Vector) Scatter(denseVector *mat.VecDense) *mat.VecDense {
 		panic(mat.ErrShape)
 	}
 	vec := denseVector.RawVector()
-	blas.Ussc(v.data, vec.Data, vec.Inc, v.ind)
+	blas.Dussc(v.data, vec.Data, vec.Inc, v.ind)
 	return denseVector
 }
 
@@ -374,14 +374,14 @@ func Dot(a, b mat.Vector) float64 {
 		}
 		if bdense, bIsDense := b.(mat.RawVectorer); bIsDense {
 			raw := bdense.RawVector()
-			return blas.Usdot(as.data, as.ind, raw.Data, raw.Inc)
+			return blas.Dusdot(as.data, as.ind, raw.Data, raw.Inc)
 		}
 		return dotSparse(as, b)
 	}
 	if bIsSparse {
 		if adense, aIsDense := a.(mat.RawVectorer); aIsDense {
 			raw := adense.RawVector()
-			return blas.Usdot(bs.data, bs.ind, raw.Data, raw.Inc)
+			return blas.Dusdot(bs.data, bs.ind, raw.Data, raw.Inc)
 		}
 		return dotSparse(bs, a)
 	}

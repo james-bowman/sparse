@@ -235,7 +235,7 @@ func MulMatVec(transA bool, alpha float64, a BlasCompatibleSparser, x mat.Vector
 		}
 	}
 	xraw := xd.RawVector()
-	blas.Usmv(transA, alpha, araw, xraw.Data, xraw.Inc, yraw.Data, yraw.Inc)
+	blas.Dusmv(transA, alpha, araw, xraw.Data, xraw.Inc, yraw.Data, yraw.Inc)
 	return y
 
 }
@@ -280,7 +280,7 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 
 	if bd, bIsDense := b.(mat.RawMatrixer); bIsDense {
 		braw := bd.RawMatrix()
-		blas.Usmm(transA, bc, alpha, araw, braw.Data, braw.Stride, craw.Data, craw.Stride)
+		blas.Dusmm(transA, bc, alpha, araw, braw.Data, braw.Stride, craw.Data, craw.Stride)
 		return c
 	}
 
@@ -290,8 +290,8 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 		for j := 0; j < bc; j++ {
 			begin, end := bs.matrix.Indptr[j], bs.matrix.Indptr[j+1]
 			ind := bs.matrix.Ind[begin:end]
-			blas.Ussc(bs.matrix.Data[begin:end], col, 1, ind)
-			blas.Usmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
+			blas.Dussc(bs.matrix.Data[begin:end], col, 1, ind)
+			blas.Dusmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
 			for _, v := range ind {
 				col[v] = 0
 			}
@@ -301,7 +301,7 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 
 	for j := 0; j < bc; j++ {
 		col = mat.Col(col, j, b)
-		blas.Usmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
+		blas.Dusmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
 	}
 	return c
 }
