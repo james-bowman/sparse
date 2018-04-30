@@ -188,15 +188,62 @@ type BlasCompatibleSparser interface {
 	RawMatrix() *blas.SparseMatrix
 }
 
-func MulMatVec(transA bool, alpha float64, a BlasCompatibleSparser, x *mat.VecDense, y *mat.VecDense) *mat.VecDense {
-	return nil
+// MulMatVec (y = alpha * a * x + y) performs sparse matrix multiplication with a vector and
+// stores the result in a mat.VecDense vector.  y is a *mat.VecDense, if c is nil, a new mat.VecDense
+// of the correct dimensions (Ac x 1) will be allocated and returned as the result of the function.
+// x is an implementation of mat.Vector and a is a sparse matri of type CSR, CSC or a format
+// that implements the BlasCompatibleSparser interface.  Matrix A will be scaled by alpha.
+// If transA is true, the matrix A will be transposed as part of the operation.  The function
+// will panic Ac != len(x) or if (y != nil and (Ac != len(y)))
+func MulMatVec(transA bool, alpha float64, a BlasCompatibleSparser, x mat.Vector, y *mat.VecDense) *mat.VecDense {
+	// A is m x n (or n x m if transA), x is n, y is m
+	ar, ac := a.Dims()
+	if transA {
+		ar, ac = ac, ar
+	}
+	if ac != x.Len() {
+		panic(mat.ErrShape)
+	}
+	if y == nil {
+		y = mat.NewVecDense(ar, nil)
+	} else {
+		if ar != y.Len() {
+			panic(mat.ErrShape)
+		}
+	}
+
+	yraw := y.RawVector()
+
+	var araw *blas.SparseMatrix
+	if as, ok := a.(*CSC); ok {
+		// as CSC is the natural transpose of CSR, we will transpose here to CSR
+		// then transpose back during the multiplication operation
+		araw = as.T().(*CSR).RawMatrix()
+		transA = !transA
+	} else {
+		araw = a.RawMatrix()
+	}
+
+	// xd, xIsDense := x.(*mat.VecDense)
+	xd, xIsDense := x.(mat.RawVectorer)
+	if !xIsDense {
+		if xs, xIsSparse := x.(*Vector); xIsSparse {
+			xd = xs.ToDense()
+		} else {
+			xd = mat.VecDenseCopyOf(x)
+		}
+	}
+	xraw := xd.RawVector()
+	blas.Usmv(transA, alpha, araw, xraw.Data, xraw.Inc, yraw.Data, yraw.Inc)
+	return y
+
 }
 
 // MulMatMat (c = alpha * a * b + c) performs sparse matrix multiplication with another matrix and
 // stores the result in a mat.Dense matrix.  c is a *mat.Dense, if c is nil, a new mat.Dense
 // of the correct dimensions (Ar x Bc) will be allocated and returned as the result from the
 // function. b is an implementation of mat.Matrix and a is a sparse matrix of type CSR, CSC or
-// a format that implements the BlasCompatibleSparser interface).  Matrix A
+// a format that implements the BlasCompatibleSparser interface.  Matrix A
 // will be scaled by alpha.  If transA is true, the matrix A will be transposed as part of the
 // operation.  The function will panic if Ac != Br or if (C != nil and (ar != Cr or Bc != Cc))
 func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix, c *mat.Dense) *mat.Dense {
@@ -230,15 +277,29 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 		araw = a.RawMatrix()
 	}
 
-	if bd, bIsDense := b.(*mat.Dense); bIsDense {
+	if bd, bIsDense := b.(mat.RawMatrixer); bIsDense {
 		braw := bd.RawMatrix()
 		blas.Usmm(transA, bc, alpha, araw, braw.Data, braw.Stride, craw.Data, craw.Stride)
 		return c
 	}
 
 	col := make([]float64, br)
+
+	if bs, bIsCSC := b.(*CSC); bIsCSC {
+		for j := 0; j < bc; j++ {
+			begin, end := bs.matrix.Indptr[j], bs.matrix.Indptr[j+1]
+			ind := bs.matrix.Ind[begin:end]
+			blas.Ussc(bs.matrix.Data[begin:end], col, 1, ind)
+			blas.Usmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
+			for _, v := range ind {
+				col[v] = 0
+			}
+		}
+		return c
+	}
+
 	for j := 0; j < bc; j++ {
-		col := mat.Col(col, j, b)
+		col = mat.Col(col, j, b)
 		blas.Usmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
 	}
 	return c
