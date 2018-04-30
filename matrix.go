@@ -181,8 +181,9 @@ func Norm(m mat.Matrix, L float64) float64 {
 	return mat.Norm(m, L)
 }
 
-// ConvertibleSparser is an interface which aggregates the TypeConverter and Sparser
-// interfaces.  It is used
+// BlasCompatibleSparser is an interface which represents Sparse matrices compatible with
+// sparse BLAS routines i.e. implementing the RawMatrix() method as a means of obtaining
+// a BLAS sparse matrix representation of the matrix.
 type BlasCompatibleSparser interface {
 	Sparser
 	RawMatrix() *blas.SparseMatrix
