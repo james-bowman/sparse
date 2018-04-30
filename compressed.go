@@ -251,20 +251,28 @@ func (c *CSR) ColView(j int) mat.Vector {
 	return mat.NewVecDense(c.matrix.I, slice)
 }
 
-// ScatterRow returns a slice representing row i of the matrix in dense format.  This
-// is a copy of the data within the matrix and does not share underlying storage.
-func (c *CSR) ScatterRow(i int) []float64 {
+// ScatterRow returns a slice representing row i of the matrix in dense format.  Row
+// is used as the storage for the operation unless it is nil in which case, new
+// storage of the correct length will be allocated.  This method will panic if i
+// is out of range or row is not the same length as the number of columns in the matrix i.e.
+// the correct size to receive the dense representation of the row.
+func (c *CSC) ScatterRow(i int, row []float64) []float64 {
 	if i >= c.matrix.I || i < 0 {
 		panic(mat.ErrRowAccess)
 	}
-	x := make([]float64, c.matrix.J)
+	if row != nil && len(row) != c.matrix.J {
+		panic(mat.ErrRowLength)
+	}
+	if row == nil {
+		row = make([]float64, c.matrix.J)
+	}
 	blas.Ussc(
 		c.matrix.Data[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
-		x,
+		row,
 		1,
 		c.matrix.Ind[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
 	)
-	return x
+	return row
 }
 
 // CSC is a Compressed Sparse Column format sparse matrix implementation (sometimes called Compressed Column
@@ -458,18 +466,26 @@ func (c *CSC) ColView(j int) mat.Vector {
 	)
 }
 
-// ScatterCol returns a slice representing column j of the matrix in dense format.  This
-// is a copy of the data within the matrix and does not share underlying storage.
-func (c *CSC) ScatterCol(j int) []float64 {
+// ScatterCol returns a slice representing column j of the matrix in dense format.  Col
+// is used as the storage for the operation unless it is nil in which case, new
+// storage of the correct length will be allocated.  This method will panic if j
+// is out of range or col is not the same length as the number of rows in the matrix i.e.
+// the correct size to receive the dense representation of the column.
+func (c *CSC) ScatterCol(j int, col []float64) []float64 {
 	if j >= c.matrix.I || j < 0 {
 		panic(mat.ErrColAccess)
 	}
-	x := make([]float64, c.matrix.J)
+	if col != nil && len(col) != c.matrix.J {
+		panic(mat.ErrColLength)
+	}
+	if col == nil {
+		col = make([]float64, c.matrix.J)
+	}
 	blas.Ussc(
 		c.matrix.Data[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]],
-		x,
+		col,
 		1,
 		c.matrix.Ind[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]],
 	)
-	return x
+	return col
 }
