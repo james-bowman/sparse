@@ -256,7 +256,7 @@ func (c *CSR) ColView(j int) mat.Vector {
 // storage of the correct length will be allocated.  This method will panic if i
 // is out of range or row is not the same length as the number of columns in the matrix i.e.
 // the correct size to receive the dense representation of the row.
-func (c *CSC) ScatterRow(i int, row []float64) []float64 {
+func (c *CSR) ScatterRow(i int, row []float64) []float64 {
 	if i >= c.matrix.I || i < 0 {
 		panic(mat.ErrRowAccess)
 	}
