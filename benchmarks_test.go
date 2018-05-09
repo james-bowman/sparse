@@ -4,7 +4,6 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/james-bowman/sparse/blas"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -286,80 +285,124 @@ func benchmarkMatrixAddition(target *CSR, lhs mat.Matrix, rhs mat.Matrix, b *tes
 	}
 }
 
-func BenchmarkMulBLASLargeDenseCSRDense(b *testing.B) {
+func BenchmarkBLASMulMatMat(b *testing.B) {
 	ar, ac := 500, 600
-	t := mat.NewDense(ar, ar, nil)
-	lhs := Random(CSRFormat, ar, ac, 0.01).(*CSR)
-	rhs := Random(DenseFormat, ac, ar, 0.01).(*mat.Dense)
+	br, bc := 600, 500
 
-	a := lhs.RawMatrix()
-
-	rawB := rhs.RawMatrix()
-	rawC := t.RawMatrix()
-
-	for n := 0; n < b.N; n++ {
-		blas.Dusmm(false, ar, 1, a, rawB.Data, rawB.Stride, rawC.Data, rawC.Stride)
+	benchmarks := []struct {
+		name    string
+		transA  bool
+		alpha   float64
+		a       MatrixType
+		b       MatrixType
+		density float32
+	}{
+		{
+			name:    "CSRxDense",
+			transA:  false,
+			a:       CSRFormat,
+			b:       DenseFormat,
+			density: 0.01,
+		},
+		{
+			name:    "CSCxDense",
+			transA:  false,
+			a:       CSCFormat,
+			b:       DenseFormat,
+			density: 0.01,
+		},
+		// {
+		// 	name:    "CSRxDense",
+		// 	transA:  true,
+		// 	alpha:   1,
+		// 	a:       CSRFormat,
+		// 	b:       DenseFormat,
+		// 	density: 0.1,
+		// },
+		// {
+		// 	name:    "CSCxDense",
+		// 	transA:  true,
+		// 	alpha:   1,
+		// 	a:       CSCFormat,
+		// 	b:       DenseFormat,
+		// 	density: 0.1,
+		// },
+		{
+			name:    "COOxDense",
+			transA:  false,
+			a:       COOFormat,
+			b:       DenseFormat,
+			density: 0.01,
+		},
+		{
+			name:    "DOKxDense",
+			transA:  false,
+			a:       DOKFormat,
+			b:       DenseFormat,
+			density: 0.01,
+		},
+		{
+			name:    "CSRxCSC",
+			transA:  false,
+			a:       CSRFormat,
+			b:       CSCFormat,
+			density: 0.01,
+		},
+		{
+			name:    "CSRxCSR",
+			transA:  false,
+			a:       CSRFormat,
+			b:       CSRFormat,
+			density: 0.01,
+		},
+		{
+			name:    "CSRxCOO",
+			transA:  false,
+			a:       CSRFormat,
+			b:       COOFormat,
+			density: 0.01,
+		},
+		{
+			name:    "CSCxCSC",
+			transA:  false,
+			a:       CSCFormat,
+			b:       CSCFormat,
+			density: 0.01,
+		},
+		{
+			name:    "CSCxCSR",
+			transA:  false,
+			a:       CSCFormat,
+			b:       CSRFormat,
+			density: 0.01,
+		},
+		{
+			name:    "CSCxCOO",
+			transA:  false,
+			a:       CSCFormat,
+			b:       COOFormat,
+			density: 0.01,
+		},
 	}
-}
 
-func BenchmarkMulBLASLargeDenseCSRCSC(b *testing.B) {
-	ar, ac := 500, 600
-	t := mat.NewDense(ar, ar, nil)
-	lhs := Random(CSRFormat, ar, ac, 0.01).(*CSR)
-	rhs := Random(CSCFormat, ac, ar, 0.01).(*CSC)
+	cMat := mat.NewDense(ar, bc, nil)
 
-	a := lhs.RawMatrix()
-	br := rhs.RawMatrix()
+	for _, bench := range benchmarks {
 
-	rawC := t.RawMatrix()
-	y := make([]float64, ac)
+		aMat := Random(bench.a, ar, ac, bench.density).(BlasCompatibleSparser)
+		bMat := Random(bench.b, br, bc, bench.density)
 
-	for n := 0; n < b.N; n++ {
-		for i := 0; i < ar; i++ {
-			ind := br.Ind[br.Indptr[i]:br.Indptr[i+1]]
-			blas.Dussc(br.Data[br.Indptr[i]:br.Indptr[i+1]], y, 1, ind)
-			blas.Dusmv(false, 1, a, y, 1, rawC.Data[i:], rawC.Stride)
-			for _, v := range ind {
-				y[v] = 0
-			}
+		c := cMat.RawMatrix()
+		for i := range c.Data {
+			c.Data[i] = 0
 		}
-	}
-}
 
-func BenchmarkMulBLASLargeCSCCSRCSC(b *testing.B) {
-	ar, ac := 500, 600
-
-	lhs := Random(CSRFormat, ar, ac, 0.01).(*CSR)
-	rhs := Random(CSCFormat, ac, ar, 0.01).(*CSC)
-
-	a := lhs.RawMatrix()
-	br := rhs.RawMatrix()
-
-	indptr := make([]int, ar+1)
-	indptr[0] = 0
-	var indx []int
-	var data []float64
-
-	y := make([]float64, ac)
-	z := make([]float64, ar)
-
-	for n := 0; n < b.N; n++ {
-		for i := 0; i < ar; i++ {
-			ind := br.Ind[br.Indptr[i]:br.Indptr[i+1]]
-			blas.Dussc(br.Data[br.Indptr[i]:br.Indptr[i+1]], y, 1, ind)
-			blas.Dusmv(false, 1, a, y, 1, z, 1)
-
-			for k, v := range z {
-				if v != 0 {
-					data = append(data, v)
-					ind = append(indx, k)
-					z[k] = 0
-				}
+		b.Run(bench.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				cMat = MulMatMat(bench.transA, 1, aMat, bMat, cMat)
 			}
-			indptr[i+1] = len(data)
-		}
+		})
 	}
-	NewCSC(ar, ar, indptr, indx, data)
 }
 
 // dot is a package level variable to hold the result of dot benchmark to prevent
@@ -368,8 +411,8 @@ var dot float64
 
 func BenchmarkDot(b *testing.B) {
 	rnd := rand.New(rand.NewSource(0))
-	population := 0.3
-	dim := 100000000
+	population := 0.01
+	dim := 100000
 
 	adata := make([]float64, dim)
 	bdata := make([]float64, dim)
@@ -402,7 +445,9 @@ func BenchmarkDot(b *testing.B) {
 		bv := bench.bf(bdata)
 
 		b.Run(bench.name, func(b *testing.B) {
-			dot = bench.fn(av, bv)
+			for n := 0; n < b.N; n++ {
+				dot = bench.fn(av, bv)
+			}
 		})
 	}
 }
