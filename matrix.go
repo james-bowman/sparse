@@ -284,6 +284,25 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 		return c
 	}
 
+	if bs, bIsCSR := b.(*CSR); bIsCSR {
+		if transA {
+			for i := 0; i < ac; i++ {
+				begin, end := bs.matrix.Indptr[i], bs.matrix.Indptr[i+1]
+				for t := araw.Indptr[i]; t < araw.Indptr[i+1]; t++ {
+					blas.Dusaxpy(alpha*araw.Data[t], bs.matrix.Data[begin:end], bs.matrix.Ind[begin:end], craw.Data[araw.Ind[t]*craw.Stride:(araw.Ind[t]+1)*craw.Stride], 1)
+				}
+			}
+		} else {
+			for i := 0; i < ar; i++ {
+				for t := araw.Indptr[i]; t < araw.Indptr[i+1]; t++ {
+					begin, end := bs.matrix.Indptr[araw.Ind[t]], bs.matrix.Indptr[araw.Ind[t]+1]
+					blas.Dusaxpy(alpha*araw.Data[t], bs.matrix.Data[begin:end], bs.matrix.Ind[begin:end], craw.Data[i*craw.Stride:(i+1)*craw.Stride], 1)
+				}
+			}
+		}
+		return c
+	}
+
 	col := make([]float64, br)
 
 	if bs, bIsCSC := b.(*CSC); bIsCSC {
