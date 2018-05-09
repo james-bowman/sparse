@@ -176,7 +176,9 @@ func (c *COO) Canonicalise() {
 			c.data[k] += c.data[i]
 		}
 	}
-	c.rows, c.cols, c.data = c.rows[:k+1], c.cols[:k+1], c.data[:k+1]
+	if len(c.data) > k {
+		c.rows, c.cols, c.data = c.rows[:k+1], c.cols[:k+1], c.data[:k+1]
+	}
 	c.canonicalised = true
 }
 
