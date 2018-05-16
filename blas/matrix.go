@@ -1,9 +1,5 @@
 package blas
 
-import (
-	"sort"
-)
-
 // SparseMatrix represents the common structure for representing compressed sparse
 // matrix formats e.g. CSR (Compressed Sparse Row) or CSC (Compressed Sparse Column)
 type SparseMatrix struct {
@@ -22,20 +18,11 @@ func (m *SparseMatrix) At(i, j int) float64 {
 		panic("sparse/blas: index out of range")
 	}
 
-	// binary search through elements (assumes dimension is sorted)
-	// TODO, small, low density or individual sparse row/columns
-	// may be faster using linear search.  Consider selecting
-	// algorithms dynamically.
-	idx := m.Indptr[i] + sort.SearchInts(m.Ind[m.Indptr[i]:m.Indptr[i+1]], j)
-	if idx < m.Indptr[i+1] && m.Ind[idx] == j {
-		return m.Data[idx]
+	for k := m.Indptr[i]; k < m.Indptr[i+1]; k++ {
+		if m.Ind[k] == j {
+			return m.Data[k]
+		}
 	}
-
-	// for k := c.indptr[i]; k < c.indptr[i+1]; k++ {
-	// 	if c.ind[k] == j {
-	// 		return c.data[k]
-	// 	}
-	// }
 
 	return 0
 }
@@ -60,13 +47,6 @@ func (m *SparseMatrix) Set(i, j int, v float64) {
 			// if element(i, j) is already a non-zero value then simply update the existing
 			// value without altering the sparsity pattern
 			m.Data[k] = v
-			return
-		}
-
-		if m.Ind[k] > j {
-			// element(i, j) doesn't exist in current sparsity pattern and is mid row/col
-			// so add it
-			m.insert(i, j, v, k)
 			return
 		}
 	}

@@ -2,7 +2,6 @@ package sparse
 
 import (
 	"math"
-	"sort"
 
 	"github.com/gonum/floats"
 	"github.com/james-bowman/sparse/blas"
@@ -70,16 +69,11 @@ func (v *Vector) AtVec(i int) float64 {
 		panic(mat.ErrRowAccess)
 	}
 
-	idx := sort.SearchInts(v.ind, i)
-	if idx < len(v.ind) && v.ind[idx] == i {
-		return v.data[idx]
+	for j := 0; j < len(v.ind); j++ {
+		if v.ind[j] == i {
+			return v.data[j]
+		}
 	}
-
-	// for j := 0; j < len(v.ind); j++ {
-	// 	if v.ind[j] == i {
-	// 		return v.data[j]
-	// 	}
-	// }
 	return 0.0
 }
 
@@ -215,60 +209,17 @@ func (v *Vector) AddVec(a, b mat.Vector) {
 	v.commitWorkspace(ind, data)
 }
 
-// addVecSparse adds the vectors a and alpha*b.  This method is
+// addVecSparse2 adds the vectors a and alpha*b.  This method is
 // optimised for processing sparse Vector vectors and only processes
 // non-zero elements.
 func (v *Vector) addVecSparse(a *Vector, alpha float64, b *Vector) {
 	ind, data := v.createWorkspace(0, false)
 
-	var i, j int
-	for i < len(a.ind) && j < len(b.ind) {
-		if a.ind[i] == b.ind[j] {
-			s := b.data[j]
-			if alpha != 1 {
-				s = alpha * b.data[j]
-			}
-			ind = append(ind, a.ind[i])
-			data = append(data, a.data[i]+s)
-			i++
-			j++
-			continue
-		}
-		if a.ind[i] < b.ind[j] {
-			var k int
-			for k = i; k < len(a.ind) && a.ind[k] < b.ind[j]; k++ {
-				ind = append(ind, a.ind[k])
-				data = append(data, a.data[k])
-			}
-			i = k
-			continue
-		}
-		if a.ind[i] > b.ind[j] {
-			var k int
-			for k = j; k < len(b.ind) && b.ind[k] < a.ind[i]; k++ {
-				s := b.data[j]
-				if alpha != 1 {
-					s = alpha * b.data[j]
-				}
-				ind = append(ind, b.ind[k])
-				data = append(data, s)
-			}
-			j = k
-			continue
-		}
-	}
-	for k := i; k < len(a.ind); k++ {
-		ind = append(ind, a.ind[k])
-		data = append(data, a.data[k])
-	}
-	for k := j; k < len(b.ind); k++ {
-		s := b.data[j]
-		if alpha != 1 {
-			s = alpha * b.data[j]
-		}
-		ind = append(ind, b.ind[k])
-		data = append(data, s)
-	}
+	spa := NewSPA(a.len)
+
+	spa.Scatter(a.data, a.ind, 1, &ind)
+	spa.Scatter(b.data, b.ind, alpha, &ind)
+	spa.Gather(&data, &ind)
 
 	v.commitWorkspace(ind, data)
 }
@@ -367,7 +318,9 @@ func Dot(a, b mat.Vector) float64 {
 
 	if aIsSparse {
 		if bIsSparse {
-			return dotSparseSparse(as, bs)
+			buf := make([]float64, bs.len)
+			blas.Dussc(bs.data, buf, 1, bs.ind)
+			return blas.Dusdot(as.data, as.ind, buf, 1)
 		}
 		if bdense, bIsDense := b.(mat.RawVectorer); bIsDense {
 			raw := bdense.RawVector()
@@ -383,37 +336,6 @@ func Dot(a, b mat.Vector) float64 {
 		return dotSparse(bs, a)
 	}
 	return mat.Dot(a, b)
-}
-
-// dotSparseSparse returns the sum of the element-wise product of
-// a and b where a and b are both sparse Vector vectors.  dotSparse
-// will only process non-zero elements in the vectors.
-func dotSparseSparse(a, b *Vector) float64 {
-	var result float64
-	var lhs, rhs *Vector
-
-	if a.NNZ() < b.NNZ() {
-		lhs, rhs = a, b
-	} else {
-		lhs, rhs = b, a
-	}
-
-	var j int
-	for k := 0; k < len(lhs.ind); k++ {
-		var bi int
-		for bi = j; bi < len(rhs.ind) && rhs.ind[bi] < lhs.ind[k]; bi++ {
-			// empty
-		}
-		j = bi
-		if j >= len(rhs.ind) {
-			break
-		}
-		if lhs.ind[k] == rhs.ind[bi] {
-			result += lhs.data[k] * rhs.data[bi]
-		}
-	}
-
-	return result
 }
 
 // dotSparse returns the sum of the element-wise multiplication

@@ -66,11 +66,6 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 			c.mulCSRCSR(lhs, rhs)
 			return
 		}
-		if rhs, isCsc := b.(*CSC); isCsc {
-			// handle case where matrix A is CSR and matrix B is CSC
-			c.mulCSRCSC(lhs, rhs)
-			return
-		}
 	}
 
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
@@ -82,8 +77,7 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 			indptr[i] = t
 			for j := 0; j < bc; j++ {
 				var v float64
-				// TODO Consider converting all LHS Sparser args to CSR
-				// TODO Consider converting all RHS Sparser args to CSC
+				// TODO Consider converting all Sparser args to CSR
 				for k := lhs.matrix.Indptr[i]; k < lhs.matrix.Indptr[i+1]; k++ {
 					v += lhs.matrix.Data[k] * b.At(lhs.matrix.Ind[k], j)
 				}
@@ -150,64 +144,19 @@ func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
 	_, bc := rhs.Dims()
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
 
-	x := make([]float64, bc)
+	spa := NewSPA(bc)
 
 	// rows in C
 	for i := 0; i < ar; i++ {
 		// each element t in row i of A
 		for t := lhs.matrix.Indptr[i]; t < lhs.matrix.Indptr[i+1]; t++ {
-			// each element j in row [A.Ind[t]] of B
-			for j := rhs.matrix.Indptr[lhs.matrix.Ind[t]]; j < rhs.matrix.Indptr[lhs.matrix.Ind[t]+1]; j++ {
-				x[rhs.matrix.Ind[j]] += lhs.matrix.Data[t] * rhs.matrix.Data[j]
-			}
+			begin := rhs.matrix.Indptr[lhs.matrix.Ind[t]]
+			end := rhs.matrix.Indptr[lhs.matrix.Ind[t]+1]
+			spa.Scatter(rhs.matrix.Data[begin:end], rhs.matrix.Ind[begin:end], lhs.matrix.Data[t], &ind)
 		}
-		for j, v := range x {
-			if v != 0 {
-				ind = append(ind, j)
-				data = append(data, v)
-				x[j] = 0
-			}
-		}
+		spa.GatherAndZero(&data, &ind)
 		indptr[i+1] = len(ind)
 	}
-	c.matrix.I, c.matrix.J = ar, bc
-	c.commitWorkspace(indptr, ind, data)
-}
-
-// mulCSRCSC handles special case of matrix multiplication where the LHS matrix
-// (A) is CSR format and the RHS matrix (B) is CSC format.
-func (c *CSR) mulCSRCSC(lhs *CSR, rhs *CSC) {
-	ar, _ := lhs.Dims()
-	_, bc := rhs.Dims()
-	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
-
-	t := 0
-	for i := 0; i < ar; i++ {
-		indptr[i] = t
-		for j := 0; j < bc; j++ {
-			var v float64
-			rhsStart := rhs.matrix.Indptr[j]
-			rhsEnd := rhs.matrix.Indptr[j+1] - 1
-			b := rhsStart
-
-			for k := lhs.matrix.Indptr[i]; k < lhs.matrix.Indptr[i+1]; k++ {
-				var bi int
-				for bi = b; bi < rhsEnd && rhs.matrix.Ind[bi] < lhs.matrix.Ind[k]; bi++ {
-					// empty
-				}
-				b = bi
-				if lhs.matrix.Ind[k] == rhs.matrix.Ind[bi] {
-					v += lhs.matrix.Data[k] * rhs.matrix.Data[bi]
-				}
-			}
-			if v != 0 {
-				t++
-				ind = append(ind, j)
-				data = append(data, v)
-			}
-		}
-	}
-	indptr[ar] = t
 	c.matrix.I, c.matrix.J = ar, bc
 	c.commitWorkspace(indptr, ind, data)
 }
@@ -333,13 +282,13 @@ func (c *CSR) addCSR(csr *CSR, other mat.Matrix) {
 		begin := csr.matrix.Indptr[i]
 		end := csr.matrix.Indptr[i+1]
 
-		if bDense, isDense := other.(*mat.Dense); isDense {
-			row = bDense.RawRowView(i)
-			blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
-		} else {
-			row = mat.Row(row, i, other)
-			blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
-		}
+		// if bDense, isDense := other.(*mat.Dense); isDense {
+		// 	row = bDense.RawRowView(i)
+		// 	blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
+		// } else {
+		row = mat.Row(row, i, other)
+		blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
+		// }
 
 		for j, v := range row {
 			if v != 0 {
@@ -358,136 +307,97 @@ func (c *CSR) addCSR(csr *CSR, other mat.Matrix) {
 // addCSRCSR adds 2 CSR matrices together storing the result in the receiver.
 // This method is specially optimised to take advantage of the sparsity patterns
 // of the 2 CSR matrices.
-func (c *CSR) addCSRCSR(a, b *CSR) {
-	ar, ac := a.Dims()
-	indptr, ind, data := c.createWorkspace(ar+1, 0, true)
-
-	for row, start1 := range a.matrix.Indptr[0 : len(a.matrix.Indptr)-1] {
-		indptr[row+1] = indptr[row]
-		start2 := b.matrix.Indptr[row]
-		end1 := a.matrix.Indptr[row+1]
-		end2 := b.matrix.Indptr[row+1]
-		if start1 == end1 {
-			if start2 == end2 {
-				continue
-			}
-			for k := start2; k < end2; k++ {
-				data = append(data, b.matrix.Data[k])
-				ind = append(ind, b.matrix.Ind[k])
-				indptr[row+1]++
-			}
-			continue
-		} else if start2 == end2 {
-			for k := start1; k < end1; k++ {
-				data = append(data, a.matrix.Data[k])
-				ind = append(ind, a.matrix.Ind[k])
-				indptr[row+1]++
-			}
-			continue
-		}
-		i := start1
-		j := start2
-		for {
-			if i == end1 && j == end2 {
-				break
-			} else if i == end1 {
-				for k := j; k < end2; k++ {
-					data = append(data, b.matrix.Data[k])
-					ind = append(ind, b.matrix.Ind[k])
-					indptr[row+1]++
-				}
-				break
-			} else if j == end2 {
-				for k := i; k < end1; k++ {
-					data = append(data, a.matrix.Data[k])
-					ind = append(ind, a.matrix.Ind[k])
-					indptr[row+1]++
-				}
-				break
-			}
-			if a.matrix.Ind[i] == b.matrix.Ind[j] {
-				val := a.matrix.Data[i] + b.matrix.Data[j]
-				data = append(data, val)
-				ind = append(ind, a.matrix.Ind[i])
-				indptr[row+1]++
-				i++
-				j++
-			} else if a.matrix.Ind[i] < b.matrix.Ind[j] {
-				data = append(data, a.matrix.Data[i])
-				ind = append(ind, a.matrix.Ind[i])
-				indptr[row+1]++
-				i++
-			} else {
-				data = append(data, b.matrix.Data[j])
-				ind = append(ind, b.matrix.Ind[j])
-				indptr[row+1]++
-				j++
-			}
-		}
-	}
-	c.matrix.I, c.matrix.J = ar, ac
-	c.commitWorkspace(indptr, ind, data)
-}
-
-func (c *CSR) addCSRCSR2(lhs, rhs *CSR) {
-	ar, _ := lhs.Dims()
-	_, bc := rhs.Dims()
-
-	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
-	indptr[0] = 0
-
-	x := make([]float64, bc)
-
-	// rows in C
-	for i := 0; i < ar; i++ {
-		// each t in row B[i]
-		for j := lhs.matrix.Indptr[i]; j < lhs.matrix.Indptr[i+1]; j++ {
-			x[lhs.matrix.Ind[j]] += lhs.matrix.Data[j]
-		}
-		for j := rhs.matrix.Indptr[i]; j < rhs.matrix.Indptr[i+1]; j++ {
-			x[rhs.matrix.Ind[j]] += rhs.matrix.Data[j]
-		}
-		for j, v := range x {
-			if v != 0 {
-				data = append(data, v)
-				ind = append(ind, j)
-				x[j] = 0
-			}
-		}
-		indptr[i+1] = len(ind)
-	}
-	c.matrix.I, c.matrix.J = ar, bc
-	c.commitWorkspace(indptr, ind, data)
-}
-
-func (c *CSR) addCSRCSR3(lhs, rhs *CSR) {
+func (c *CSR) addCSRCSR(lhs, rhs *CSR) {
 	ar, ac := lhs.Dims()
-
-	indptr, ind, data := c.createWorkspace(ar+1, 0, true)
+	anz, bnz := lhs.NNZ(), rhs.NNZ()
+	indptr := make([]int, ar+1)
+	ind := make([]int, 0, anz+bnz)
+	data := make([]float64, 0, anz+bnz)
 
 	a := lhs.RawMatrix()
 	b := rhs.RawMatrix()
+	spa := NewSPA(ac)
 
-	y := make([]float64, ac)
-
+	var begin, end int
 	for i := 0; i < ar; i++ {
-		begin := a.Indptr[i]
-		end := a.Indptr[i+1]
-		blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], y, 1)
+		indptr[i] = len(ind)
 
-		begin = b.Indptr[i]
-		end = b.Indptr[i+1]
-		blas.Dusaxpy(1, b.Data[begin:end], b.Ind[begin:end], y, 1)
+		begin, end = a.Indptr[i], a.Indptr[i+1]
+		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], 1, &ind)
 
-		for yi, yv := range y {
-			if yv != 0 {
-				ind = append(ind, yi)
-				data = append(data, yv)
-				y[yi] = 0
-			}
-		}
-		indptr[i+1] = len(ind)
+		begin, end = b.Indptr[i], b.Indptr[i+1]
+		spa.Scatter(b.Data[begin:end], b.Ind[begin:end], 1, &ind)
+
+		spa.GatherAndZero(&data, &ind)
 	}
+	indptr[ar] = len(ind)
 	c.matrix.I, c.matrix.J = ar, ac
-	c.commitWorkspace(indptr, ind, data)
+	c.matrix.Indptr = indptr
+	c.matrix.Ind = ind
+	c.matrix.Data = data
+}
+
+// SPA is a SParse Accumulator used to construct the results of sparse
+// arithmetic operations in linear time.
+type SPA struct {
+	// w contains flags for indices containing non-zero values
+	w []int
+
+	// x contains all the values in dense representation (including zero values)
+	y []float64
+
+	// ls contains the indices of non-zero values
+	//ls []int
+
+	// nnz is the Number of Non-Zero elements
+	nnz int
+
+	// generation is used to compare values of w to see if they have been set
+	// in the current row (generation).  This avoids needing to reset all values
+	// during the GatherAndZero operation at the end of
+	// construction for each row/column vector.
+	generation int
+}
+
+// NewSPA creates a new SParse Accumulator of length n.  If accumulating
+// rows for a CSR matrix then n should be equal to the number of columns
+// in the resulting matrix.
+func NewSPA(n int) *SPA {
+	return &SPA{
+		w: make([]int, n),
+		y: make([]float64, n),
+	}
+}
+
+// Scatter accumulates the sparse vector x by multiplying the elements by
+// alpha and adding them to the corresponding elements in the SPA (SPA += alpha * x)
+func (s *SPA) Scatter(x []float64, indx []int, alpha float64, ind *[]int) {
+	for i, index := range indx {
+		if s.w[index] < s.generation+1 {
+			s.w[index] = s.generation + 1
+			*ind = append(*ind, index)
+			s.y[index] = alpha * x[i]
+		} else {
+			s.y[index] += alpha * x[i]
+		}
+	}
+}
+
+// Gather gathers the non-zero values from the SPA and appends them to
+// end of the supplied sparse vector.
+func (s SPA) Gather(data *[]float64, ind *[]int) {
+	for _, index := range (*ind)[s.nnz:] {
+		*data = append(*data, s.y[index])
+		//y[index] = 0
+	}
+}
+
+// GatherAndZero gathers the non-zero values from the SPA and appends them
+// to the end of the supplied sparse vector.  The SPA is also zeroed
+// ready to start accumulating the next row/column vector.
+func (s *SPA) GatherAndZero(data *[]float64, ind *[]int) {
+	s.Gather(data, ind)
+
+	s.nnz = len(*ind)
+	s.generation++
 }

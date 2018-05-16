@@ -35,19 +35,8 @@ A common practice is to construct sparse matrices using a creational format e.g.
         * sparse vectors
     * Other Formats:
         * [Binary (Bit) vectors](https://en.wikipedia.org/wiki/Bit_array) and matrices
-* CSR matrix product from multiplication of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with specific optimisations for the following scenarios:
-    * CSR * DIA
-    * DIA * CSR
-    * DIA * mat.Matrix
-    * mat.Matrix * DIA
-    * CSR * CSR
-    * CSR * CSC
-    * CSR * mat.Matrix
-* CSR result from addition of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with specific optimisations for the following scenarios:
-    * CSR + CSR
-    * CSR + mat.Matrix
-    * mat.Matrix + CSR
-* Row and column slicing.
+* CSR matrix product from multiplication of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with specific optimisations for sparse matrices.
+* CSR result from addition of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with specific optimisations for sparse matrices.
 * Binary Vector and Matrix types for efficient storage and processing of binary/bit vectors (elements are 0 or 1) requiring a single bit of memory to represent each element.
 * sparse optimised implementations of scalar vector dot product and normalisation (e.g. L2 norm).
 * Implements standard Gonum API for iterating over non-zero elements
@@ -56,4 +45,3 @@ A common practice is to construct sparse matrices using a creational format e.g.
 
 * Implement parallel/fast matrix multiplication algorithm for sparse matrices
 * Implement further arithmetic operations e.g. subtract, divide, element wise multiplication, etc.
-* Improve memory allocation for matrix multiplication - pre-calculating sparsity pattern for product and allocate storage in advance rather than incrementally.
