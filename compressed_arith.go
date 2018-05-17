@@ -243,10 +243,12 @@ func (c *CSR) Add(a, b mat.Matrix) {
 	if lIsCsr && rIsCsr {
 		c.addCSRCSR(lCsr, rCsr)
 		return
-	} else if lIsCsr {
+	}
+	if lIsCsr {
 		c.addCSR(lCsr, b)
 		return
-	} else if rIsCsr {
+	}
+	if rIsCsr {
 		c.addCSR(rCsr, a)
 		return
 	}
