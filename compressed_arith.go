@@ -369,6 +369,13 @@ func NewSPA(n int) *SPA {
 	}
 }
 
+// ScatterVec accumulates the sparse vector x by multiplying the elements
+// by alpha and adding them to the corresponding elements in the SPA
+// (SPA += alpha * x)
+func (s *SPA) ScatterVec(x *Vector, alpha float64, ind *[]int) {
+	s.Scatter(x.data, x.ind, alpha, ind)
+}
+
 // Scatter accumulates the sparse vector x by multiplying the elements by
 // alpha and adding them to the corresponding elements in the SPA (SPA += alpha * x)
 func (s *SPA) Scatter(x []float64, indx []int, alpha float64, ind *[]int) {
