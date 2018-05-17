@@ -233,6 +233,49 @@ func BenchmarkMulLargeCSRCSRCSC(b *testing.B) {
 	rhs := Random(CSCFormat, 600, 500, 0.01)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
+
+func BenchmarkMulLargeCSRDIACSR(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := RandomDIA(500, 600)
+	rhs := Random(CSRFormat, 600, 500, 0.01)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+
+func BenchmarkMulLargeCSRCSRDIA(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(CSRFormat, 500, 600, 0.01)
+	rhs := RandomDIA(600, 500)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+
+func BenchmarkMulLargeCSRDIADense(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := RandomDIA(500, 600)
+	rhs := Random(DenseFormat, 600, 500, 0.01)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+
+func BenchmarkMulLargeCSRDenseDIA(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(DenseFormat, 500, 600, 0.01)
+	rhs := RandomDIA(600, 500)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+
+func RandomDIA(r, c int) *DIA {
+	var min int
+	if r < c {
+		min = r
+	} else {
+		min = c
+	}
+	data := make([]float64, min)
+	for i := range data {
+		data[i] = rand.Float64()
+	}
+	return NewDIA(r, c, data)
+}
+
 func BenchmarkMulLargeDenserCSRCSRDense(b *testing.B) {
 	t := CreateCSR(0, 0, nil).(*CSR)
 	lhs := Random(CSRFormat, 500, 600, 0.4)
@@ -258,30 +301,93 @@ func BenchmarkMulLargeDenserCSRCSRCSC(b *testing.B) {
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
 
-func BenchmarkAddLargeCSRCSRCSR(b *testing.B) {
-	t := CreateCSR(0, 0, nil).(*CSR)
-	lhs := Random(CSRFormat, 500, 600, 0.01)
-	rhs := Random(CSRFormat, 500, 600, 0.01)
-	benchmarkMatrixAddition(t, lhs, rhs, b)
-}
+func BenchmarkAdd(b *testing.B) {
+	ar, ac := 500, 600
+	br, bc := 500, 600
 
-func BenchmarkAddLargeDenserCSRCSRCSR(b *testing.B) {
-	t := CreateCSR(0, 0, nil).(*CSR)
-	lhs := Random(CSRFormat, 500, 600, 0.4)
-	rhs := Random(CSRFormat, 500, 600, 0.4)
-	benchmarkMatrixAddition(t, lhs, rhs, b)
-}
+	benchmarks := []struct {
+		name    string
+		a       MatrixType
+		b       MatrixType
+		c       mat.Matrix
+		density float32
+	}{
+		{
+			name:    "Dense=CSR+CSR",
+			a:       CSRFormat,
+			b:       CSRFormat,
+			c:       &mat.Dense{},
+			density: 0.01,
+		},
+		{
+			name:    "Dense=CSR+Dense",
+			a:       CSRFormat,
+			b:       DenseFormat,
+			c:       &mat.Dense{},
+			density: 0.01,
+		},
+		{
+			name:    "Dense=CSR+CSC",
+			a:       CSRFormat,
+			b:       CSCFormat,
+			c:       &mat.Dense{},
+			density: 0.01,
+		},
+		{
+			name:    "CSR=CSR+CSR",
+			a:       CSRFormat,
+			b:       CSRFormat,
+			c:       &CSR{},
+			density: 0.01,
+		},
+		{
+			name:    "CSR=CSR+Dense",
+			a:       CSRFormat,
+			b:       DenseFormat,
+			c:       &CSR{},
+			density: 0.01,
+		},
+		{
+			name:    "CSR=CSR+CSC",
+			a:       CSRFormat,
+			b:       CSCFormat,
+			c:       &CSR{},
+			density: 0.01,
+		},
+		{
+			name:    "CSR=CSR+CSR (Denser)",
+			a:       CSRFormat,
+			b:       CSRFormat,
+			c:       &CSR{},
+			density: 0.4,
+		},
+		{
+			name:    "CSR=CSR+Dense (Denser)",
+			a:       CSRFormat,
+			b:       DenseFormat,
+			c:       &CSR{},
+			density: 0.4,
+		},
+		{
+			name:    "CSR=CSR+CSC (Denser)",
+			a:       CSRFormat,
+			b:       CSCFormat,
+			c:       &CSR{},
+			density: 0.4,
+		},
+	}
 
-func BenchmarkAddLargeDenserCSRDenseCSR(b *testing.B) {
-	t := CreateCSR(0, 0, nil).(*CSR)
-	lhs := Random(DenseFormat, 500, 600, 0.4)
-	rhs := Random(CSRFormat, 500, 600, 0.4)
-	benchmarkMatrixAddition(t, lhs, rhs, b)
-}
+	for _, bench := range benchmarks {
 
-func benchmarkMatrixAddition(target *CSR, lhs mat.Matrix, rhs mat.Matrix, b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		target.Add(lhs, rhs)
+		aMat := Random(bench.a, ar, ac, bench.density)
+		bMat := Random(bench.b, br, bc, bench.density)
+		var c CSR
+
+		b.Run(bench.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				c.Add(aMat, bMat)
+			}
+		})
 	}
 }
 
@@ -311,22 +417,6 @@ func BenchmarkBLASMulMatMat(b *testing.B) {
 			b:       DenseFormat,
 			density: 0.01,
 		},
-		// {
-		// 	name:    "CSRxDense",
-		// 	transA:  true,
-		// 	alpha:   1,
-		// 	a:       CSRFormat,
-		// 	b:       DenseFormat,
-		// 	density: 0.1,
-		// },
-		// {
-		// 	name:    "CSCxDense",
-		// 	transA:  true,
-		// 	alpha:   1,
-		// 	a:       CSCFormat,
-		// 	b:       DenseFormat,
-		// 	density: 0.1,
-		// },
 		{
 			name:    "COOxDense",
 			transA:  false,

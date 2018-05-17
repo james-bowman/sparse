@@ -34,6 +34,20 @@ func (c *CSR) commitWorkspace(indptr, ind []int, data []float64) {
 	putFloats(data)
 }
 
+// MulMatRawVec computes the matrix vector product between lhs and rhs and stores
+// the result in out
+func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
+	m, n := lhs.Dims()
+	if len(rhs) != n {
+		panic(mat.ErrShape)
+	}
+	if len(out) != m {
+		panic(mat.ErrShape)
+	}
+
+	blas.Dusmv(false, 1, lhs.RawMatrix(), rhs, 1, out, 1)
+}
+
 // Mul takes the matrix product of the supplied matrices a and b and stores the result
 // in the receiver.  Some specific optimisations are available for operands of certain
 // sparse formats e.g. CSR * CSR uses Gustavson Algorithm (ACM 1978) for fast
@@ -66,76 +80,71 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 			c.mulCSRCSR(lhs, rhs)
 			return
 		}
+		c.mulCSR(lhs, b)
+		return
 	}
 
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
 	t := 0
-
-	if isCsr {
-		// handle case where matrix A is CSR (matrix B can be any implementation of mat.Matrix)
-		for i := 0; i < ar; i++ {
-			indptr[i] = t
-			for j := 0; j < bc; j++ {
-				var v float64
-				// TODO Consider converting all Sparser args to CSR
-				for k := lhs.matrix.Indptr[i]; k < lhs.matrix.Indptr[i+1]; k++ {
-					v += lhs.matrix.Data[k] * b.At(lhs.matrix.Ind[k], j)
-				}
-				if v != 0 {
-					t++
-					ind = append(ind, j)
-					data = append(data, v)
-				}
+	// handle any implementation of mat.Matrix for both matrix A and B
+	row := getFloats(ac, false)
+	for i := 0; i < ar; i++ {
+		indptr[i] = t
+		// perhaps counter-intuatively, transferring the row elements of the first operand
+		// into a slice as part of a separate loop (rather than accessing each element within
+		// the main loop (a.At(m, n) * b.At(m, n)) then ranging over them as part of the
+		// main loop is about twice as fast.  This is related to lining the data up into CPU
+		// cache rather than accessing from RAM.
+		// This seems to have interesting implications when using formats with more expensive
+		// lookups - placing the more costly format first (and extracting its rows into a
+		// slice) appears approximately twice as fast as switching the order of the formats.
+		for ci := range row {
+			row[ci] = a.At(i, ci)
+		}
+		for j := 0; j < bc; j++ {
+			var v float64
+			for ci, e := range row {
+				v += e * b.At(ci, j)
+			}
+			if v != 0 {
+				t++
+				ind = append(ind, j)
+				data = append(data, v)
 			}
 		}
-	} else {
-		// handle any implementation of mat.Matrix for both matrix A and B
-		row := getFloats(ac, false)
-		for i := 0; i < ar; i++ {
-			indptr[i] = t
-			// perhaps counter-intuatively, transferring the row elements of the first operand
-			// into a slice as part of a separate loop (rather than accessing each element within
-			// the main loop (a.At(m, n) * b.At(m, n)) then ranging over them as part of the
-			// main loop is about twice as fast.  This is related to lining the data up into CPU
-			// cache rather than accessing from RAM.
-			// This seems to have interesting implications when using formats with more expensive
-			// lookups - placing the more costly format first (and extracting its rows into a
-			// slice) appears approximately twice as fast as switching the order of the formats.
-			for ci := range row {
-				row[ci] = a.At(i, ci)
-			}
-			for j := 0; j < bc; j++ {
-				var v float64
-				for ci, e := range row {
-					v += e * b.At(ci, j)
-				}
-				if v != 0 {
-					t++
-					ind = append(ind, j)
-					data = append(data, v)
-				}
-			}
-		}
-		putFloats(row)
 	}
-
+	putFloats(row)
 	indptr[ar] = t
 	c.matrix.I, c.matrix.J = ar, bc
 	c.commitWorkspace(indptr, ind, data)
 }
 
-// MulMatRawVec computes the matrix vector product between lhs and rhs and stores
-// the result in out
-func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
-	m, n := lhs.Dims()
-	if len(rhs) != n {
-		panic(mat.ErrShape)
-	}
-	if len(out) != m {
-		panic(mat.ErrShape)
-	}
+// mulCSR handles CSR = CSR * mat.Matrix
+func (c *CSR) mulCSR(lhs *CSR, b mat.Matrix) {
+	ar, _ := lhs.Dims()
+	_, bc := b.Dims()
+	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
+	t := 0
 
-	blas.Dusmv(false, 1, lhs.RawMatrix(), rhs, 1, out, 1)
+	// handle case where matrix A is CSR (matrix B can be any implementation of mat.Matrix)
+	for i := 0; i < ar; i++ {
+		indptr[i] = t
+		for j := 0; j < bc; j++ {
+			var v float64
+			// TODO Consider converting all Sparser args to CSR
+			for k := lhs.matrix.Indptr[i]; k < lhs.matrix.Indptr[i+1]; k++ {
+				v += lhs.matrix.Data[k] * b.At(lhs.matrix.Ind[k], j)
+			}
+			if v != 0 {
+				t++
+				ind = append(ind, j)
+				data = append(data, v)
+			}
+		}
+	}
+	indptr[ar] = t
+	c.matrix.I, c.matrix.J = ar, bc
+	c.commitWorkspace(indptr, ind, data)
 }
 
 // mulCSRCSR handles CSR = CSR * CSR using Gustavson Algorithm (ACM 1978)
@@ -184,38 +193,45 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 	t := 0
 	raw := dia.Diagonal()
 
-	for i := 0; i < rows; i++ {
-		indptr[i] = t
-		var v float64
-
-		if isCS {
+	if isCS {
+		for i := 0; i < rows; i++ {
+			indptr[i] = t
+			var v float64
 			for k := csMat.Indptr[i]; k < csMat.Indptr[i+1]; k++ {
-				var rawval float64
+				var indx int
 				if trans {
-					rawval = raw[csMat.Ind[k]]
+					indx = csMat.Ind[k]
 				} else {
-					rawval = raw[i]
+					indx = i
 				}
-				v = csMat.Data[k] * rawval
-				if v != 0 {
-					ind[t] = csMat.Ind[k]
-					data[t] = v
-					t++
+				if indx < len(raw) {
+					v = csMat.Data[k] * raw[indx]
+					if v != 0 {
+						ind[t] = csMat.Ind[k]
+						data[t] = v
+						t++
+					}
 				}
 			}
-		} else {
+		}
+	} else {
+		for i := 0; i < rows; i++ {
+			indptr[i] = t
+			var v float64
 			for k := 0; k < cols; k++ {
-				var rawval float64
+				var indx int
 				if trans {
-					rawval = raw[k]
+					indx = k
 				} else {
-					rawval = raw[i]
+					indx = i
 				}
-				v = other.At(i, k) * rawval
-				if v != 0 {
-					ind = append(ind, k)
-					data = append(data, v)
-					t++
+				if indx < len(raw) {
+					v = other.At(i, k) * raw[indx]
+					if v != 0 {
+						ind = append(ind, k)
+						data = append(data, v)
+						t++
+					}
 				}
 			}
 		}
