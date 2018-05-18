@@ -257,7 +257,7 @@ func (c *CSR) Add(a, b mat.Matrix) {
 
 	// TODO optimisation for DIA matrices
 	if lIsCsr && rIsCsr {
-		c.addCSRCSR(lCsr, rCsr)
+		c.addCSRCSR(lCsr, rCsr, 1, 1)
 		return
 	}
 	if lIsCsr {
@@ -323,9 +323,10 @@ func (c *CSR) addCSR(csr *CSR, other mat.Matrix) {
 }
 
 // addCSRCSR adds 2 CSR matrices together storing the result in the receiver.
+// Matrices a and b are scaled by alpha and beta respectively before addition.
 // This method is specially optimised to take advantage of the sparsity patterns
 // of the 2 CSR matrices.
-func (c *CSR) addCSRCSR(lhs, rhs *CSR) {
+func (c *CSR) addCSRCSR(lhs *CSR, rhs *CSR, alpha float64, beta float64) {
 	ar, ac := lhs.Dims()
 	anz, bnz := lhs.NNZ(), rhs.NNZ()
 	indptr := make([]int, ar+1)
@@ -341,10 +342,10 @@ func (c *CSR) addCSRCSR(lhs, rhs *CSR) {
 		indptr[i] = len(ind)
 
 		begin, end = a.Indptr[i], a.Indptr[i+1]
-		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], 1, &ind)
+		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &ind)
 
 		begin, end = b.Indptr[i], b.Indptr[i+1]
-		spa.Scatter(b.Data[begin:end], b.Ind[begin:end], 1, &ind)
+		spa.Scatter(b.Data[begin:end], b.Ind[begin:end], beta, &ind)
 
 		spa.GatherAndZero(&data, &ind)
 	}
