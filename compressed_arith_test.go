@@ -496,11 +496,142 @@ func TestCSRAdd(t *testing.T) {
 		a := test.atype(test.am, test.an, test.adata)
 		b := test.btype(test.bm, test.bn, test.bdata)
 
-		csr := NewCSR(0, 0, nil, nil, nil)
+		var csr CSR
 		csr.Add(a, b)
 
-		if !mat.Equal(expected, csr) {
-			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csr))
+		if !mat.Equal(expected, &csr) {
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(&csr))
+			t.Fail()
+		}
+	}
+}
+
+func TestCSRSub(t *testing.T) {
+	var tests = []struct {
+		atype  MatrixCreator
+		am, an int
+		adata  []float64
+		btype  MatrixCreator
+		bm, bn int
+		bdata  []float64
+		cm, cn int
+		cdata  []float64
+	}{
+		{
+			atype: CreateDIA,
+			am:    4, an: 4,
+			adata: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 0,
+				0, 0, 0, 4,
+			},
+			btype: CreateCSR,
+			bm:    4, bn: 4,
+			bdata: []float64{
+				1, 0, 2, 2,
+				3, 4, 5, 0,
+				0, 0, 1, 1,
+				6, 0, 7, 0,
+			},
+			cm: 4, cn: 4,
+			cdata: []float64{
+				0, 0, -2, -2,
+				-3, -2, -5, 0,
+				0, 0, 2, -1,
+				-6, 0, -7, 4,
+			},
+		},
+		{
+			atype: CreateCSR,
+			am:    4, an: 4,
+			adata: []float64{
+				1, 3, 0, 6,
+				0, 4, 0, 0,
+				2, 5, 0, 7,
+				1, 0, 0, 1,
+			},
+			btype: CreateDIA,
+			bm:    4, bn: 4,
+			bdata: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 0,
+				0, 0, 0, 4,
+			},
+			cm: 4, cn: 4,
+			cdata: []float64{
+				0, 3, 0, 6,
+				0, 2, 0, 0,
+				2, 5, -3, 7,
+				1, 0, 0, -3,
+			},
+		},
+		{
+			atype: CreateDIA,
+			am:    4, an: 4,
+			adata: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 0,
+				0, 0, 0, 4,
+			},
+			btype: CreateDIA,
+			bm:    4, bn: 4,
+			bdata: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 0,
+				0, 0, 0, 4,
+			},
+			cm: 4, cn: 4,
+			cdata: []float64{
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+			},
+		},
+		{
+			atype: CreateCSR,
+			am:    4, an: 3,
+			adata: []float64{
+				1, 0, 0,
+				0, 2, 0,
+				0, 0, 3,
+				0, 0, 0,
+			},
+			btype: CreateCSR,
+			bm:    4, bn: 3,
+			bdata: []float64{
+				1, 0, 2,
+				3, 4, 5,
+				0, 0, 0,
+				6, 0, 7,
+			},
+			cm: 4, cn: 3,
+			cdata: []float64{
+				0, 0, -2,
+				-3, -2, -5,
+				0, 0, 3,
+				-6, 0, -7,
+			},
+		},
+	}
+
+	for ti, test := range tests {
+		t.Logf("**** Test Run %d.\n", ti+1)
+
+		expected := mat.NewDense(test.cm, test.cn, test.cdata)
+
+		a := test.atype(test.am, test.an, test.adata)
+		b := test.btype(test.bm, test.bn, test.bdata)
+
+		var csr CSR
+		csr.Sub(a, b)
+
+		if !mat.Equal(expected, &csr) {
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(&csr))
 			t.Fail()
 		}
 	}

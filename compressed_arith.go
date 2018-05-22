@@ -242,9 +242,20 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 	c.commitWorkspace(indptr, ind, data)
 }
 
+// Sub subtracts matrix b from a and stores the result in the receiver.
+// If matrices a and b are not the same shape then the method will panic.
+func (c *CSR) Sub(a, b mat.Matrix) {
+	c.addScaled(a, b, 1, -1)
+}
+
 // Add adds matrices a and b together and stores the result in the receiver.
 // If matrices a and b are not the same shape then the method will panic.
 func (c *CSR) Add(a, b mat.Matrix) {
+	c.addScaled(a, b, 1, 1)
+}
+
+// addScaled adds matrices a and b scaling them by a and b respectively before hand.
+func (c *CSR) addScaled(a mat.Matrix, b mat.Matrix, alpha float64, beta float64) {
 	ar, ac := a.Dims()
 	br, bc := b.Dims()
 
@@ -257,15 +268,15 @@ func (c *CSR) Add(a, b mat.Matrix) {
 
 	// TODO optimisation for DIA matrices
 	if lIsCsr && rIsCsr {
-		c.addCSRCSR(lCsr, rCsr, 1, 1)
+		c.addCSRCSR(lCsr, rCsr, alpha, beta)
 		return
 	}
 	if lIsCsr {
-		c.addCSR(lCsr, b)
+		c.addCSR(lCsr, b, alpha, beta)
 		return
 	}
 	if rIsCsr {
-		c.addCSR(rCsr, a)
+		c.addCSR(rCsr, a, beta, alpha)
 		return
 	}
 	// dumb addition with no sparcity optimisations/savings
@@ -274,7 +285,8 @@ func (c *CSR) Add(a, b mat.Matrix) {
 	indptr = append(indptr, offset)
 	for i := 0; i < ar; i++ {
 		for j := 0; j < ac; j++ {
-			v := a.At(i, j) + b.At(i, j)
+			v := alpha*a.At(i, j) + beta*b.At(i, j)
+			//v := a.At(i, j) + b.At(i, j)
 			if v != 0 {
 				ind = append(ind, j)
 				data = append(data, v)
@@ -289,35 +301,34 @@ func (c *CSR) Add(a, b mat.Matrix) {
 
 // addCSR adds a CSR matrix to any implementation of mat.Matrix and stores the
 // result in the receiver.
-func (c *CSR) addCSR(csr *CSR, other mat.Matrix) {
+func (c *CSR) addCSR(csr *CSR, other mat.Matrix, alpha float64, beta float64) {
 	ar, ac := csr.Dims()
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
 
-	row := getFloats(ac, false)
+	spa := NewSPA(ac)
 	a := csr.RawMatrix()
 
 	for i := 0; i < ar; i++ {
 		begin := csr.matrix.Indptr[i]
 		end := csr.matrix.Indptr[i+1]
 
-		// if bDense, isDense := other.(*mat.Dense); isDense {
-		// 	row = bDense.RawRowView(i)
-		// 	blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
-		// } else {
-		row = mat.Row(row, i, other)
-		blas.Dusaxpy(1, a.Data[begin:end], a.Ind[begin:end], row, 1)
-		// }
+		if dense, isDense := other.(mat.RawMatrixer); isDense {
+            rawOther := dense.RawMatrix()
+            r := rawOther.Data[i*rawOther.Stride : i*rawOther.Stride+rawOther.Cols]
+			spa.AccumulateDense(r, beta, &ind)
+        } else {
+			for j := 0; j < ac; j++ {
+				v := other.At(i, j)
+				if v != 0 {
+					spa.ScatterValue(v, j, beta, &ind)
+				}
+            }
+        }	
 
-		for j, v := range row {
-			if v != 0 {
-				ind = append(ind, j)
-				data = append(data, v)
-				row[j] = 0
-			}
-		}
+		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &ind)
+		spa.GatherAndZero(&data, &ind)
 		indptr[i+1] = len(ind)
 	}
-	putFloats(row)
 	c.matrix.I, c.matrix.J = ar, ac
 	c.commitWorkspace(indptr, ind, data)
 }
@@ -339,8 +350,6 @@ func (c *CSR) addCSRCSR(lhs *CSR, rhs *CSR, alpha float64, beta float64) {
 
 	var begin, end int
 	for i := 0; i < ar; i++ {
-		indptr[i] = len(ind)
-
 		begin, end = a.Indptr[i], a.Indptr[i+1]
 		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &ind)
 
@@ -348,6 +357,7 @@ func (c *CSR) addCSRCSR(lhs *CSR, rhs *CSR, alpha float64, beta float64) {
 		spa.Scatter(b.Data[begin:end], b.Ind[begin:end], beta, &ind)
 
 		spa.GatherAndZero(&data, &ind)
+		indptr[i+1] = len(ind)
 	}
 	indptr[ar] = len(ind)
 	c.matrix.I, c.matrix.J = ar, ac
@@ -399,12 +409,29 @@ func (s *SPA) ScatterVec(x *Vector, alpha float64, ind *[]int) {
 // alpha and adding them to the corresponding elements in the SPA (SPA += alpha * x)
 func (s *SPA) Scatter(x []float64, indx []int, alpha float64, ind *[]int) {
 	for i, index := range indx {
-		if s.w[index] < s.generation+1 {
-			s.w[index] = s.generation + 1
-			*ind = append(*ind, index)
-			s.y[index] = alpha * x[i]
-		} else {
-			s.y[index] += alpha * x[i]
+		s.ScatterValue(x[i], index, alpha, ind)
+	}
+}
+
+// ScatterValue accumulates a single value by multiplying the value by alpha
+// and adding it to the corresponding element in the SPA (SPA += alpha * x)
+func (s *SPA) ScatterValue(val float64, index int, alpha float64, ind *[]int) {
+	if s.w[index] < s.generation+1 {
+		s.w[index] = s.generation + 1
+		*ind = append(*ind, index)
+		s.y[index] = alpha * val
+	} else {
+		s.y[index] += alpha * val
+	}
+}
+
+// AccumulateDense accumulates the dense vector x by multiplying the non-zero elements
+// by alpha and adding them to the corresponding elements in the SPA (SPA += alpha * x)
+// This is the dense version of the Scatter method for sparse vectors.
+func (s *SPA) AccumulateDense(x []float64, alpha float64, ind *[]int) {
+	for i, val := range x {
+		if val != 0 {
+			s.ScatterValue(val, i, alpha, ind)
 		}
 	}
 }

@@ -305,11 +305,15 @@ func BenchmarkAdd(b *testing.B) {
 	ar, ac := 500, 600
 	br, bc := 500, 600
 
+	type Adder interface {
+		Add(a, b mat.Matrix)
+	}
+
 	benchmarks := []struct {
 		name    string
 		a       MatrixType
 		b       MatrixType
-		c       mat.Matrix
+		c       Adder
 		density float32
 	}{
 		{
@@ -355,6 +359,20 @@ func BenchmarkAdd(b *testing.B) {
 			density: 0.01,
 		},
 		{
+			name:    "CSR=Dense+Dense",
+			a:       DenseFormat,
+			b:       DenseFormat,
+			c:       &CSR{},
+			density: 0.01,
+		},
+		{
+			name:    "CSR=CSC+CSC",
+			a:       CSCFormat,
+			b:       CSCFormat,
+			c:       &CSR{},
+			density: 0.01,
+		},
+		{
 			name:    "CSR=CSR+CSR (Denser)",
 			a:       CSRFormat,
 			b:       CSRFormat,
@@ -381,11 +399,10 @@ func BenchmarkAdd(b *testing.B) {
 
 		aMat := Random(bench.a, ar, ac, bench.density)
 		bMat := Random(bench.b, br, bc, bench.density)
-		var c CSR
 
 		b.Run(bench.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				c.Add(aMat, bMat)
+				bench.c.Add(aMat, bMat)
 			}
 		})
 	}
