@@ -271,7 +271,7 @@ func (c *CSR) addScaled(a mat.Matrix, b mat.Matrix, alpha float64, beta float64)
 		return
 	}
 	// dumb addition with no sparcity optimisations/savings
-	indptr, ind, data := c.createWorkspace(0, 0, false)
+	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
 	for i := 0; i < ar; i++ {
 		for j := 0; j < ac; j++ {
 			v := alpha*a.At(i, j) + beta*b.At(i, j)
