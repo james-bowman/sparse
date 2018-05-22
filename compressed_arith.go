@@ -186,6 +186,7 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 	raw := dia.Diagonal()
 
 	if isCS {
+		var t int
 		for i := 0; i < rows; i++ {
 			var v float64
 			for k := csMat.Indptr[i]; k < csMat.Indptr[i+1]; k++ {
@@ -200,10 +201,11 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 					if v != 0 {
 						ind[t] = csMat.Ind[k]
 						data[t] = v
+						t++
 					}
 				}
 			}
-			indptr[i+1] = len(ind)
+			indptr[i+1] = t
 		}
 	} else {
 		for i := 0; i < rows; i++ {
