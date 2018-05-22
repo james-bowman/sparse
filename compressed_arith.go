@@ -85,11 +85,9 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	}
 
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
-	t := 0
 	// handle any implementation of mat.Matrix for both matrix A and B
 	row := getFloats(ac, false)
 	for i := 0; i < ar; i++ {
-		indptr[i] = t
 		// perhaps counter-intuatively, transferring the row elements of the first operand
 		// into a slice as part of a separate loop (rather than accessing each element within
 		// the main loop (a.At(m, n) * b.At(m, n)) then ranging over them as part of the
@@ -107,14 +105,13 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 				v += e * b.At(ci, j)
 			}
 			if v != 0 {
-				t++
 				ind = append(ind, j)
 				data = append(data, v)
 			}
 		}
+		indptr[i+1] = len(ind)
 	}
 	putFloats(row)
-	indptr[ar] = t
 	c.matrix.I, c.matrix.J = ar, bc
 	c.commitWorkspace(indptr, ind, data)
 }
@@ -124,11 +121,9 @@ func (c *CSR) mulCSR(lhs *CSR, b mat.Matrix) {
 	ar, _ := lhs.Dims()
 	_, bc := b.Dims()
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
-	t := 0
 
 	// handle case where matrix A is CSR (matrix B can be any implementation of mat.Matrix)
 	for i := 0; i < ar; i++ {
-		indptr[i] = t
 		for j := 0; j < bc; j++ {
 			var v float64
 			// TODO Consider converting all Sparser args to CSR
@@ -136,13 +131,12 @@ func (c *CSR) mulCSR(lhs *CSR, b mat.Matrix) {
 				v += lhs.matrix.Data[k] * b.At(lhs.matrix.Ind[k], j)
 			}
 			if v != 0 {
-				t++
 				ind = append(ind, j)
 				data = append(data, v)
 			}
 		}
+		indptr[i+1] = len(ind)
 	}
-	indptr[ar] = t
 	c.matrix.I, c.matrix.J = ar, bc
 	c.commitWorkspace(indptr, ind, data)
 }
@@ -189,13 +183,10 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 
 	rows, cols := other.Dims()
 	indptr, ind, data := c.createWorkspace(rows+1, size, true)
-
-	t := 0
 	raw := dia.Diagonal()
 
 	if isCS {
 		for i := 0; i < rows; i++ {
-			indptr[i] = t
 			var v float64
 			for k := csMat.Indptr[i]; k < csMat.Indptr[i+1]; k++ {
 				var indx int
@@ -209,14 +200,13 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 					if v != 0 {
 						ind[t] = csMat.Ind[k]
 						data[t] = v
-						t++
 					}
 				}
 			}
+			indptr[i+1] = len(ind)
 		}
 	} else {
 		for i := 0; i < rows; i++ {
-			indptr[i] = t
 			var v float64
 			for k := 0; k < cols; k++ {
 				var indx int
@@ -230,13 +220,12 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 					if v != 0 {
 						ind = append(ind, k)
 						data = append(data, v)
-						t++
 					}
 				}
 			}
+			indptr[i+1] = len(ind)
 		}
 	}
-	indptr[rows] = t
 
 	c.matrix.I, c.matrix.J = rows, cols
 	c.commitWorkspace(indptr, ind, data)
@@ -281,8 +270,6 @@ func (c *CSR) addScaled(a mat.Matrix, b mat.Matrix, alpha float64, beta float64)
 	}
 	// dumb addition with no sparcity optimisations/savings
 	indptr, ind, data := c.createWorkspace(0, 0, false)
-	var offset int
-	indptr = append(indptr, offset)
 	for i := 0; i < ar; i++ {
 		for j := 0; j < ac; j++ {
 			v := alpha*a.At(i, j) + beta*b.At(i, j)
@@ -290,10 +277,9 @@ func (c *CSR) addScaled(a mat.Matrix, b mat.Matrix, alpha float64, beta float64)
 			if v != 0 {
 				ind = append(ind, j)
 				data = append(data, v)
-				offset++
 			}
 		}
-		indptr = append(indptr, offset)
+		indptr[i+1] = len(ind)
 	}
 	c.matrix.I, c.matrix.J = ar, ac
 	c.commitWorkspace(indptr, ind, data)
@@ -324,7 +310,6 @@ func (c *CSR) addCSR(csr *CSR, other mat.Matrix, alpha float64, beta float64) {
 				}
             }
         }	
-
 		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &ind)
 		spa.GatherAndZero(&data, &ind)
 		indptr[i+1] = len(ind)
@@ -359,7 +344,6 @@ func (c *CSR) addCSRCSR(lhs *CSR, rhs *CSR, alpha float64, beta float64) {
 		spa.GatherAndZero(&data, &ind)
 		indptr[i+1] = len(ind)
 	}
-	indptr[ar] = len(ind)
 	c.matrix.I, c.matrix.J = ar, ac
 	c.matrix.Indptr = indptr
 	c.matrix.Ind = ind
