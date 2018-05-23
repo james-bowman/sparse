@@ -86,26 +86,54 @@ func (d *DIA) Diagonal() []float64 {
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
 func (d *DIA) RowView(i int) mat.Vector {
-	return mat.NewVecDense(d.n, d.slice(i, d.m, d.n))
+	return mat.NewVecDense(d.n, d.ScatterRow(i, nil))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column j.
 func (d *DIA) ColView(j int) mat.Vector {
-	return mat.NewVecDense(d.m, d.slice(j, d.n, d.m))
+	return mat.NewVecDense(d.m, d.ScatterCol(j, nil))
 }
 
-// nativeSlice slices the DIAgonal matrix.
-func (d *DIA) slice(i int, max int, length int) []float64 {
-	if i >= max || i < 0 {
+// ScatterRow returns a slice representing row i of the matrix in dense format.  row
+// is used as the storage for the operation unless it is nil in which case, new
+// storage of the correct length will be allocated.  This method will panic if i
+// is out of range or row is not the same length as the number of columns in the matrix i.e.
+// the correct size to receive the dense representation of the row.
+func (d *DIA) ScatterRow(i int, row []float64) []float64 {
+	if i >= d.m || i < 0 {
 		panic(mat.ErrRowAccess)
 	}
-
-	slice := make([]float64, length)
-
-	if i < len(d.data) {
-		slice[i] = d.data[i]
+	if row != nil && len(row) != d.n {
+		panic(mat.ErrRowLength)
 	}
-
-	return slice
+	if row == nil {
+		row = make([]float64, d.n)
+	}
+	if i < len(d.data) {
+		row[i] = d.data[i]
+	}
+	return row
 }
+
+// ScatterCol returns a slice representing column j of the matrix in dense format.  Col
+// is used as the storage for the operation unless it is nil in which case, new
+// storage of the correct length will be allocated.  This method will panic if j
+// is out of range or col is not the same length as the number of rows in the matrix i.e.
+// the correct size to receive the dense representation of the column.
+func (d *DIA) ScatterCol(j int, col []float64) []float64 {
+	if j >= d.n || j < 0 {
+		panic(mat.ErrColAccess)
+	}
+	if col != nil && len(col) != d.m {
+		panic(mat.ErrColLength)
+	}
+	if col == nil {
+		col = make([]float64, d.m)
+	}
+	if j < len(d.data) {
+		col[j] = d.data[j]
+	}
+	return col
+}
+
