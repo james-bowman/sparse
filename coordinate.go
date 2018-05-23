@@ -17,8 +17,6 @@ var (
 
 	_ mat.ColViewer    = coo
 	_ mat.RowViewer    = coo
-	_ mat.RawColViewer = coo
-	_ mat.RawRowViewer = coo
 )
 
 // COO is a COOrdinate format sparse matrix implementation (sometimes called `Tiplet` format) and implements the
@@ -375,23 +373,11 @@ func (c *COO) ToType(matType MatrixType) mat.Matrix {
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
 func (c *COO) RowView(i int) mat.Vector {
-	return mat.NewVecDense(c.c, c.RawRowView(i))
+	return mat.NewVecDense(c.c, mat.Row(nil, i, c))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column i.
 func (c *COO) ColView(j int) mat.Vector {
-	return mat.NewVecDense(c.r, c.RawColView(j))
-}
-
-// RawRowView returns a slice representing row i of the matrix.  This is a copy
-// of the data within the matrix and does not share underlying storage.
-func (c *COO) RawRowView(i int) []float64 {
-	return rawRowView(c, i)
-}
-
-// RawColView returns a slice representing col i of the matrix.  This is a copy
-// of the data within the matrix and does not share underlying storage.
-func (c *COO) RawColView(j int) []float64 {
-	return rawColView(c, j)
+	return mat.NewVecDense(c.r, mat.Col(nil, j, c))
 }

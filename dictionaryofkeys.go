@@ -15,8 +15,6 @@ var (
 
 	_ mat.ColViewer    = dok
 	_ mat.RowViewer    = dok
-	_ mat.RawColViewer = dok
-	_ mat.RawRowViewer = dok
 )
 
 // key is used to specify the row and column of elements within the matrix.
@@ -163,23 +161,11 @@ func (d *DOK) ToType(matType MatrixType) mat.Matrix {
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
 func (d *DOK) RowView(i int) mat.Vector {
-	return mat.NewVecDense(d.c, d.RawRowView(i))
+	return mat.NewVecDense(d.c, mat.Row(nil, i, d))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column i.
 func (d *DOK) ColView(j int) mat.Vector {
-	return mat.NewVecDense(d.r, d.RawColView(j))
-}
-
-// RawRowView returns a slice representing row i of the matrix.  This is a copy
-// of the data within the matrix and does not share underlying storage.
-func (d *DOK) RawRowView(i int) []float64 {
-	return rawRowView(d, i)
-}
-
-// RawColView returns a slice representing col i of the matrix.  This is a copy
-// of the data within the matrix and does not share underlying storage.
-func (d *DOK) RawColView(j int) []float64 {
-	return rawColView(d, j)
+	return mat.NewVecDense(d.r, mat.Col(nil, j, d))
 }

@@ -9,8 +9,6 @@ var (
 
 	_ mat.ColViewer    = (*DIA)(nil)
 	_ mat.RowViewer    = (*DIA)(nil)
-	_ mat.RawColViewer = (*DIA)(nil)
-	_ mat.RawRowViewer = (*DIA)(nil)
 )
 
 // DIA matrix type is a specialised matrix designed to store DIAgonal values of square symmetrical
@@ -88,25 +86,13 @@ func (d *DIA) Diagonal() []float64 {
 // RowView slices the matrix and returns a Vector containing a copy of elements
 // of row i.
 func (d *DIA) RowView(i int) mat.Vector {
-	return mat.NewVecDense(d.n, d.RawRowView(i))
+	return mat.NewVecDense(d.n, d.slice(i, d.m, d.n))
 }
 
 // ColView slices the matrix and returns a Vector containing a copy of elements
 // of column j.
 func (d *DIA) ColView(j int) mat.Vector {
-	return mat.NewVecDense(d.m, d.RawColView(j))
-}
-
-// RawRowView returns a slice representing row i of the matrix.  This is a copy
-// of the data within the matrix and does not share underlying storage.
-func (d *DIA) RawRowView(i int) []float64 {
-	return d.slice(i, d.m, d.n)
-}
-
-// RawColView returns a slice representing col i of the matrix.  This is a copy
-// of the data within the matrix and does not share underlying storage.
-func (d *DIA) RawColView(j int) []float64 {
-	return d.slice(j, d.n, d.m)
+	return mat.NewVecDense(d.m, d.slice(j, d.n, d.m))
 }
 
 // nativeSlice slices the DIAgonal matrix.
