@@ -15,14 +15,6 @@ Machine learning applications typically model entities as vectors of numerical f
 
 Sparse matrix formats capitalise on this premise by only storing the non-zero values thereby reducing both storage/memory requirements and processing effort for manipulating the data.  Sparse matrices can effectively be divided into 3 main categories:
 
-1. *Creational* - Sparse matrix formats suited to construction and building of matrices.  Matrix formats in this category include DOK (Dictionary Of Keys) and COO (COOrdinate aka triplet).
-
-2. *Operational* - Sparse matrix formats suited to arithmetic operations e.g. multiplication.  Matrix formats in this category include CSR (Compressed Sparse Row aka CRS - Compressed Row Storage) and CSC (Compressed Sparse Column aka CCS - Compressed Column Storage)
-
-3. *Specialised* - Specialised matrix formats to efficiently store and manipulate specific sparsity patterns or data types.  Matrix formats in this category include DIA (DIAgonal) for diagonal matrices (where all the non-zero elements are situated along the diagonal) and Binary (bit) vectors and matrices for binary digits (bits - 1 or 0).
-
-A common practice is to construct sparse matrices using a creational format e.g. DOK or COO and then convert them to an operational format e.g. CSR for arithmetic operations.
-
 ## Features
 
 * Implementations of [Sparse BLAS](http://www.netlib.org/blas/blast-forum/chapter3.pdf) standard routines covering level 1 (vector-vector), level 2 (matrix-vector) and level 3 (matrix-matrix) including vector Dot product, AXPY, Scatter/Gather operations, Matrix-vector multiplication and matrix-matrix multiplication.
