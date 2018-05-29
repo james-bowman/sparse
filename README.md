@@ -69,7 +69,7 @@ csrProduct.Mul(csrMatrix, denseMatrix)
 // As an alternative, use the sparse BLAS routines for efficient
 // sparse matrix multiplication with a Gonum mat.Dense product
 // (multiplication with dense product)
-denseProduct := sparse.MulMatMat(false, 1, &csrProduct, denseMatrix, nil)
+denseProduct := sparse.MulMatMat(false, 1, &csrProduct, csrMatrix, nil)
 ```
 
 ## Installation
