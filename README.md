@@ -17,7 +17,7 @@ Sparse matrix formats capitalise on this premise by only storing the non-zero va
 
 ## Features
 
-* Implementations of [Sparse BLAS](http://www.netlib.org/blas/blast-forum/chapter3.pdf) standard routines covering level 1 (vector-vector), level 2 (matrix-vector) and level 3 (matrix-matrix) including vector Dot product, AXPY, Scatter/Gather operations, Matrix-vector multiplication and matrix-matrix multiplication.
+* Implementations of [Sparse BLAS](http://www.netlib.org/blas/blast-forum/chapter3.pdf) standard routines.
 * Implemented Formats:
     * Sparse Matrix Formats:
         * [DOK (Dictionary Of Keys)](https://en.wikipedia.org/wiki/Sparse_matrix#Dictionary_of_keys_(DOK)) format
@@ -28,10 +28,8 @@ Sparse matrix formats capitalise on this premise by only storing the non-zero va
         * sparse vectors
     * Other Formats:
         * [Binary (Bit) vectors](https://en.wikipedia.org/wiki/Bit_array) and matrices
-* CSR multiplication, addition and subtraction of 2 matrices (any implementations of the [Gonum mat.Matrix](https://godoc.org/gonum.org/v1/gonum/mat#Matrix) interface) with specific optimisations for sparse matrices with sparse CSR result.
-* Binary Vector and Matrix types for efficient storage and processing of binary/bit vectors (elements are 0 or 1) requiring a single bit of memory to represent each element.
-* sparse optimised implementations of scalar vector dot product and normalisation (e.g. L2 norm).
-* Implements standard Gonum interfaces for matrices, vectors, row/column slicing and iterating over non-zero elements
+* Matrix multiplication, addition and subtraction and vector dot products.
+* Binary Vector and Matrix types for efficient binary/bit vectors (elements are 0 or 1).
 
 ## Usage
 
