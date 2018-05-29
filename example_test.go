@@ -40,11 +40,11 @@ func Example() {
 	// As an alternative, use the sparse BLAS routines for efficient
 	// sparse matrix multiplication with a Gonum mat.Dense product
 	// (multiplication with dense product)
-	denseProduct := sparse.MulMatMat(false, 1, &csrProduct, denseMatrix, nil)
+	denseProduct := sparse.MulMatMat(false, 1, &csrProduct, csrMatrix, nil)
 
 	rows, cols := denseProduct.Dims()
-	if rows != 3 && cols != 3 {
-		fmt.Printf("Expected product 3x3 but received %dx%d\n", rows, cols)
+	if rows != 2 && cols != 3 {
+		fmt.Printf("Expected product 2x3 but received %dx%d\n", rows, cols)
 	}
 
 	// Output: 5,0,
