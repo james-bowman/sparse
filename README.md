@@ -106,7 +106,7 @@ multiplication. IBM Technical Disclosure Bulletin, 20:1262–1264, 1977.
 
 ## See Also
 
-* [gonum/mat](https://github.com/gonum/gonum/mat)
+* [gonum/gonum](https://github.com/gonum/gonum)
 
 ## License
 
