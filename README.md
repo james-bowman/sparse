@@ -53,23 +53,29 @@ for i := 0; i < m; i++ {
     fmt.Printf("\n")
 }
 
-// Convert DOK matrix to Gonum mat.Dense matrix just for fun
-// (not required for upcoming multiplication operation)
-denseMatrix := dokMatrix.ToDense()
+// Convert DOK matrix to CSR (Compressed Sparse Row) matrix
+// just for fun (not required for upcoming multiplication operation)
+csrMatrix := dokMatrix.ToCSR()
 
-// Create a random 2x3 CSR (Compressed Sparse Row) matrix with
+// Create a random 2x3 COO (COOrdinate) matrix with
 // density of 0.5 (half the elements will be non-zero)
-csrMatrix := sparse.Random(sparse.CSRFormat, 2, 3, 0.5)
+cooMatrix := sparse.Random(sparse.COOFormat, 2, 3, 0.5)
+
+// Convert CSR matrix to Gonum mat.Dense matrix just for fun
+// (not required for upcoming multiplication operation)
+// then transpose so it is the right shape/dimensions for
+// multiplication with the original CSR matrix
+denseMatrix := csrMatrix.ToDense().T()
 
 // Multiply the 2 matrices together and store the result in the
 // sparse receiver (multiplication with sparse product)
 var csrProduct sparse.CSR
-csrProduct.Mul(csrMatrix, denseMatrix)
+csrProduct.Mul(csrMatrix, cooMatrix)
 
 // As an alternative, use the sparse BLAS routines for efficient
 // sparse matrix multiplication with a Gonum mat.Dense product
 // (multiplication with dense product)
-denseProduct := sparse.MulMatMat(false, 1, &csrProduct, csrMatrix, nil)
+denseProduct := sparse.MulMatMat(false, 1, csrMatrix, denseMatrix, nil)
 ```
 
 ## Installation
