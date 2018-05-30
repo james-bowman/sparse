@@ -18,7 +18,7 @@ Sparse matrix formats capitalise on this premise by only storing the non-zero va
 ## Features
 
 * Implementations of [Sparse BLAS](http://www.netlib.org/blas/blast-forum/chapter3.pdf) standard routines.
-* Compatible with Gonum's APIs and interoperable with Gonum's dense matrix types.
+* Compatible with [Gonum's APIs](https://godoc.org/gonum.org/v1/gonum/mat) and interoperable with Gonum's dense matrix types.
 * Implemented Formats:
     * Sparse Matrix Formats:
         * [DOK (Dictionary Of Keys)](https://en.wikipedia.org/wiki/Sparse_matrix#Dictionary_of_keys_(DOK)) format
