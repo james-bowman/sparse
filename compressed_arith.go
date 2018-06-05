@@ -73,14 +73,24 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	}
 	// TODO: handle cases where both matrices are DIA
 
-	lhs, isCsr := a.(*CSR)
-	if isCsr {
-		if rhs, isRCsr := b.(*CSR); isRCsr {
-			// handle case where matrix A is CSR and matrix B is CSR
+	lhs, isLCsr := a.(*CSR)
+	rhs, isRCsr := b.(*CSR)
+	if isLCsr {
+		if isRCsr {
+			// handle case where matrix A and B are both CSR
 			c.mulCSRCSR(lhs, rhs)
 			return
 		}
-		c.mulCSR(lhs, b)
+		// handle case where matrix A is CSR
+		c.mulCSRMat(lhs, b)
+		return
+	}
+	if isRCsr {
+		// handle case where matrix B is CSR
+		bt := b.T().(*CSC).ToCSR()
+		at := a.T()
+		c.mulCSRMat(bt, at)
+		*c = *c.T().(*CSC).ToCSR()
 		return
 	}
 
@@ -116,8 +126,8 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	c.commitWorkspace(indptr, ind, data)
 }
 
-// mulCSR handles CSR = CSR * mat.Matrix
-func (c *CSR) mulCSR(lhs *CSR, b mat.Matrix) {
+// mulCSRMat handles CSR = CSR * mat.Matrix
+func (c *CSR) mulCSRMat(lhs *CSR, b mat.Matrix) {
 	ar, _ := lhs.Dims()
 	_, bc := b.Dims()
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
@@ -301,17 +311,17 @@ func (c *CSR) addCSR(csr *CSR, other mat.Matrix, alpha float64, beta float64) {
 		end := csr.matrix.Indptr[i+1]
 
 		if dense, isDense := other.(mat.RawMatrixer); isDense {
-            rawOther := dense.RawMatrix()
-            r := rawOther.Data[i*rawOther.Stride : i*rawOther.Stride+rawOther.Cols]
+			rawOther := dense.RawMatrix()
+			r := rawOther.Data[i*rawOther.Stride : i*rawOther.Stride+rawOther.Cols]
 			spa.AccumulateDense(r, beta, &ind)
-        } else {
+		} else {
 			for j := 0; j < ac; j++ {
 				v := other.At(i, j)
 				if v != 0 {
 					spa.ScatterValue(v, j, beta, &ind)
 				}
-            }
-        }	
+			}
+		}
 		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &ind)
 		spa.GatherAndZero(&data, &ind)
 		indptr[i+1] = len(ind)
