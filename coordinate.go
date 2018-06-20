@@ -1,8 +1,6 @@
 package sparse
 
 import (
-	"sort"
-
 	"github.com/james-bowman/sparse/blas"
 	"gonum.org/v1/gonum/mat"
 )
@@ -15,24 +13,22 @@ var (
 
 	_ mat.Mutable = coo
 
-	_ mat.ColViewer    = coo
-	_ mat.RowViewer    = coo
+	_ mat.ColViewer = coo
+	_ mat.RowViewer = coo
 )
 
 // COO is a COOrdinate format sparse matrix implementation (sometimes called `Tiplet` format) and implements the
 // Matrix interface from gonum/matrix.  This allows large sparse (mostly zero values) matrices to be stored
 // efficiently in memory (only storing non-zero values).  COO matrices are good for constructing sparse matrices
-// incrementally and very good at converting to CSR and CSC formats but poor for arithmetic operations.  As this
+// initially and very good at converting to CSR and CSC formats but poor for arithmetic operations.  As this
 // type implements the gonum mat.Matrix interface, it may be used with any of the Gonum mat functions that
 // accept Matrix types as parameters in place of other matrix types included in the Gonum mat package e.g. mat.Dense.
 type COO struct {
-	r             int
-	c             int
-	rows          []int
-	cols          []int
-	data          []float64
-	colMajor      bool
-	canonicalised bool
+	r    int
+	c    int
+	rows []int
+	cols []int
+	data []float64
 }
 
 // NewCOO creates a new DIAgonal format sparse matrix.
@@ -56,8 +52,6 @@ func NewCOO(r int, c int, rows []int, cols []int, data []float64) *COO {
 			coo.rows = rows
 			coo.cols = cols
 			coo.data = data
-
-			coo.Canonicalise()
 		} else {
 			panic(mat.ErrRowAccess)
 		}
@@ -75,10 +69,6 @@ func (c *COO) NNZ() int {
 // The function fn takes a row/column index and the element value of the receiver at
 // (i, j).  The order of visiting to each non-zero element is not guaranteed.
 func (c *COO) DoNonZero(fn func(i, j int, v float64)) {
-	if !c.canonicalised {
-		c.Canonicalise()
-	}
-
 	nnz := c.NNZ()
 	for i := 0; i < nnz; i++ {
 		fn(c.rows[i], c.cols[i], c.data[i])
@@ -104,10 +94,7 @@ func (c *COO) At(i, j int) float64 {
 	result := 0.0
 	for k := 0; k < len(c.data); k++ {
 		if c.rows[k] == i && c.cols[k] == j {
-			if c.canonicalised {
-				return c.data[k]
-			}
-			// if not canonicalised then sum values for duplicate elements
+			// sum values for duplicate elements
 			result += c.data[k]
 		}
 	}
@@ -115,23 +102,11 @@ func (c *COO) At(i, j int) float64 {
 	return result
 }
 
-// T transposes the matrix creating a new COO matrix, allocating new storage, but switching
-// column and row sizes and index slices i.e. rows become columns and columns become rows.
+// T transposes the matrix creating a new COO matrix, reusing the same underlying
+// storage, but switching column and row sizes and index slices i.e. rows become
+// columns and columns become rows.
 func (c *COO) T() mat.Matrix {
-	// TODO Should transpose operation copy data or reuse same underlying storage
-	// as original matrix so that updates to one are reflected in the other as with
-	// other matrix formats?
-	// If the latter, need to make sure internal sorts/canonicalisation don't screw
-	// with other matrices sharing storage.
-	size := len(c.data)
-	cols := make([]int, size)
-	rows := make([]int, size)
-	data := make([]float64, size)
-	copy(cols, c.cols)
-	copy(rows, c.rows)
-	copy(data, c.data)
-
-	return NewCOO(c.c, c.r, cols, rows, data)
+	return NewCOO(c.c, c.r, c.cols, c.rows, c.data)
 }
 
 // RawMatrix converts the matrix into a CSR matrix and returns a pointer
@@ -140,9 +115,9 @@ func (c *COO) RawMatrix() *blas.SparseMatrix {
 	return c.ToCSR().RawMatrix()
 }
 
-// Set sets the element of the matrix located at row i and column j to equal the specified value, v.  Set
-// will panic if specified values for i or j fall outside the dimensions of the matrix.  Duplicate values
-// are allowed.
+// Set sets the element of the matrix located at row i and column j to equal the
+// specified value, v.  Set will panic if specified values for i or j fall outside
+// the dimensions of the matrix.  Duplicate values are allowed and will be added.
 func (c *COO) Set(i, j int, v float64) {
 	if uint(i) < 0 || uint(i) >= uint(c.r) {
 		panic(mat.ErrRowAccess)
@@ -154,90 +129,14 @@ func (c *COO) Set(i, j int, v float64) {
 	c.rows = append(c.rows, i)
 	c.cols = append(c.cols, j)
 	c.data = append(c.data, v)
-	c.canonicalised = false
-}
-
-// Canonicalise sorts the slices (rows, cols, data) representing the NNZ values of the matrix
-// (by default into row major ordering) and removes any duplicate elements (by summing them).
-// The matrix is canonicalised upon initial construction and before converting to other formats
-// and improves performance for operations.
-func (c *COO) Canonicalise() {
-	sort.Sort(c)
-	//  Remove duplicates (summing values of duplicate elements)
-
-	k := 0
-	for i := 1; i < len(c.data); i++ {
-		if (c.rows[k] != c.rows[i]) || (c.cols[k] != c.cols[i]) {
-			k++
-			c.rows[k], c.cols[k], c.data[k] = c.rows[i], c.cols[i], c.data[i]
-		} else {
-			c.data[k] += c.data[i]
-		}
-	}
-	if len(c.data) > k {
-		c.rows, c.cols, c.data = c.rows[:k+1], c.cols[:k+1], c.data[:k+1]
-	}
-	c.canonicalised = true
-}
-
-// Len returns the length of the storage of the matrix i.e. the Number of Non Zero values.  This is required
-// for sorting.
-func (c *COO) Len() int {
-	return c.NNZ()
-}
-
-// Less compares two items from the matrix backing storage and checks they are in the correct specified ordering
-// (either row major or col major - row major is default) for sorting.
-func (c *COO) Less(i, j int) bool {
-	if c.colMajor {
-		return c.isColMajorOrdered(i, j)
-	}
-	return c.isRowMajorOrdered(i, j)
-}
-
-// Swap swaps 2 row, column indexes and corresponding data values for 2 Non Zero values from the matrix for sorting.
-func (c *COO) Swap(i, j int) {
-	c.rows[i], c.rows[j] = c.rows[j], c.rows[i]
-	c.cols[i], c.cols[j] = c.cols[j], c.cols[i]
-	c.data[i], c.data[j] = c.data[j], c.data[i]
-}
-
-// isRowMajorOrdered checks the two specified elements are in row major order
-func (c *COO) isRowMajorOrdered(i, j int) bool {
-	if c.rows[i] < c.rows[j] {
-		return true
-	}
-	if c.rows[i] == c.rows[j] {
-		if c.cols[i] < c.cols[j] {
-			return true
-		}
-	}
-	return false
-}
-
-// isColMajorOrdered checks the two specified elements are in column major order
-func (c *COO) isColMajorOrdered(i, j int) bool {
-	if c.cols[i] < c.cols[j] {
-		return true
-	}
-	if c.cols[i] == c.cols[j] {
-		if c.rows[i] < c.rows[j] {
-			return true
-		}
-	}
-	return false
 }
 
 // ToDense returns a mat.Dense dense format version of the matrix.  The returned mat.Dense
 // matrix will not share underlying storage with the receiver. nor is the receiver modified by this call
 func (c *COO) ToDense() *mat.Dense {
-	if !c.canonicalised {
-		c.Canonicalise()
-	}
-
 	mat := mat.NewDense(c.r, c.c, nil)
 	for i := 0; i < len(c.data); i++ {
-		mat.Set(c.rows[i], c.cols[i], c.data[i])
+		mat.Set(c.rows[i], c.cols[i], mat.At(c.rows[i], c.cols[i])+c.data[i])
 	}
 
 	return mat
@@ -246,13 +145,9 @@ func (c *COO) ToDense() *mat.Dense {
 // ToDOK returns a DOK (Dictionary Of Keys) sparse format version of the matrix.  The returned DOK
 // matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
 func (c *COO) ToDOK() *DOK {
-	if !c.canonicalised {
-		c.Canonicalise()
-	}
-
 	dok := NewDOK(c.r, c.c)
 	for i := 0; i < len(c.data); i++ {
-		dok.Set(c.rows[i], c.cols[i], c.data[i])
+		dok.Set(c.rows[i], c.cols[i], dok.At(c.rows[i], c.cols[i])+c.data[i])
 	}
 
 	return dok
@@ -263,30 +158,122 @@ func (c *COO) ToCOO() *COO {
 	return c
 }
 
+func cumsum(p []int, c []int, n int) int {
+	nz := 0
+	for i := 0; i < n; i++ {
+		p[i] = nz
+		nz += c[i]
+		c[i] = p[i]
+	}
+	p[n] = nz
+	return nz
+}
+
+func compress(row []int, col []int, data []float64, n int) (ia []int, ja []int, d []float64) {
+	w := make([]int, n+1)
+	ia = make([]int, n+1)
+	ja = make([]int, len(col))
+	d = make([]float64, len(data))
+
+	for _, v := range row {
+		w[v]++
+	}
+	cumsum(ia, w, n)
+
+	for j, v := range col {
+		p := w[row[j]]
+		ja[p] = v
+		d[p] = data[j]
+		w[row[j]]++
+	}
+	return
+}
+
+func dedupe(ia []int, ja []int, d []float64, m int, n int) ([]int, []float64) {
+	w := make([]int, n)
+	nz := 0
+
+	for i := 0; i < m; i++ {
+		q := nz
+		for j := ia[i]; j < ia[i+1]; j++ {
+			if w[ja[j]] > q {
+				d[w[ja[j]]] += d[j]
+			} else {
+				w[ja[j]] = nz
+				ja[nz] = ja[j]
+				d[nz] = d[j]
+				nz++
+			}
+		}
+		ia[i] = q
+	}
+	ia[m] = nz
+
+	return ja[:nz], d[:nz]
+}
+
+func compressInPlace(row []int, col []int, data []float64, n int) (ia []int, ja []int, d []float64) {
+	w := make([]int, n+1)
+
+	for _, v := range row {
+		w[v+1]++
+	}
+	for i := 0; i < n; i++ {
+		w[i+1] += w[i]
+	}
+
+	var i, j int
+	var ipos, iNext, jNext int
+	var dt, dNext float64
+	for init := 0; init < len(data); {
+		dt = data[init]
+		i = row[init]
+		j = col[init]
+		row[init] = -1
+		for {
+			ipos = w[i]
+			dNext = data[ipos]
+			iNext = row[ipos]
+			jNext = col[ipos]
+
+			data[ipos] = dt
+			col[ipos] = j
+			row[ipos] = -1
+			w[i]++
+			if iNext < 0 {
+				break
+			}
+			dt = dNext
+			i = iNext
+			j = jNext
+		}
+		init++
+		for init < len(data) && row[init] < 0 {
+			init++
+		}
+	}
+
+	if n+1 > cap(row) {
+		ia = make([]int, n+1)
+	} else {
+		ia = row[:n+1]
+	}
+	for i := 0; i < n; i++ {
+		ia[i+1] = w[i]
+	}
+	ia[0] = 0
+	ja = col
+	d = data
+
+	return
+}
+
 // ToCSR returns a CSR (Compressed Sparse Row)(AKA CRS (Compressed Row Storage)) sparse format
 // version of the matrix.  The returned CSR matrix will not share underlying storage with the
 // receiver nor is the receiver modified by this call.
 func (c *COO) ToCSR() *CSR {
-	if !c.canonicalised || c.colMajor {
-		c.colMajor = false
-		c.Canonicalise()
-	}
-
-	ia := make([]int, c.r+1)
-	ja := make([]int, len(c.cols))
-	data := make([]float64, len(c.data))
-
-	var j int
-	k := 0
-	for i := 1; i < c.r+1; i++ {
-		for j = k; j < len(c.rows) && c.rows[j] < i; j++ {
-			ja[j] = c.cols[j]
-			data[j] = c.data[j]
-		}
-		k = j
-		ia[i] = j
-	}
-
+	ia, ja, data := compress(c.rows, c.cols, c.data, c.r)
+	ja, data = dedupe(ia, ja, data, c.r, c.c)
 	return NewCSR(c.r, c.c, ia, ja, data)
 }
 
@@ -294,50 +281,16 @@ func (c *COO) ToCSR() *CSR {
 // version of the matrix.  Unlike with ToCSR(), The returned CSR matrix WILL share underlying storage with the
 // receiver and the receiver will be modified by this call.
 func (c *COO) ToCSRReuseMem() *CSR {
-	if !c.canonicalised || c.colMajor {
-		c.colMajor = false
-		c.Canonicalise()
-	}
-
-	ia := make([]int, c.r+1)
-
-	var j int
-	k := 0
-	for i := 1; i < c.r+1; i++ {
-		for j = k; j < len(c.rows) && c.rows[j] < i; j++ {
-			// empty
-		}
-		k = j
-		ia[i] = j
-	}
-
-	return NewCSR(c.r, c.c, ia, c.cols, c.data)
+	ia, ja, data := compressInPlace(c.rows, c.cols, c.data, c.r)
+	return NewCSR(c.r, c.c, ia, ja, data)
 }
 
 // ToCSC returns a CSC (Compressed Sparse Column)(AKA CCS (Compressed Column Storage)) sparse format
 // version of the matrix.  The returned CSC matrix will not share underlying storage with the
 // receiver nor is the receiver modified by this call.
 func (c *COO) ToCSC() *CSC {
-	if !c.canonicalised || !c.colMajor {
-		c.colMajor = true
-		c.Canonicalise()
-	}
-
-	ja := make([]int, c.c+1)
-	ia := make([]int, len(c.rows))
-	data := make([]float64, len(c.data))
-
-	var i int
-	k := 0
-	for j := 1; j < c.c+1; j++ {
-		for i = k; i < len(c.cols) && c.cols[i] < j; i++ {
-			ia[i] = c.rows[i]
-			data[i] = c.data[i]
-		}
-		k = i
-		ja[j] = i
-	}
-
+	ja, ia, data := compress(c.cols, c.rows, c.data, c.c)
+	ia, data = dedupe(ja, ia, data, c.c, c.r)
 	return NewCSC(c.r, c.c, ja, ia, data)
 }
 
@@ -345,24 +298,8 @@ func (c *COO) ToCSC() *CSC {
 // version of the matrix.  Unlike with ToCSC(), The returned CSC matrix WILL share underlying storage with the
 // receiver and the receiver will be modified by this call.
 func (c *COO) ToCSCReuseMem() *CSC {
-	if !c.canonicalised || !c.colMajor {
-		c.colMajor = true
-		c.Canonicalise()
-	}
-
-	ja := make([]int, c.c+1)
-
-	var i int
-	k := 0
-	for j := 1; j < c.c+1; j++ {
-		for i = k; i < len(c.cols) && c.cols[i] < j; i++ {
-			// empty
-		}
-		k = i
-		ja[j] = i
-	}
-
-	return NewCSC(c.r, c.c, ja, c.rows, c.data)
+	ja, ia, data := compressInPlace(c.cols, c.rows, c.data, c.c)
+	return NewCSC(c.r, c.c, ja, ia, data)
 }
 
 // ToType returns an alternative format version fo the matrix in the format specified.

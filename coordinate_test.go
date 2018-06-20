@@ -1,10 +1,22 @@
 package sparse
 
 import (
+	"math/rand"
 	"testing"
 
 	"gonum.org/v1/gonum/mat"
 )
+
+func CreateCOOWithDupes(m, n int, data []float64) mat.Matrix {
+	coo := CreateCOO(m, n, data).(*COO)
+	for k := 0; k < rand.Intn(m*n-1)+1; k++ {
+		i := rand.Intn(m)
+		j := rand.Intn(n)
+		coo.Set(i, j, 5)
+		coo.Set(i, j, -5)
+	}
+	return coo
+}
 
 func TestCOOConversion(t *testing.T) {
 	r, c := 3, 4
@@ -27,6 +39,11 @@ func TestCOOConversion(t *testing.T) {
 		{
 			"COO -> CSR",
 			CreateCOO,
+			func(a TypeConverter) Sparser { return a.ToCSR() },
+		},
+		{
+			"COO -> CSR (With Dupes)",
+			CreateCOOWithDupes,
 			func(a TypeConverter) Sparser { return a.ToCSR() },
 		},
 		{

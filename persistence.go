@@ -759,15 +759,13 @@ func (c *CSC) UnmarshalBinaryFrom(r io.Reader) (int, error) {
 // compressedSparse is little-endian encoded as follows:
 //   0 -  7  number of rows    (int64)
 //   8 - 15  number of columns (int64)
-//  16 - 16  colMajor          (bool)
-//  17 - 17  cononicalised     (bool)
-//  17 - 25  number of indptr  (int64)
-//  26 - 33  number of ind     (int64)
-//  34 - 41  number of non zero elements (int64)
-//  42 - ..  data elements for indptr, ind, and data (float64)
+//  16 - 23  number of indptr  (int64)
+//  24 - 31  number of ind     (int64)
+//  32 - 39  number of non zero elements (int64)
+//  40 - ..  data elements for indptr, ind, and data (float64)
 func (c *COO) MarshalBinary() ([]byte, error) {
 	bufLen := 5*int64(sizeInt64) + // row and column count plus lengths of the slices
-		2 + // colMajor and canonicalised booleans
+		//2 + // colMajor and canonicalised booleans
 		int64(len(c.rows))*int64(sizeInt64) + // rows slice
 		int64(len(c.cols))*int64(sizeInt64) + // cols slice
 		int64(len(c.data))*int64(sizeFloat64) // data slice
@@ -781,14 +779,6 @@ func (c *COO) MarshalBinary() ([]byte, error) {
 	p += sizeInt64
 	binary.LittleEndian.PutUint64(buf[p:p+sizeInt64], uint64(c.c))
 	p += sizeInt64
-	if c.colMajor {
-		buf[p] = 1
-	}
-	p++
-	if c.canonicalised {
-		buf[p] = 1
-	}
-	p++
 	binary.LittleEndian.PutUint64(buf[p:p+sizeInt64], uint64(len(c.rows)))
 	p += sizeInt64
 	binary.LittleEndian.PutUint64(buf[p:p+sizeInt64], uint64(len(c.cols)))
@@ -829,19 +819,6 @@ func (c *COO) MarshalBinaryTo(w io.Writer) (int, error) {
 	}
 	binary.LittleEndian.PutUint64(buf[:], uint64(c.c))
 	nn, err = w.Write(buf[:])
-	n += nn
-	if err != nil {
-		return n, err
-	}
-
-	var buf2 [2]byte
-	if c.colMajor {
-		buf2[0] = 1
-	}
-	if c.canonicalised {
-		buf2[1] = 1
-	}
-	nn, err = w.Write(buf2[:])
 	n += nn
 	if err != nil {
 		return n, err
@@ -917,10 +894,6 @@ func (c *COO) UnmarshalBinary(data []byte) error {
 	p += sizeInt64
 	c.c = int(binary.LittleEndian.Uint64(data[p : p+sizeInt64]))
 	p += sizeInt64
-	c.colMajor = data[p] == 1
-	p++
-	c.canonicalised = data[p] == 1
-	p++
 	pr := int64(binary.LittleEndian.Uint64(data[p : p+sizeInt64]))
 	p += sizeInt64
 	pc := int64(binary.LittleEndian.Uint64(data[p : p+sizeInt64]))
@@ -973,7 +946,6 @@ func (c *COO) UnmarshalBinary(data []byte) error {
 func (c *COO) UnmarshalBinaryFrom(r io.Reader) (int, error) {
 	var n int
 	var buf [8]byte
-	var buf2 [2]byte
 
 	nn, err := readUntilFull(r, buf[:])
 	n += nn
@@ -988,14 +960,6 @@ func (c *COO) UnmarshalBinaryFrom(r io.Reader) (int, error) {
 		return n, err
 	}
 	j := int64(binary.LittleEndian.Uint64(buf[:]))
-
-	nn, err = readUntilFull(r, buf2[:])
-	n += nn
-	if err != nil {
-		return n, err
-	}
-	cm := buf2[0] == 1
-	co := buf2[1] == 1
 
 	nn, err = readUntilFull(r, buf[:])
 	n += nn
@@ -1033,8 +997,6 @@ func (c *COO) UnmarshalBinaryFrom(r io.Reader) (int, error) {
 
 	c.r = int(i)
 	c.c = int(j)
-	c.colMajor = cm
-	c.canonicalised = co
 	c.rows = make([]int, rcnt)
 	c.cols = make([]int, ccnt)
 	c.data = make([]float64, datan)
@@ -1068,17 +1030,6 @@ func (c *COO) UnmarshalBinaryFrom(r io.Reader) (int, error) {
 
 	return n, nil
 }
-
-/*
-type key struct {
-	i, j int
-}
-type DOK struct {
-	r        int
-	c        int
-	elements map[key]float64
-}
-*/
 
 // MarshalBinary binary serialises the receiver into a []byte and returns the result.
 //

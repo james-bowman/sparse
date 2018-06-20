@@ -431,8 +431,6 @@ var (
 			raw: []byte(
 				"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2
-					"\x00" + // false
-					"\x01" + // true
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2 = len(rows)
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2 = len(cols)
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2 = len(data)
@@ -449,8 +447,6 @@ var (
 			raw: []byte(
 				"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2
 					"\x03\x00\x00\x00\x00\x00\x00\x00" + // 3
-					"\x00" + // false
-					"\x01" + // true
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2 = len(rows)
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2 = len(cols)
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2 = len(data)
@@ -467,8 +463,6 @@ var (
 			raw: []byte(
 				"\x03\x00\x00\x00\x00\x00\x00\x00" + // 3
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2
-					"\x00" + // false
-					"\x01" + // true
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2 = len(rows)
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2 = len(cols)
 					"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2 = len(data)
@@ -494,7 +488,6 @@ func TestCOOMarshalBinary(t *testing.T) {
 		}
 
 		size := 5*int64(sizeInt64) + // row and column count plus lengths of the slices
-			2 + // colMajor and canonicalised booleans
 			int64(len(test.want.rows))*int64(sizeInt64) + // indptr slice
 			int64(len(test.want.cols))*int64(sizeInt64) + // ind slice
 			int64(len(test.want.data))*int64(sizeFloat64) // data slice
@@ -522,7 +515,7 @@ func TestCOOMarshallTo(t *testing.T) {
 		}
 
 		size := len(test.want.data)*sizeFloat64 + len(test.want.rows)*sizeInt64 +
-			len(test.want.cols)*sizeInt64 + 5*sizeInt64 + 2
+			len(test.want.cols)*sizeInt64 + 5*sizeInt64
 		if n != size {
 			t.Errorf("encoded size: want=%d got=%d\n", size, n)
 		}
