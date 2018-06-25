@@ -318,9 +318,11 @@ func Dot(a, b mat.Vector) float64 {
 
 	if aIsSparse {
 		if bIsSparse {
-			buf := make([]float64, bs.len)
+			buf := getFloats(bs.len, true)
 			blas.Dussc(bs.data, buf, 1, bs.ind)
-			return blas.Dusdot(as.data, as.ind, buf, 1)
+			val := blas.Dusdot(as.data, as.ind, buf, 1)
+			putFloats(buf)
+			return val
 		}
 		if bdense, bIsDense := b.(mat.RawVectorer); bIsDense {
 			raw := bdense.RawVector()
