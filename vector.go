@@ -294,6 +294,9 @@ func (v *Vector) AddScaledVec(a mat.Vector, alpha float64, b mat.Vector) {
 // non-zero elements.
 // See Normer interface for more details.
 func (v *Vector) Norm(L float64) float64 {
+	if v.len == 0 || len(v.data) == 0 {
+		return 0
+	}
 	if L == 2 {
 		twoNorm := math.Pow(math.Abs(v.data[0]), 2)
 		for i := 1; i < len(v.data); i++ {
