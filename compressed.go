@@ -188,10 +188,10 @@ func (c *CSR) ToCOO() *COO {
 	for i := 0; i < len(c.matrix.Indptr)-1; i++ {
 		for j := c.matrix.Indptr[i]; j < c.matrix.Indptr[i+1]; j++ {
 			rows[j] = i
-			cols[j] = c.matrix.Ind[j]
-			data[j] = c.matrix.Data[j]
 		}
 	}
+	copy(cols, c.matrix.Ind)
+	copy(data, c.matrix.Data)
 
 	coo := NewCOO(c.matrix.I, c.matrix.J, rows, cols, data)
 
@@ -411,10 +411,10 @@ func (c *CSC) ToCOO() *COO {
 	for i := 0; i < len(c.matrix.Indptr)-1; i++ {
 		for j := c.matrix.Indptr[i]; j < c.matrix.Indptr[i+1]; j++ {
 			cols[j] = i
-			rows[j] = c.matrix.Ind[j]
-			data[j] = c.matrix.Data[j]
 		}
 	}
+	copy(rows, c.matrix.Ind)
+	copy(data, c.matrix.Data)
 
 	coo := NewCOO(c.matrix.J, c.matrix.I, rows, cols, data)
 

@@ -61,6 +61,83 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		panic(mat.ErrShape)
 	}
 
+	lhs, isLCsr := a.(*CSR)
+	rhs, isRCsr := b.(*CSR)
+	if isLCsr && isRCsr {
+		// handle case where matrix A and B are both CSR
+		c.mulCSRCSR(lhs, rhs)
+		return
+	}
+
+	srcA, isLSparse := a.(TypeConverter)
+	srcB, isRSparse := b.(TypeConverter)
+	if isLSparse {
+		if isRSparse {
+			c.mulCSRCSR(srcA.ToCSR(), srcB.ToCSR())
+			return
+		}
+		c.mulCSRMat(srcA.ToCSR(), b)
+		return
+	}
+	if isRSparse {
+		bt := srcB.ToCSC().T().(*CSR)
+		c.mulCSRMat(bt, a.T())
+		*c = *c.T().(*CSC).ToCSR()
+		return
+	}
+
+	if dia, ok := a.(*DIA); ok {
+		// handle case where matrix A is a DIA
+		c.mulDIA(dia, b, false)
+		return
+	}
+	if dia, ok := b.(*DIA); ok {
+		// handle case where matrix B is a DIA
+		c.mulDIA(dia, a, true)
+		return
+	}
+	// TODO: handle cases where both matrices are DIA
+
+	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
+	// handle any implementation of mat.Matrix for both matrix A and B
+	row := getFloats(ac, false)
+	var v float64
+	for i := 0; i < ar; i++ {
+		for ci := range row {
+			row[ci] = a.At(i, ci)
+		}
+		for j := 0; j < bc; j++ {
+			v = 0
+			for ci, e := range row {
+				if e != 0 {
+					v += e * b.At(ci, j)
+				}
+			}
+			if v != 0 {
+				ind = append(ind, j)
+				data = append(data, v)
+			}
+		}
+		indptr[i+1] = len(ind)
+	}
+	putFloats(row)
+	c.matrix.I, c.matrix.J = ar, bc
+	c.commitWorkspace(indptr, ind, data)
+}
+
+// Mul2 takes the matrix product of the supplied matrices a and b and stores the result
+// in the receiver.  Some specific optimisations are available for operands of certain
+// sparse formats e.g. CSR * CSR uses Gustavson Algorithm (ACM 1978) for fast
+// sparse matrix multiplication.
+// If the number of columns does not equal the number of rows in b, Mul will panic.
+func (c *CSR) Mul2(a, b mat.Matrix) {
+	ar, ac := a.Dims()
+	br, bc := b.Dims()
+
+	if ac != br {
+		panic(mat.ErrShape)
+	}
+
 	if dia, ok := a.(*DIA); ok {
 		// handle case where matrix A is a DIA
 		c.mulDIA(dia, b, false)
@@ -81,15 +158,38 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 			c.mulCSRCSR(lhs, rhs)
 			return
 		}
+		if csc, isRCsc := b.(*CSC); isRCsc {
+			// handle case where Matrix A is CSR and B is CSC
+			c.mulCSRCSC(lhs, csc)
+			return
+		}
 		// handle case where matrix A is CSR
 		c.mulCSRMat(lhs, b)
 		return
 	}
 	if isRCsr {
-		// handle case where matrix B is CSR
 		bt := b.T().(*CSC).ToCSR()
 		at := a.T()
-		c.mulCSRMat(bt, at)
+		if atcsr, isAtCSR := at.(*CSR); isAtCSR {
+			// handle case where matrix A is CSC and B is CSR
+			c.mulCSRCSR(bt, atcsr)
+		} else {
+			// handle case where matrix B is CSR
+			c.mulCSRMat(bt, at)
+		}
+		*c = *c.T().(*CSC).ToCSR()
+		return
+	}
+	if _, isRCsc := b.(*CSC); isRCsc {
+		bt := b.T().(*CSR)
+		at := a.T()
+		if atcsr, isAtCSR := at.(*CSR); isAtCSR {
+			// handle case where matrix A and B are both CSC
+			c.mulCSRCSR(bt, atcsr)
+		} else {
+			// handle case where matrix B is CSC
+			c.mulCSRMat(bt, at)
+		}
 		*c = *c.T().(*CSC).ToCSR()
 		return
 	}
@@ -97,22 +197,17 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
 	// handle any implementation of mat.Matrix for both matrix A and B
 	row := getFloats(ac, false)
+	var v float64
 	for i := 0; i < ar; i++ {
-		// perhaps counter-intuatively, transferring the row elements of the first operand
-		// into a slice as part of a separate loop (rather than accessing each element within
-		// the main loop (a.At(m, n) * b.At(m, n)) then ranging over them as part of the
-		// main loop is about twice as fast.  This is related to lining the data up into CPU
-		// cache rather than accessing from RAM.
-		// This seems to have interesting implications when using formats with more expensive
-		// lookups - placing the more costly format first (and extracting its rows into a
-		// slice) appears approximately twice as fast as switching the order of the formats.
 		for ci := range row {
 			row[ci] = a.At(i, ci)
 		}
 		for j := 0; j < bc; j++ {
-			var v float64
+			v = 0
 			for ci, e := range row {
-				v += e * b.At(ci, j)
+				if e != 0 {
+					v += e * b.At(ci, j)
+				}
 			}
 			if v != 0 {
 				ind = append(ind, j)
@@ -124,6 +219,43 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	putFloats(row)
 	c.matrix.I, c.matrix.J = ar, bc
 	c.commitWorkspace(indptr, ind, data)
+}
+
+// mulCSRCSC handles CSR = CSR * CSC
+func (c *CSR) mulCSRCSC(lhs *CSR, csc *CSC) {
+	ar, ac := lhs.Dims()
+	_, bc := csc.Dims()
+	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
+	bt := csc.T().(*CSR)
+	at := lhs.T().(*CSC)
+	braw := bt.RawMatrix()
+	//col := make([]float64, ac)
+	//recv := make([]float64, bc)
+	col := getFloats(ac, true)
+	recv := getFloats(bc, true)
+
+	for j := 0; j < ar; j++ {
+		begin, end := at.matrix.Indptr[j], at.matrix.Indptr[j+1]
+		indx := at.matrix.Ind[begin:end]
+		blas.Dussc(at.matrix.Data[begin:end], col, 1, indx)
+		blas.Dusmv(false, 1, braw, col, 1, recv, 1)
+		for _, v := range indx {
+			col[v] = 0
+		}
+		for i, v := range recv {
+			if v != 0.0 {
+				ind = append(ind, i)
+				data = append(data, v)
+				recv[i] = 0
+			}
+		}
+		indptr[j+1] = len(ind)
+	}
+	c.matrix.I, c.matrix.J = ar, bc
+	putFloats(col)
+	putFloats(recv)
+	c.commitWorkspace(indptr, ind, data)
+	return
 }
 
 // mulCSRMat handles CSR = CSR * mat.Matrix

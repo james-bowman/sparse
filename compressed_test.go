@@ -61,48 +61,92 @@ func TestCSRCSCConversion(t *testing.T) {
 
 	var tests = []struct {
 		desc    string
+		r, c    int
+		data    []float64
 		create  MatrixCreator
 		convert func(a TypeConverter) mat.Matrix
 	}{
 		{
 			"CSR -> CSC",
+			r, c,
+			data,
 			CreateCSR,
 			func(a TypeConverter) mat.Matrix { return a.ToCSC() },
 		},
 		{
 			"CSC -> CSR",
+			r, c,
+			data,
 			CreateCSC,
 			func(a TypeConverter) mat.Matrix { return a.ToCSR() },
 		},
 		{
 			"CSR -> COO",
+			r, c,
+			data,
 			CreateCSR,
 			func(a TypeConverter) mat.Matrix { return a.ToCOO() },
 		},
 		{
 			"CSC -> COO",
+			r, c,
+			data,
 			CreateCSC,
 			func(a TypeConverter) mat.Matrix { return a.ToCOO() },
 		},
 		{
 			"CSR -> DOK",
+			r, c,
+			data,
 			CreateCSR,
 			func(a TypeConverter) mat.Matrix { return a.ToDOK() },
 		},
 		{
 			"CSC -> DOK",
+			r, c,
+			data,
 			CreateCSC,
 			func(a TypeConverter) mat.Matrix { return a.ToDOK() },
 		},
 		{
 			"CSR -> Dense",
+			r, c,
+			data,
 			CreateCSR,
 			func(a TypeConverter) mat.Matrix { return a.ToDense() },
 		},
 		{
 			"CSC -> Dense",
+			r, c,
+			data,
 			CreateCSC,
 			func(a TypeConverter) mat.Matrix { return a.ToDense() },
+		},
+		{
+			"CSR -> CSC 2",
+			5, 4,
+			[]float64{
+				1, 0, 0, 7,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 7, 0,
+				0, 0, 0, 0,
+			},
+			CreateCSR,
+			func(a TypeConverter) mat.Matrix { return a.ToCSC() },
+		},
+		{
+			"CSC -> CSR 2",
+			5, 4,
+			[]float64{
+				1, 0, 0, 7,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 7, 0,
+				0, 0, 0, 0,
+			},
+			CreateCSC,
+			func(a TypeConverter) mat.Matrix { return a.ToCSR() },
 		},
 	}
 

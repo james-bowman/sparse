@@ -20,8 +20,8 @@ var products = []Product{
 
 var densities = []float32{
 	0.01,
-	//	0.1,
-	//0.4,
+	//0.1,
+	0.4,
 	//	0.6,
 }
 
@@ -47,6 +47,20 @@ func BenchmarkMulLargeCSRDIACSR(b *testing.B) {
 func BenchmarkMulLargeCSRCSRDIA(b *testing.B) {
 	t := CreateCSR(0, 0, nil).(*CSR)
 	lhs := Random(CSRFormat, 500, 600, 0.01)
+	rhs := RandomDIA(600, 500)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+
+func BenchmarkMulLargeCSRDIACSC(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := RandomDIA(500, 600)
+	rhs := Random(CSCFormat, 600, 500, 0.01)
+	benchmarkMatrixMultiplication(t, lhs, rhs, b)
+}
+
+func BenchmarkMulLargeCSRCSCDIA(b *testing.B) {
+	t := CreateCSR(0, 0, nil).(*CSR)
+	lhs := Random(CSCFormat, 500, 600, 0.01)
 	rhs := RandomDIA(600, 500)
 	benchmarkMatrixMultiplication(t, lhs, rhs, b)
 }
@@ -149,7 +163,7 @@ func BenchmarkMul(b *testing.B) {
 	var dimensions = []struct {
 		ar, ac, br, bc int
 	}{
-		{ar: 5, ac: 6, br: 6, bc: 5},
+		//{ar: 5, ac: 6, br: 6, bc: 5},
 		{ar: 500, ac: 600, br: 600, bc: 500},
 	}
 
@@ -408,4 +422,28 @@ func sparseVec(s []float64) mat.Vector {
 
 func denseVec(s []float64) mat.Vector {
 	return mat.NewVecDense(len(s), s)
+}
+
+func BenchmarkNorm(b *testing.B) {
+
+	ind := []int{0, 100, 200, 300, 400, 500, 600, 700, 800, 900}
+	data := []float64{2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
+	vec := NewVector(1000, ind, data)
+
+	benchmarks := []struct {
+		name string
+		f    func(float64) float64
+	}{
+		{name: "norm", f: vec.Norm},
+	}
+
+	var v float64
+	for _, bench := range benchmarks {
+		b.Run(bench.name, func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				v = bench.f(2)
+			}
+		})
+	}
+	_ = v
 }

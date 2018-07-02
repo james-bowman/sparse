@@ -67,6 +67,54 @@ func TestCSRMul(t *testing.T) {
 			},
 		},
 		{
+			atype: CreateCSC,
+			am:    3, an: 4,
+			adata: []float64{
+				1, 3, 0, 6,
+				0, 4, 0, 0,
+				2, 5, 0, 7,
+			},
+			btype: CreateDIA,
+			bm:    4, bn: 4,
+			bdata: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 0,
+				0, 0, 0, 4,
+			},
+			cm: 3, cn: 4,
+			cdata: []float64{
+				1, 6, 0, 24,
+				0, 8, 0, 0,
+				2, 10, 0, 28,
+			},
+		},
+		{
+			atype: CreateDIA,
+			am:    4, an: 4,
+			adata: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 0,
+				0, 0, 0, 4,
+			},
+			btype: CreateCSC,
+			bm:    4, bn: 3,
+			bdata: []float64{
+				1, 0, 2,
+				3, 4, 5,
+				0, 0, 0,
+				6, 0, 7,
+			},
+			cm: 4, cn: 3,
+			cdata: []float64{
+				1, 0, 2,
+				6, 8, 10,
+				0, 0, 0,
+				24, 0, 28,
+			},
+		},
+		{
 			atype: CreateDIA,
 			am:    4, an: 4,
 			adata: []float64{
