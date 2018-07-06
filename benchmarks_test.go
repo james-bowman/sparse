@@ -425,7 +425,6 @@ func denseVec(s []float64) mat.Vector {
 }
 
 func BenchmarkNorm(b *testing.B) {
-
 	ind := []int{0, 100, 200, 300, 400, 500, 600, 700, 800, 900}
 	data := []float64{2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
 	vec := NewVector(1000, ind, data)

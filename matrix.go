@@ -123,6 +123,50 @@ func Random(t MatrixType, r int, c int, density float32) mat.Matrix {
 	return NewCOO(r, c, m, n, data).ToType(t)
 }
 
+// alias reports whether x and y share the same base array.
+func aliasFloats(x, y []float64) bool {
+	return cap(x) > 0 && cap(y) > 0 && &x[0:cap(x)][cap(x)-1] == &y[0:cap(y)][cap(y)-1]
+}
+
+// alias reports whether x and y share the same base array.
+func aliasInts(x, y []int) bool {
+	return cap(x) > 0 && cap(y) > 0 && &x[0:cap(x)][cap(x)-1] == &y[0:cap(y)][cap(y)-1]
+}
+
+// useFloats attempts to reuse the specified slice of floats ensuring it has
+// sufficient capacity for at least n elements.  If slice does not have sufficent
+// capacity for n elements, new storage will be allocated.  If clear is true,
+// all values in the slice will be zeroed.
+func useFloats(slice []float64, n int, clear bool) []float64 {
+	if n <= cap(slice) {
+		slice = slice[:n]
+		if clear {
+			for i := range slice {
+				slice[i] = 0
+			}
+		}
+		return slice
+	}
+	return make([]float64, n)
+}
+
+// useInts attempts to reuse the specified slice of ints ensuring it has
+// sufficient capacity for at least n elements.  If slice does not have sufficent
+// capacity for n elements, new storage will be allocated.  If clear is true,
+// all values in the slice will be zeroed.
+func useInts(slice []int, n int, clear bool) []int {
+	if n <= cap(slice) {
+		slice = slice[:n]
+		if clear {
+			for i := range slice {
+				slice[i] = 0
+			}
+		}
+		return slice
+	}
+	return make([]int, n)
+}
+
 // Normer is an interface for calculating the Norm of a matrix.
 // This allows matrices to implement format specific Norm
 // implementations optimised for each format processing only non-zero
@@ -232,6 +276,18 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 	}
 	craw := c.RawMatrix()
 
+	// TODO change signature so that matrix a changes from BLASCompatible
+	// Sparser to a mat.Matrix
+	// if a is sparse do all the below
+	// else if b is sparse then
+	// 		convert b to CSR and T()
+	// 		transpose a
+	//		do below
+	//      transpose c
+	// else if neither sparse
+	// c.Mul(a, b)
+	// c.T() and possibly copy back into dense
+
 	var araw *blas.SparseMatrix
 	if as, ok := a.(*CSC); ok {
 		// as CSC is the natural transpose of CSR, we will transpose here to CSR
@@ -245,6 +301,21 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 	if bd, bIsDense := b.(mat.RawMatrixer); bIsDense {
 		braw := bd.RawMatrix()
 		blas.Dusmm(transA, bc, alpha, araw, braw.Data, braw.Stride, craw.Data, craw.Stride)
+		return c
+	}
+
+	if bs, bIsCSC := b.(*CSC); bIsCSC {
+		col := getFloats(br, true)
+		for j := 0; j < bc; j++ {
+			begin, end := bs.matrix.Indptr[j], bs.matrix.Indptr[j+1]
+			ind := bs.matrix.Ind[begin:end]
+			blas.Dussc(bs.matrix.Data[begin:end], col, 1, ind)
+			blas.Dusmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
+			for _, v := range ind {
+				col[v] = 0
+			}
+		}
+		putFloats(col)
 		return c
 	}
 
@@ -267,24 +338,11 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 		return c
 	}
 
-	col := make([]float64, br)
-
-	if bs, bIsCSC := b.(*CSC); bIsCSC {
-		for j := 0; j < bc; j++ {
-			begin, end := bs.matrix.Indptr[j], bs.matrix.Indptr[j+1]
-			ind := bs.matrix.Ind[begin:end]
-			blas.Dussc(bs.matrix.Data[begin:end], col, 1, ind)
-			blas.Dusmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
-			for _, v := range ind {
-				col[v] = 0
-			}
-		}
-		return c
-	}
-
+	col := getFloats(br, false)
 	for j := 0; j < bc; j++ {
 		col = mat.Col(col, j, b)
 		blas.Dusmv(transA, alpha, araw, col, 1, craw.Data[j:], craw.Stride)
 	}
+	putFloats(col)
 	return c
 }

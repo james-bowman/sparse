@@ -2,6 +2,8 @@ package sparse
 
 import (
 	"sync"
+
+	"github.com/james-bowman/sparse/blas"
 )
 
 const (
@@ -10,6 +12,18 @@ const (
 )
 
 var (
+	pool = sync.Pool{
+		New: func() interface{} {
+			return &CSR{
+				matrix: blas.SparseMatrix{},
+			}
+		},
+	}
+	vecPool = sync.Pool{
+		New: func() interface{} {
+			return &Vector{}
+		},
+	}
 	floatPool = sync.Pool{
 		New: func() interface{} {
 			return make([]float64, pooledFloatSize)
@@ -22,24 +36,37 @@ var (
 	}
 )
 
+func getWorkspace(r, c, nnz int) *CSR {
+	w := pool.Get().(*CSR)
+	w.matrix.Indptr = useInts(w.matrix.Indptr, r+1, false)
+	w.matrix.Ind = useInts(w.matrix.Ind, nnz, false)
+	w.matrix.Data = useFloats(w.matrix.Data, nnz, false)
+	w.matrix.I = r
+	w.matrix.J = c
+	return w
+}
+
+func putWorkspace(w *CSR) {
+	pool.Put(w)
+}
+
+func getVecWorkspace(len, nnz int) *Vector {
+	w := vecPool.Get().(*Vector)
+	w.ind = useInts(w.ind, nnz, false)
+	w.data = useFloats(w.data, nnz, false)
+	w.len = len
+	return w
+}
+
+func putVecWorkspace(w *Vector) {
+	vecPool.Put(w)
+}
+
 // getFloats returns a []float64 of length l. If clear is true,
 // the slice visible is zeroed.
 func getFloats(l int, clear bool) []float64 {
 	w := floatPool.Get().([]float64)
-	if l <= cap(w) {
-		w = w[:l]
-		if clear {
-			for i := range w {
-				w[i] = 0
-			}
-		}
-		return w
-	}
-	// []float from pool is too small so return and create a
-	// bigger one
-	//putFloats(w)
-	w = make([]float64, l)
-	return w
+	return useFloats(w, l, clear)
 }
 
 // putFloats replaces a used []float64 into the appropriate size
@@ -55,20 +82,7 @@ func putFloats(w []float64) {
 // the slice visible is zeroed.
 func getInts(l int, clear bool) []int {
 	w := intPool.Get().([]int)
-	if l <= cap(w) {
-		w = w[:l]
-		if clear {
-			for i := range w {
-				w[i] = 0
-			}
-		}
-		return w
-	}
-	// []float from pool is too small so return and create a
-	// bigger one
-	//putInts(w)
-	w = make([]int, l)
-	return w
+	return useInts(w, l, clear)
 }
 
 // putInts replaces a used []int into the pool.

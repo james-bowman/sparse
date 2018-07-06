@@ -18,6 +18,8 @@ var (
 
 	_ mat.RowNonZeroDoer = csr
 
+	_ mat.Reseter = csr
+
 	csc *CSC
 
 	_ Sparser       = csc
@@ -132,10 +134,22 @@ func (c *CSR) DoRowNonZero(i int, fn func(i, j int, v float64)) {
 
 // Clone copies the specified matrix into the receiver
 func (c *CSR) Clone(b mat.Matrix) {
-	c.matrix.I, c.matrix.J = b.Dims()
+	row, col := b.Dims()
+	var nnz int
+	if sp, ok := b.(Sparser); ok {
+		nnz = sp.NNZ()
+	} else {
+		nnz = row * col / 10
+	}
+	c.reuseAs(row, col, nnz)
+	c.matrix.Ind, c.matrix.Data = c.matrix.Ind[:0], c.matrix.Data[:0]
 
-	c.matrix.Indptr = make([]int, c.matrix.I+1)
+	if csr, ok := b.(*CSR); ok {
+		c.cloneCSR(csr)
+		return
+	}
 
+	c.matrix.I, c.matrix.J = row, col
 	k := 0
 	for i := 0; i < c.matrix.I; i++ {
 		c.matrix.Indptr[i] = k
@@ -146,9 +160,16 @@ func (c *CSR) Clone(b mat.Matrix) {
 				k++
 			}
 		}
-
 	}
 	c.matrix.Indptr[c.matrix.I] = k
+}
+
+// cloneCSR copies the specified CSR matrix into the receiver
+func (c *CSR) cloneCSR(b *CSR) {
+	c.matrix.I, c.matrix.J = b.matrix.I, b.matrix.J
+	copy(c.matrix.Indptr, b.matrix.Indptr)
+	copy(c.matrix.Ind, b.matrix.Ind)
+	copy(c.matrix.Data, b.matrix.Data)
 }
 
 // ToDense returns a mat.Dense dense format version of the matrix.  The returned mat.Dense
@@ -273,6 +294,73 @@ func (c *CSR) ScatterRow(i int, row []float64) []float64 {
 		c.matrix.Ind[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
 	)
 	return row
+}
+
+// Reset zeros the dimensions of the matrix so that it can be reused as the
+// receiver of a dimensionally restricted operation.
+//
+// See the Gonum mat.Reseter interface for more information.
+func (c *CSR) Reset() {
+	c.matrix.I, c.matrix.J = 0, 0
+	c.matrix.Indptr = c.matrix.Indptr[:0]
+	c.matrix.Ind = c.matrix.Ind[:0]
+	c.matrix.Data = c.matrix.Data[:0]
+}
+
+// IsZero returns whether the receiver is zero-sized. Zero-sized matrices can be the
+// receiver for size-restricted operations. CSR matrices can be zeroed using the Reset
+// method.
+func (c *CSR) IsZero() bool {
+	return c.matrix.I == 0 && c.matrix.J == 0
+}
+
+// reuseAs resizes a zero-sized matrix to be rxc or checks a non-zero-sized matrix
+// is already the correct size (rxc).  If the matrix is resized, the method will
+// ensure there is sufficient initial capacity allocated in the underlying storage
+// to store up to nnz non-zero elements although this will be extended
+// automatically later as needed (using Go's built-in append function).
+func (c *CSR) reuseAs(row, col, nnz int) {
+	if c.IsZero() {
+		c.matrix = blas.SparseMatrix{
+			I:      row,
+			J:      col,
+			Indptr: useInts(c.matrix.Indptr, row+1, false),
+			Ind:    useInts(c.matrix.Ind, nnz, false),
+			Data:   useFloats(c.matrix.Data, nnz, false),
+		}
+
+		return
+	}
+
+	if row != c.matrix.I || col != c.matrix.J {
+		panic(mat.ErrShape)
+	}
+}
+
+// checkOverlap checks whether the receiver overlaps or is an alias for the
+// matrix a.  The method returns true (indicating overlap) if c == a or if
+// any of the receiver's internal data structures share underlying storage with a.
+func (c *CSR) checkOverlap(a mat.Matrix) bool {
+	if c == a {
+		return true
+	}
+
+	switch a := a.(type) {
+	case *Vector:
+		return aliasInts(c.matrix.Ind, a.ind) ||
+			aliasFloats(c.matrix.Data, a.data)
+	case *COO:
+		return aliasInts(c.matrix.Ind, a.cols) ||
+			aliasInts(c.matrix.Ind, a.rows) ||
+			aliasFloats(c.matrix.Data, a.data)
+	case *CSR, *CSC:
+		m := a.(BlasCompatibleSparser).RawMatrix()
+		return aliasInts(c.matrix.Indptr, m.Indptr) ||
+			aliasInts(c.matrix.Ind, m.Ind) ||
+			aliasFloats(c.matrix.Data, m.Data)
+	default:
+		return false
+	}
 }
 
 // CSC is a Compressed Sparse Column format sparse matrix implementation (sometimes called Compressed Column

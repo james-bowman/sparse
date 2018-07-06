@@ -5,35 +5,6 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-// createWorkspace creates a temporary workspace to store the result
-// of matrix operations avoiding the issue of mutating operands mid
-// operation where they overlap with the receiver
-// e.g.
-//	result.Mul(result, a)
-// createWorkspace will attempt to reuse previously allocated memory
-// for the temporary workspace where ever possible to avoid allocating
-// memory and placing strain on GC.
-func (c *CSR) createWorkspace(dim int, size int, zero bool) (indptr, ind []int, data []float64) {
-	indptr = getInts(dim, zero)
-	ind = getInts(size, zero)
-	data = getFloats(size, zero)
-	return
-}
-
-// commitWorkspace commits a temporary workspace previously created
-// with createWorkspace.  This has the effect of updaing the receiver
-// with the values from the temporary workspace and returning the
-// memory used by the workspace to the pool for other operations to
-// reuse.
-func (c *CSR) commitWorkspace(indptr, ind []int, data []float64) {
-	c.matrix.Indptr, indptr = indptr, c.matrix.Indptr
-	c.matrix.Ind, ind = ind, c.matrix.Ind
-	c.matrix.Data, data = data, c.matrix.Data
-	putInts(indptr)
-	putInts(ind)
-	putFloats(data)
-}
-
 // MulMatRawVec computes the matrix vector product between lhs and rhs and stores
 // the result in out
 func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
@@ -46,6 +17,48 @@ func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
 	}
 
 	blas.Dusmv(false, 1, lhs.RawMatrix(), rhs, 1, out, 1)
+}
+
+// temporaryWorkspace returns a new CSR matrix w with the size of r x c with
+// initial capacity allocated for nnz non-zero elements and
+// returns a callback to defer which performs cleanup at the return of the call.
+// This should be used when a method receiver is the same pointer as an input argument.
+func (c *CSR) temporaryWorkspace(row, col, nnz int) (w *CSR, restore func()) {
+	w = getWorkspace(row, col, nnz)
+	return w, func() {
+		c.cloneCSR(w)
+		putWorkspace(w)
+	}
+}
+
+// spalloc ensures appropriate storage is allocated for the receiver sparse matrix
+// ensuring it is row * col dimensions and checking for any overlap or aliasing
+// between operands a or b with c in which case a temporary isolated workspace is
+// allocated and the returned value isTemp is true with restore representing a
+// function to clean up and restore the workspace once finished.
+func (c *CSR) spalloc(a mat.Matrix, b mat.Matrix, row int, col int) (isTemp bool, restore func()) {
+	var nnz int
+	lSp, lIsSp := a.(Sparser)
+	rSp, rIsSp := b.(Sparser)
+	if lIsSp && rIsSp {
+		nnz = lSp.NNZ() + rSp.NNZ()
+	} else {
+		// assume 10% of elements will be non-zero
+		nnz = row * col / 10
+	}
+	c.reuseAs(row, col, nnz)
+	if c.checkOverlap(a) || c.checkOverlap(b) {
+		var tmp *CSR
+		tmp, restore = c.temporaryWorkspace(row, col, nnz)
+		*c = *tmp
+		isTemp = true
+	}
+	for i := range c.matrix.Indptr {
+		c.matrix.Indptr[i] = 0
+	}
+	c.matrix.Ind = c.matrix.Ind[:0]
+	c.matrix.Data = c.matrix.Data[:0]
+	return
 }
 
 // Mul takes the matrix product of the supplied matrices a and b and stores the result
@@ -61,6 +74,10 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		panic(mat.ErrShape)
 	}
 
+	if temp, restore := c.spalloc(a, b, ar, bc); temp {
+		defer restore()
+	}
+
 	lhs, isLCsr := a.(*CSR)
 	rhs, isRCsr := b.(*CSR)
 	if isLCsr && isRCsr {
@@ -68,6 +85,18 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		c.mulCSRCSR(lhs, rhs)
 		return
 	}
+
+	if dia, ok := a.(*DIA); ok {
+		// handle case where matrix A is a DIA
+		c.mulDIA(dia, b, false)
+		return
+	}
+	if dia, ok := b.(*DIA); ok {
+		// handle case where matrix B is a DIA
+		c.mulDIA(dia, a, true)
+		return
+	}
+	// TODO: handle cases where both matrices are DIA
 
 	srcA, isLSparse := a.(TypeConverter)
 	srcB, isRSparse := b.(TypeConverter)
@@ -80,25 +109,13 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		return
 	}
 	if isRSparse {
+		*c = *c.T().(*CSC).ToCSR()
 		bt := srcB.ToCSC().T().(*CSR)
 		c.mulCSRMat(bt, a.T())
 		*c = *c.T().(*CSC).ToCSR()
 		return
 	}
 
-	if dia, ok := a.(*DIA); ok {
-		// handle case where matrix A is a DIA
-		c.mulDIA(dia, b, false)
-		return
-	}
-	if dia, ok := b.(*DIA); ok {
-		// handle case where matrix B is a DIA
-		c.mulDIA(dia, a, true)
-		return
-	}
-	// TODO: handle cases where both matrices are DIA
-
-	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
 	// handle any implementation of mat.Matrix for both matrix A and B
 	row := getFloats(ac, false)
 	var v float64
@@ -114,123 +131,23 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 				}
 			}
 			if v != 0 {
-				ind = append(ind, j)
-				data = append(data, v)
+				c.matrix.Ind = append(c.matrix.Ind, j)
+				c.matrix.Data = append(c.matrix.Data, v)
 			}
 		}
-		indptr[i+1] = len(ind)
+		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 	}
 	putFloats(row)
-	c.matrix.I, c.matrix.J = ar, bc
-	c.commitWorkspace(indptr, ind, data)
-}
-
-// Mul2 takes the matrix product of the supplied matrices a and b and stores the result
-// in the receiver.  Some specific optimisations are available for operands of certain
-// sparse formats e.g. CSR * CSR uses Gustavson Algorithm (ACM 1978) for fast
-// sparse matrix multiplication.
-// If the number of columns does not equal the number of rows in b, Mul will panic.
-func (c *CSR) Mul2(a, b mat.Matrix) {
-	ar, ac := a.Dims()
-	br, bc := b.Dims()
-
-	if ac != br {
-		panic(mat.ErrShape)
-	}
-
-	if dia, ok := a.(*DIA); ok {
-		// handle case where matrix A is a DIA
-		c.mulDIA(dia, b, false)
-		return
-	}
-	if dia, ok := b.(*DIA); ok {
-		// handle case where matrix B is a DIA
-		c.mulDIA(dia, a, true)
-		return
-	}
-	// TODO: handle cases where both matrices are DIA
-
-	lhs, isLCsr := a.(*CSR)
-	rhs, isRCsr := b.(*CSR)
-	if isLCsr {
-		if isRCsr {
-			// handle case where matrix A and B are both CSR
-			c.mulCSRCSR(lhs, rhs)
-			return
-		}
-		if csc, isRCsc := b.(*CSC); isRCsc {
-			// handle case where Matrix A is CSR and B is CSC
-			c.mulCSRCSC(lhs, csc)
-			return
-		}
-		// handle case where matrix A is CSR
-		c.mulCSRMat(lhs, b)
-		return
-	}
-	if isRCsr {
-		bt := b.T().(*CSC).ToCSR()
-		at := a.T()
-		if atcsr, isAtCSR := at.(*CSR); isAtCSR {
-			// handle case where matrix A is CSC and B is CSR
-			c.mulCSRCSR(bt, atcsr)
-		} else {
-			// handle case where matrix B is CSR
-			c.mulCSRMat(bt, at)
-		}
-		*c = *c.T().(*CSC).ToCSR()
-		return
-	}
-	if _, isRCsc := b.(*CSC); isRCsc {
-		bt := b.T().(*CSR)
-		at := a.T()
-		if atcsr, isAtCSR := at.(*CSR); isAtCSR {
-			// handle case where matrix A and B are both CSC
-			c.mulCSRCSR(bt, atcsr)
-		} else {
-			// handle case where matrix B is CSC
-			c.mulCSRMat(bt, at)
-		}
-		*c = *c.T().(*CSC).ToCSR()
-		return
-	}
-
-	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
-	// handle any implementation of mat.Matrix for both matrix A and B
-	row := getFloats(ac, false)
-	var v float64
-	for i := 0; i < ar; i++ {
-		for ci := range row {
-			row[ci] = a.At(i, ci)
-		}
-		for j := 0; j < bc; j++ {
-			v = 0
-			for ci, e := range row {
-				if e != 0 {
-					v += e * b.At(ci, j)
-				}
-			}
-			if v != 0 {
-				ind = append(ind, j)
-				data = append(data, v)
-			}
-		}
-		indptr[i+1] = len(ind)
-	}
-	putFloats(row)
-	c.matrix.I, c.matrix.J = ar, bc
-	c.commitWorkspace(indptr, ind, data)
 }
 
 // mulCSRCSC handles CSR = CSR * CSC
 func (c *CSR) mulCSRCSC(lhs *CSR, csc *CSC) {
 	ar, ac := lhs.Dims()
 	_, bc := csc.Dims()
-	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
+
 	bt := csc.T().(*CSR)
 	at := lhs.T().(*CSC)
 	braw := bt.RawMatrix()
-	//col := make([]float64, ac)
-	//recv := make([]float64, bc)
 	col := getFloats(ac, true)
 	recv := getFloats(bc, true)
 
@@ -244,17 +161,15 @@ func (c *CSR) mulCSRCSC(lhs *CSR, csc *CSC) {
 		}
 		for i, v := range recv {
 			if v != 0.0 {
-				ind = append(ind, i)
-				data = append(data, v)
+				c.matrix.Ind = append(c.matrix.Ind, i)
+				c.matrix.Data = append(c.matrix.Data, v)
 				recv[i] = 0
 			}
 		}
-		indptr[j+1] = len(ind)
+		c.matrix.Indptr[j+1] = len(c.matrix.Ind)
 	}
-	c.matrix.I, c.matrix.J = ar, bc
 	putFloats(col)
 	putFloats(recv)
-	c.commitWorkspace(indptr, ind, data)
 	return
 }
 
@@ -262,7 +177,6 @@ func (c *CSR) mulCSRCSC(lhs *CSR, csc *CSC) {
 func (c *CSR) mulCSRMat(lhs *CSR, b mat.Matrix) {
 	ar, _ := lhs.Dims()
 	_, bc := b.Dims()
-	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
 
 	// handle case where matrix A is CSR (matrix B can be any implementation of mat.Matrix)
 	for i := 0; i < ar; i++ {
@@ -273,22 +187,18 @@ func (c *CSR) mulCSRMat(lhs *CSR, b mat.Matrix) {
 				v += lhs.matrix.Data[k] * b.At(lhs.matrix.Ind[k], j)
 			}
 			if v != 0 {
-				ind = append(ind, j)
-				data = append(data, v)
+				c.matrix.Ind = append(c.matrix.Ind, j)
+				c.matrix.Data = append(c.matrix.Data, v)
 			}
 		}
-		indptr[i+1] = len(ind)
+		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 	}
-	c.matrix.I, c.matrix.J = ar, bc
-	c.commitWorkspace(indptr, ind, data)
 }
 
 // mulCSRCSR handles CSR = CSR * CSR using Gustavson Algorithm (ACM 1978)
 func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
 	ar, _ := lhs.Dims()
 	_, bc := rhs.Dims()
-	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
-
 	spa := NewSPA(bc)
 
 	// rows in C
@@ -297,13 +207,11 @@ func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
 		for t := lhs.matrix.Indptr[i]; t < lhs.matrix.Indptr[i+1]; t++ {
 			begin := rhs.matrix.Indptr[lhs.matrix.Ind[t]]
 			end := rhs.matrix.Indptr[lhs.matrix.Ind[t]+1]
-			spa.Scatter(rhs.matrix.Data[begin:end], rhs.matrix.Ind[begin:end], lhs.matrix.Data[t], &ind)
+			spa.Scatter(rhs.matrix.Data[begin:end], rhs.matrix.Ind[begin:end], lhs.matrix.Data[t], &c.matrix.Ind)
 		}
-		spa.GatherAndZero(&data, &ind)
-		indptr[i+1] = len(ind)
+		spa.GatherAndZero(&c.matrix.Data, &c.matrix.Ind)
+		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 	}
-	c.matrix.I, c.matrix.J = ar, bc
-	c.commitWorkspace(indptr, ind, data)
 }
 
 // mulDIA takes the matrix product of the diagonal matrix dia and an other matrix, other and stores the result
@@ -313,23 +221,20 @@ func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
 func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 	var csMat blas.SparseMatrix
 	isCS := false
-	var size int
 
 	if csr, ok := other.(*CSR); ok {
 		// TODO consider implicitly converting all sparsers to CSR
 		// or at least iterating only over the non-zero elements
 		csMat = csr.matrix
 		isCS = true
-		size = len(csMat.Ind)
 	}
 
-	rows, cols := other.Dims()
-	indptr, ind, data := c.createWorkspace(rows+1, size, true)
+	_, cols := other.Dims()
 	raw := dia.Diagonal()
 
 	if isCS {
 		var t int
-		for i := 0; i < rows; i++ {
+		for i := 0; i < c.matrix.I; i++ {
 			var v float64
 			for k := csMat.Indptr[i]; k < csMat.Indptr[i+1]; k++ {
 				var indx int
@@ -341,16 +246,16 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 				if indx < len(raw) {
 					v = csMat.Data[k] * raw[indx]
 					if v != 0 {
-						ind[t] = csMat.Ind[k]
-						data[t] = v
+						c.matrix.Ind = append(c.matrix.Ind, csMat.Ind[k])
+						c.matrix.Data = append(c.matrix.Data, v)
 						t++
 					}
 				}
 			}
-			indptr[i+1] = t
+			c.matrix.Indptr[i+1] = t
 		}
 	} else {
-		for i := 0; i < rows; i++ {
+		for i := 0; i < c.matrix.I; i++ {
 			var v float64
 			for k := 0; k < cols; k++ {
 				var indx int
@@ -362,17 +267,14 @@ func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
 				if indx < len(raw) {
 					v = other.At(i, k) * raw[indx]
 					if v != 0 {
-						ind = append(ind, k)
-						data = append(data, v)
+						c.matrix.Ind = append(c.matrix.Ind, k)
+						c.matrix.Data = append(c.matrix.Data, v)
 					}
 				}
 			}
-			indptr[i+1] = len(ind)
+			c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 		}
 	}
-
-	c.matrix.I, c.matrix.J = rows, cols
-	c.commitWorkspace(indptr, ind, data)
 }
 
 // Sub subtracts matrix b from a and stores the result in the receiver.
@@ -396,9 +298,12 @@ func (c *CSR) addScaled(a mat.Matrix, b mat.Matrix, alpha float64, beta float64)
 		panic(mat.ErrShape)
 	}
 
+	if temp, restore := c.spalloc(a, b, ar, bc); temp {
+		defer restore()
+	}
+
 	lCsr, lIsCsr := a.(*CSR)
 	rCsr, rIsCsr := b.(*CSR)
-
 	// TODO optimisation for DIA matrices
 	if lIsCsr && rIsCsr {
 		c.addCSRCSR(lCsr, rCsr, alpha, beta)
@@ -413,53 +318,51 @@ func (c *CSR) addScaled(a mat.Matrix, b mat.Matrix, alpha float64, beta float64)
 		return
 	}
 	// dumb addition with no sparcity optimisations/savings
-	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
 	for i := 0; i < ar; i++ {
 		for j := 0; j < ac; j++ {
 			v := alpha*a.At(i, j) + beta*b.At(i, j)
-			//v := a.At(i, j) + b.At(i, j)
 			if v != 0 {
-				ind = append(ind, j)
-				data = append(data, v)
+				c.matrix.Ind = append(c.matrix.Ind, j)
+				c.matrix.Data = append(c.matrix.Data, v)
 			}
 		}
-		indptr[i+1] = len(ind)
+		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 	}
-	c.matrix.I, c.matrix.J = ar, ac
-	c.commitWorkspace(indptr, ind, data)
 }
 
 // addCSR adds a CSR matrix to any implementation of mat.Matrix and stores the
 // result in the receiver.
 func (c *CSR) addCSR(csr *CSR, other mat.Matrix, alpha float64, beta float64) {
 	ar, ac := csr.Dims()
-	indptr, ind, data := c.createWorkspace(ar+1, 0, false)
-
 	spa := NewSPA(ac)
 	a := csr.RawMatrix()
 
-	for i := 0; i < ar; i++ {
-		begin := csr.matrix.Indptr[i]
-		end := csr.matrix.Indptr[i+1]
-
-		if dense, isDense := other.(mat.RawMatrixer); isDense {
+	if dense, isDense := other.(mat.RawMatrixer); isDense {
+		for i := 0; i < ar; i++ {
+			begin := csr.matrix.Indptr[i]
+			end := csr.matrix.Indptr[i+1]
 			rawOther := dense.RawMatrix()
 			r := rawOther.Data[i*rawOther.Stride : i*rawOther.Stride+rawOther.Cols]
-			spa.AccumulateDense(r, beta, &ind)
-		} else {
+			spa.AccumulateDense(r, beta, &c.matrix.Ind)
+			spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &c.matrix.Ind)
+			spa.GatherAndZero(&c.matrix.Data, &c.matrix.Ind)
+			c.matrix.Indptr[i+1] = len(c.matrix.Ind)
+		}
+	} else {
+		for i := 0; i < ar; i++ {
+			begin := csr.matrix.Indptr[i]
+			end := csr.matrix.Indptr[i+1]
 			for j := 0; j < ac; j++ {
 				v := other.At(i, j)
 				if v != 0 {
-					spa.ScatterValue(v, j, beta, &ind)
+					spa.ScatterValue(v, j, beta, &c.matrix.Ind)
 				}
 			}
+			spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &c.matrix.Ind)
+			spa.GatherAndZero(&c.matrix.Data, &c.matrix.Ind)
+			c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 		}
-		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &ind)
-		spa.GatherAndZero(&data, &ind)
-		indptr[i+1] = len(ind)
 	}
-	c.matrix.I, c.matrix.J = ar, ac
-	c.commitWorkspace(indptr, ind, data)
 }
 
 // addCSRCSR adds 2 CSR matrices together storing the result in the receiver.
@@ -468,11 +371,6 @@ func (c *CSR) addCSR(csr *CSR, other mat.Matrix, alpha float64, beta float64) {
 // of the 2 CSR matrices.
 func (c *CSR) addCSRCSR(lhs *CSR, rhs *CSR, alpha float64, beta float64) {
 	ar, ac := lhs.Dims()
-	anz, bnz := lhs.NNZ(), rhs.NNZ()
-	indptr := make([]int, ar+1)
-	ind := make([]int, 0, anz+bnz)
-	data := make([]float64, 0, anz+bnz)
-
 	a := lhs.RawMatrix()
 	b := rhs.RawMatrix()
 	spa := NewSPA(ac)
@@ -480,18 +378,14 @@ func (c *CSR) addCSRCSR(lhs *CSR, rhs *CSR, alpha float64, beta float64) {
 	var begin, end int
 	for i := 0; i < ar; i++ {
 		begin, end = a.Indptr[i], a.Indptr[i+1]
-		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &ind)
+		spa.Scatter(a.Data[begin:end], a.Ind[begin:end], alpha, &c.matrix.Ind)
 
 		begin, end = b.Indptr[i], b.Indptr[i+1]
-		spa.Scatter(b.Data[begin:end], b.Ind[begin:end], beta, &ind)
+		spa.Scatter(b.Data[begin:end], b.Ind[begin:end], beta, &c.matrix.Ind)
 
-		spa.GatherAndZero(&data, &ind)
-		indptr[i+1] = len(ind)
+		spa.GatherAndZero(&c.matrix.Data, &c.matrix.Ind)
+		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 	}
-	c.matrix.I, c.matrix.J = ar, ac
-	c.matrix.Indptr = indptr
-	c.matrix.Ind = ind
-	c.matrix.Data = data
 }
 
 // SPA is a SParse Accumulator used to construct the results of sparse
@@ -502,9 +396,6 @@ type SPA struct {
 
 	// x contains all the values in dense representation (including zero values)
 	y []float64
-
-	// ls contains the indices of non-zero values
-	//ls []int
 
 	// nnz is the Number of Non-Zero elements
 	nnz int

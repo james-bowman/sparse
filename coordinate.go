@@ -219,7 +219,6 @@ func dedupe(ia []int, ja []int, d []float64, m int, n int) ([]int, []float64) {
 func compressInPlace(row []int, col []int, data []float64, n int) (ia []int, ja []int, d []float64) {
 	//w := make([]int, n+1)
 	w := getInts(n+1, true)
-
 	for _, v := range row {
 		w[v+1]++
 	}

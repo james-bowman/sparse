@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	_ Sparser    = (*Vector)(nil)
-	_ mat.Matrix = (*Vector)(nil)
-	_ mat.Vector = (*Vector)(nil)
+	_ Sparser     = (*Vector)(nil)
+	_ mat.Matrix  = (*Vector)(nil)
+	_ mat.Vector  = (*Vector)(nil)
+	_ mat.Reseter = (*Vector)(nil)
 )
 
 // Vector is a sparse vector format.  It implements the mat.Vector
@@ -68,7 +69,6 @@ func (v *Vector) AtVec(i int) float64 {
 	if i < 0 || i >= v.len {
 		panic(mat.ErrRowAccess)
 	}
-
 	for j := 0; j < len(v.ind); j++ {
 		if v.ind[j] == i {
 			return v.data[j]
@@ -112,7 +112,6 @@ func (v *Vector) GatherAndZero(denseVector *mat.VecDense) {
 	if v.len != denseVector.Len() {
 		panic(mat.ErrShape)
 	}
-
 	vec := denseVector.RawVector()
 	blas.Dusgz(vec.Data, vec.Inc, v.data, v.ind)
 }
@@ -136,24 +135,24 @@ func (v *Vector) CloneVec(a mat.Vector) {
 	if v == a {
 		return
 	}
+
 	v.len = a.Len()
 
-	if sv, isSparse := a.(*Vector); isSparse {
-		size := len(sv.ind)
-		if size > cap(v.ind) {
-			v.ind = make([]int, size)
-			v.data = make([]float64, size)
-		} else {
-			v.ind = v.ind[:size]
-			v.data = v.data[:size]
-		}
-		for i, val := range sv.ind {
-			v.ind[i] = val
-			v.data[i] = sv.data[i]
-		}
+	if s, isSparse := a.(*Vector); isSparse {
+		nnz := s.NNZ()
+		v.ind = useInts(v.ind, nnz, false)
+		v.data = useFloats(v.data, nnz, false)
+		copy(v.ind, s.ind)
+		copy(v.data, s.data)
 		return
 	}
 
+	if v.IsZero() {
+		v.len = a.Len()
+		nnz := v.len / 10
+		v.ind = useInts(v.ind, nnz, false)
+		v.data = useFloats(v.data, nnz, false)
+	}
 	v.ind = v.ind[:0]
 	v.data = v.data[:0]
 
@@ -184,77 +183,80 @@ func (v *Vector) AddVec(a, b mat.Vector) {
 		panic(mat.ErrShape)
 	}
 
-	v.len = ar
+	if temp, restore := v.spalloc(a, b, ar); temp {
+		defer restore()
+	}
 
 	// Sparse specific optimised implementation
 	sa, aIsSparse := a.(*Vector)
 	sb, bIsSparse := b.(*Vector)
 	if aIsSparse && bIsSparse {
-		v.addVecSparse(sa, 1, sb)
+		v.addVecSparse(1, sa, 1, sb)
 		return
 	}
-
-	// fallback to basic vector addition with no optimisations
-	// for sparseness
-	ind, data := v.createWorkspace(0, false)
 
 	for i := 0; i < v.len; i++ {
 		p := a.AtVec(i) + b.AtVec(i)
 		if p != 0 {
-			ind = append(ind, i)
-			data = append(data, p)
+			v.ind = append(v.ind, i)
+			v.data = append(v.data, p)
 		}
 	}
-
-	v.commitWorkspace(ind, data)
 }
 
 // addVecSparse2 adds the vectors a and alpha*b.  This method is
 // optimised for processing sparse Vector vectors and only processes
 // non-zero elements.
-func (v *Vector) addVecSparse(a *Vector, alpha float64, b *Vector) {
-	ind, data := v.createWorkspace(0, false)
-
+func (v *Vector) addVecSparse(alpha float64, a *Vector, beta float64, b *Vector) {
 	spa := NewSPA(a.len)
-
-	spa.Scatter(a.data, a.ind, 1, &ind)
-	spa.Scatter(b.data, b.ind, alpha, &ind)
-	spa.Gather(&data, &ind)
-
-	v.commitWorkspace(ind, data)
+	spa.Scatter(a.data, a.ind, alpha, &v.ind)
+	spa.Scatter(b.data, b.ind, beta, &v.ind)
+	spa.Gather(&v.data, &v.ind)
 }
 
 // ScaleVec scales the vector a by alpha, placing the result in the
 // receiver.
 func (v *Vector) ScaleVec(alpha float64, a mat.Vector) {
-	v.len = a.Len()
+	alen := a.Len()
+	if !v.IsZero() && alen != v.len {
+		panic(mat.ErrShape)
+	}
 
 	if alpha == 0 {
+		v.len = alen
 		v.ind = v.ind[:0]
 		v.data = v.data[:0]
 		return
 	}
 
 	if s, isSparse := a.(*Vector); isSparse {
-		ind, data := v.createWorkspace(s.NNZ(), false)
-		copy(ind, s.ind)
+		nnz := s.NNZ()
+		v.len = alen
+		v.ind = useInts(v.ind, nnz, false)
+		v.data = useFloats(v.data, nnz, false)
+		copy(v.ind, s.ind)
 		for i, val := range s.data {
-			data[i] = alpha * val
+			v.data[i] = alpha * val
 		}
-		v.commitWorkspace(ind, data)
 		return
 	}
 
-	ind, data := v.createWorkspace(0, false)
+	if v.IsZero() {
+		v.len = a.Len()
+		nnz := v.len / 10
+		v.ind = useInts(v.ind, nnz, false)
+		v.data = useFloats(v.data, nnz, false)
+	}
+	v.ind = v.ind[:0]
+	v.data = v.data[:0]
 
 	for i := 0; i < v.len; i++ {
 		val := a.AtVec(i)
 		if val != 0 {
-			ind = append(ind, i)
-			data = append(data, alpha*val)
+			v.ind = append(v.ind, i)
+			v.data = append(v.data, alpha*val)
 		}
 	}
-	v.commitWorkspace(ind, data)
 }
 
 // AddScaledVec adds the vectors a and alpha*b, placing the result
@@ -268,26 +270,25 @@ func (v *Vector) AddScaledVec(a mat.Vector, alpha float64, b mat.Vector) {
 		panic(mat.ErrShape)
 	}
 
-	v.len = ar
+	if temp, restore := v.spalloc(a, b, ar); temp {
+		defer restore()
+	}
 
 	// Sparse specific optimised implementation
 	sa, aIsSparse := a.(*Vector)
 	sb, bIsSparse := b.(*Vector)
 	if aIsSparse && bIsSparse {
-		v.addVecSparse(sa, alpha, sb)
+		v.addVecSparse(1, sa, alpha, sb)
 		return
 	}
-
-	ind, data := v.createWorkspace(0, false)
 
 	for i := 0; i < v.len; i++ {
 		val := a.AtVec(i) + alpha*b.AtVec(i)
 		if val != 0 {
-			ind = append(ind, i)
-			data = append(data, val)
+			v.ind = append(v.ind, i)
+			v.data = append(v.data, val)
 		}
 	}
-	v.commitWorkspace(ind, data)
 }
 
 // Norm calculates the Norm of the vector only processing the
@@ -347,29 +348,102 @@ func dotSparse(a *Vector, b mat.Vector) float64 {
 	return result
 }
 
-// createWorkspace creates a temporary workspace to store the result
-// of vector operations avoiding the issue of mutating operands mid
-// operation where they overlap with the receiver
-// e.g.
-//	result.AddVec(result, a)
-// createWorkspace will attempt to reuse previously allocated memory
-// for the temporary workspace where ever possible to avoid allocating
-// memory and placing strain on GC.
-func (v *Vector) createWorkspace(size int, zero bool) ([]int, []float64) {
-	ind := getInts(size, zero)
-	data := getFloats(size, zero)
-
-	return ind, data
+// Reset zeros the dimensions of the vector so that it can be reused as the
+// receiver of a dimensionally restricted operation.
+//
+// See the Gonum mat.Reseter interface for more information.
+func (v *Vector) Reset() {
+	v.len = 0
+	v.ind = v.ind[:0]
+	v.data = v.data[:0]
 }
 
-// commitWorkspace commits a temporary workspace previously created
-// with createWorkspace.  This has the effect of updaing the receiver
-// with the values from the temporary workspace and returning the
-// memory used by the workspace to the pool for other operations to
-// reuse.
-func (v *Vector) commitWorkspace(indexes []int, data []float64) {
-	v.ind, indexes = indexes, v.ind
-	v.data, data = data, v.data
-	putInts(indexes)
-	putFloats(data)
+// IsZero returns whether the receiver is zero-sized. Zero-sized vectors can be the
+// receiver for size-restricted operations. Vectors can be zeroed using the Reset
+// method.
+func (v *Vector) IsZero() bool {
+	return v.len == 0
+}
+
+// reuseAs resizes a zero-sized vector to be len long or checks a non-zero-sized vector
+// is already the correct size (len).  If the vector is resized, the method will
+// ensure there is sufficient initial capacity allocated in the underlying storage
+// to store up to nnz non-zero elements although this will be extended
+// automatically later as needed (using Go's built-in append function).
+func (v *Vector) reuseAs(len, nnz int) {
+	if v.IsZero() {
+		v.len = len
+		v.ind = useInts(v.ind, nnz, false)
+		v.data = useFloats(v.data, nnz, false)
+
+		return
+	}
+
+	if len != v.len {
+		panic(mat.ErrShape)
+	}
+}
+
+// checkOverlap checks whether the receiver overlaps or is an alias for the
+// matrix a.  The method returns true (indicating overlap) if c == a or if
+// any of the receiver's internal data structures share underlying storage with a.
+func (v *Vector) checkOverlap(a mat.Matrix) bool {
+	if v == a {
+		return true
+	}
+
+	switch a := a.(type) {
+	case *Vector:
+		return aliasInts(v.ind, a.ind) ||
+			aliasFloats(v.data, a.data)
+	case *COO:
+		return aliasInts(v.ind, a.cols) ||
+			aliasInts(v.ind, a.rows) ||
+			aliasFloats(v.data, a.data)
+	case *CSR, *CSC:
+		m := a.(BlasCompatibleSparser).RawMatrix()
+		return aliasInts(v.ind, m.Ind) ||
+			aliasFloats(v.data, m.Data)
+	default:
+		return false
+	}
+}
+
+// temporaryWorkspace returns a new Vector w of length len with
+// initial capacity allocated for nnz non-zero elements and
+// returns a callback to defer which performs cleanup at the return of the call.
+// This should be used when a method receiver is the same pointer as an input argument.
+func (v *Vector) temporaryWorkspace(len, nnz int) (w *Vector, restore func()) {
+	w = getVecWorkspace(len, nnz)
+	return w, func() {
+		v.CloneVec(w)
+		putVecWorkspace(w)
+	}
+}
+
+// spalloc ensures appropriate storage is allocated for the receiver sparse vector
+// ensuring it is of length len and checking for any overlap or aliasing
+// between operands a or b with c in which case a temporary isolated workspace is
+// allocated and the returned value isTemp is true with restore representing a
+// function to clean up and restore the workspace once finished.
+func (v *Vector) spalloc(a mat.Matrix, b mat.Matrix, len int) (isTemp bool, restore func()) {
+	var nnz int
+	lSp, lIsSp := a.(Sparser)
+	rSp, rIsSp := b.(Sparser)
+	if lIsSp && rIsSp {
+		nnz = lSp.NNZ() + rSp.NNZ()
+	} else {
+		// assume 10% of elements will be non-zero
+		nnz = len / 10
+	}
+	v.reuseAs(len, nnz)
+	if v.checkOverlap(a) || v.checkOverlap(b) {
+		var tmp *Vector
+		tmp, restore = v.temporaryWorkspace(len, nnz)
+		*v = *tmp
+		isTemp = true
+	}
+	v.ind = v.ind[:0]
+	v.data = v.data[:0]
+	return
 }
