@@ -36,8 +36,9 @@ func (c *CSR) temporaryWorkspace(row, col, nnz int) (w *CSR, restore func()) {
 // between operands a or b with c in which case a temporary isolated workspace is
 // allocated and the returned value isTemp is true with restore representing a
 // function to clean up and restore the workspace once finished.
-func (c *CSR) spalloc(a mat.Matrix, b mat.Matrix, row int, col int) (isTemp bool, restore func()) {
+func (c *CSR) spalloc(a mat.Matrix, b mat.Matrix, row int, col int) (m *CSR, isTemp bool, restore func()) {
 	var nnz int
+	m = c
 	lSp, lIsSp := a.(Sparser)
 	rSp, rIsSp := b.(Sparser)
 	if lIsSp && rIsSp {
@@ -48,9 +49,7 @@ func (c *CSR) spalloc(a mat.Matrix, b mat.Matrix, row int, col int) (isTemp bool
 	}
 	c.reuseAs(row, col, nnz)
 	if c.checkOverlap(a) || c.checkOverlap(b) {
-		var tmp *CSR
-		tmp, restore = c.temporaryWorkspace(row, col, nnz)
-		*c = *tmp
+		m, restore = c.temporaryWorkspace(row, col, nnz)
 		isTemp = true
 	}
 	for i := range c.matrix.Indptr {
@@ -74,7 +73,9 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		panic(mat.ErrShape)
 	}
 
-	if temp, restore := c.spalloc(a, b, ar, bc); temp {
+	var temp bool
+	var restore func()
+	if c, temp, restore = c.spalloc(a, b, ar, bc); temp {
 		defer restore()
 	}
 
@@ -109,15 +110,18 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		return
 	}
 	if isRSparse {
-		*c = *c.T().(*CSC).ToCSR()
+		w := getWorkspace(bc, ar, bc*ar/10)
+		w.matrix.Ind, w.matrix.Data = w.matrix.Ind[:0], w.matrix.Data[:0]
 		bt := srcB.ToCSC().T().(*CSR)
-		c.mulCSRMat(bt, a.T())
-		*c = *c.T().(*CSC).ToCSR()
+		w.mulCSRMat(bt, a.T())
+		c.Clone(w.T())
+		putWorkspace(w)
 		return
 	}
 
 	// handle any implementation of mat.Matrix for both matrix A and B
 	row := getFloats(ac, false)
+	defer putFloats(row)
 	var v float64
 	for i := 0; i < ar; i++ {
 		for ci := range row {
@@ -137,7 +141,6 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		}
 		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 	}
-	putFloats(row)
 }
 
 // mulCSRCSC handles CSR = CSR * CSC
@@ -149,7 +152,9 @@ func (c *CSR) mulCSRCSC(lhs *CSR, csc *CSC) {
 	at := lhs.T().(*CSC)
 	braw := bt.RawMatrix()
 	col := getFloats(ac, true)
+	putFloats(col)
 	recv := getFloats(bc, true)
+	putFloats(recv)
 
 	for j := 0; j < ar; j++ {
 		begin, end := at.matrix.Indptr[j], at.matrix.Indptr[j+1]
@@ -168,8 +173,6 @@ func (c *CSR) mulCSRCSC(lhs *CSR, csc *CSC) {
 		}
 		c.matrix.Indptr[j+1] = len(c.matrix.Ind)
 	}
-	putFloats(col)
-	putFloats(recv)
 	return
 }
 
@@ -298,7 +301,9 @@ func (c *CSR) addScaled(a mat.Matrix, b mat.Matrix, alpha float64, beta float64)
 		panic(mat.ErrShape)
 	}
 
-	if temp, restore := c.spalloc(a, b, ar, bc); temp {
+	var temp bool
+	var restore func()
+	if c, temp, restore = c.spalloc(a, b, ar, bc); temp {
 		defer restore()
 	}
 

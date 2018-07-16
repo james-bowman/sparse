@@ -172,6 +172,7 @@ func cumsum(p []int, c []int, n int) int {
 func compress(row []int, col []int, data []float64, n int) (ia []int, ja []int, d []float64) {
 	//w := make([]int, n+1)
 	w := getInts(n+1, true)
+	defer putInts(w)
 	ia = make([]int, n+1)
 	ja = make([]int, len(col))
 	d = make([]float64, len(data))
@@ -187,13 +188,13 @@ func compress(row []int, col []int, data []float64, n int) (ia []int, ja []int, 
 		d[p] = data[j]
 		w[row[j]]++
 	}
-	putInts(w)
 	return
 }
 
 func dedupe(ia []int, ja []int, d []float64, m int, n int) ([]int, []float64) {
 	//w := make([]int, n)
 	w := getInts(n, true)
+	defer putInts(w)
 	nz := 0
 
 	for i := 0; i < m; i++ {
@@ -212,13 +213,13 @@ func dedupe(ia []int, ja []int, d []float64, m int, n int) ([]int, []float64) {
 	}
 	ia[m] = nz
 
-	putInts(w)
 	return ja[:nz], d[:nz]
 }
 
 func compressInPlace(row []int, col []int, data []float64, n int) (ia []int, ja []int, d []float64) {
 	//w := make([]int, n+1)
 	w := getInts(n+1, true)
+	defer putInts(w)
 	for _, v := range row {
 		w[v+1]++
 	}
@@ -257,19 +258,13 @@ func compressInPlace(row []int, col []int, data []float64, n int) (ia []int, ja 
 		}
 	}
 
-	if n+1 > cap(row) {
-		ia = make([]int, n+1)
-	} else {
-		ia = row[:n+1]
-	}
+	ia = useInts(row, n+1, false)
+	ia[0] = 0
 	for i := 0; i < n; i++ {
 		ia[i+1] = w[i]
 	}
-	ia[0] = 0
 	ja = col
 	d = data
-
-	putInts(w)
 
 	return
 }

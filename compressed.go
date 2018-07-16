@@ -166,6 +166,9 @@ func (c *CSR) Clone(b mat.Matrix) {
 
 // cloneCSR copies the specified CSR matrix into the receiver
 func (c *CSR) cloneCSR(b *CSR) {
+	c.matrix.Indptr = useInts(c.matrix.Indptr, c.matrix.I+1, false)
+	c.matrix.Ind = useInts(c.matrix.Ind, b.NNZ(), false)
+	c.matrix.Data = useFloats(c.matrix.Data, b.NNZ(), false)
 	c.matrix.I, c.matrix.J = b.matrix.I, b.matrix.J
 	copy(c.matrix.Indptr, b.matrix.Indptr)
 	copy(c.matrix.Ind, b.matrix.Ind)
@@ -176,13 +179,11 @@ func (c *CSR) cloneCSR(b *CSR) {
 // matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
 func (c *CSR) ToDense() *mat.Dense {
 	mat := mat.NewDense(c.matrix.I, c.matrix.J, nil)
-
 	for i := 0; i < len(c.matrix.Indptr)-1; i++ {
 		for j := c.matrix.Indptr[i]; j < c.matrix.Indptr[i+1]; j++ {
 			mat.Set(i, c.matrix.Ind[j], c.matrix.Data[j])
 		}
 	}
-
 	return mat
 }
 
@@ -195,7 +196,6 @@ func (c *CSR) ToDOK() *DOK {
 			dok.Set(i, c.matrix.Ind[j], c.matrix.Data[j])
 		}
 	}
-
 	return dok
 }
 
@@ -215,7 +215,6 @@ func (c *CSR) ToCOO() *COO {
 	copy(data, c.matrix.Data)
 
 	coo := NewCOO(c.matrix.I, c.matrix.J, rows, cols, data)
-
 	return coo
 }
 
@@ -328,7 +327,6 @@ func (c *CSR) reuseAs(row, col, nnz int) {
 			Ind:    useInts(c.matrix.Ind, nnz, false),
 			Data:   useFloats(c.matrix.Data, nnz, false),
 		}
-
 		return
 	}
 
@@ -466,13 +464,11 @@ func (c *CSC) RawMatrix() *blas.SparseMatrix {
 // matrix will not share underlying storage with the receiver nor is the receiver modified by this call.
 func (c *CSC) ToDense() *mat.Dense {
 	mat := mat.NewDense(c.matrix.J, c.matrix.I, nil)
-
 	for i := 0; i < len(c.matrix.Indptr)-1; i++ {
 		for j := c.matrix.Indptr[i]; j < c.matrix.Indptr[i+1]; j++ {
 			mat.Set(c.matrix.Ind[j], i, c.matrix.Data[j])
 		}
 	}
-
 	return mat
 }
 
@@ -485,7 +481,6 @@ func (c *CSC) ToDOK() *DOK {
 			dok.Set(c.matrix.Ind[j], i, c.matrix.Data[j])
 		}
 	}
-
 	return dok
 }
 
@@ -505,7 +500,6 @@ func (c *CSC) ToCOO() *COO {
 	copy(data, c.matrix.Data)
 
 	coo := NewCOO(c.matrix.J, c.matrix.I, rows, cols, data)
-
 	return coo
 }
 

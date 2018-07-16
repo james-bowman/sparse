@@ -97,7 +97,7 @@ func BenchmarkAdd(b *testing.B) {
 	var dimensions = []struct {
 		ar, ac, br, bc int
 	}{
-		{ar: 5, ac: 6, br: 5, bc: 6},
+		//{ar: 5, ac: 6, br: 5, bc: 6},
 		{ar: 500, ac: 600, br: 500, bc: 600},
 	}
 
