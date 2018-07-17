@@ -315,9 +315,7 @@ func (c *CSR) reuseAs(row, col, nnz int, zero bool) {
 			I: row,
 			J: col,
 		}
-	}
-
-	if row != c.matrix.I || col != c.matrix.J {
+	} else if row != c.matrix.I || col != c.matrix.J {
 		panic(mat.ErrShape)
 	}
 
