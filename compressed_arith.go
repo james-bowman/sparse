@@ -36,9 +36,12 @@ func (c *CSR) temporaryWorkspace(row, col, nnz int) (w *CSR, restore func()) {
 // between operands a or b with c in which case a temporary isolated workspace is
 // allocated and the returned value isTemp is true with restore representing a
 // function to clean up and restore the workspace once finished.
-func (c *CSR) spalloc(a mat.Matrix, b mat.Matrix, row int, col int) (m *CSR, isTemp bool, restore func()) {
+func (c *CSR) spalloc(a mat.Matrix, b mat.Matrix) (m *CSR, isTemp bool, restore func()) {
 	var nnz int
 	m = c
+	row, _ := a.Dims()
+	_, col := b.Dims()
+
 	lSp, lIsSp := a.(Sparser)
 	rSp, rIsSp := b.(Sparser)
 	if lIsSp && rIsSp {
@@ -52,11 +55,11 @@ func (c *CSR) spalloc(a mat.Matrix, b mat.Matrix, row int, col int) (m *CSR, isT
 		m, restore = c.temporaryWorkspace(row, col, nnz)
 		isTemp = true
 	}
-	for i := range c.matrix.Indptr {
-		c.matrix.Indptr[i] = 0
+	for i := range m.matrix.Indptr {
+		m.matrix.Indptr[i] = 0
 	}
-	c.matrix.Ind = c.matrix.Ind[:0]
-	c.matrix.Data = c.matrix.Data[:0]
+	m.matrix.Ind = m.matrix.Ind[:0]
+	m.matrix.Data = m.matrix.Data[:0]
 	return
 }
 
@@ -73,10 +76,9 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		panic(mat.ErrShape)
 	}
 
-	var temp bool
-	var restore func()
-	if c, temp, restore = c.spalloc(a, b, ar, bc); temp {
+	if m, temp, restore := c.spalloc(a, b); temp {
 		defer restore()
+		c = m
 	}
 
 	lhs, isLCsr := a.(*CSR)
@@ -301,10 +303,9 @@ func (c *CSR) addScaled(a mat.Matrix, b mat.Matrix, alpha float64, beta float64)
 		panic(mat.ErrShape)
 	}
 
-	var temp bool
-	var restore func()
-	if c, temp, restore = c.spalloc(a, b, ar, bc); temp {
+	if m, temp, restore := c.spalloc(a, b); temp {
 		defer restore()
+		c = m
 	}
 
 	lCsr, lIsCsr := a.(*CSR)

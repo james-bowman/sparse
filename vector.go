@@ -183,8 +183,9 @@ func (v *Vector) AddVec(a, b mat.Vector) {
 		panic(mat.ErrShape)
 	}
 
-	if temp, restore := v.spalloc(a, b, ar); temp {
+	if t, temp, restore := v.spalloc(a, b); temp {
 		defer restore()
+		v = t
 	}
 
 	// Sparse specific optimised implementation
@@ -270,8 +271,9 @@ func (v *Vector) AddScaledVec(a mat.Vector, alpha float64, b mat.Vector) {
 		panic(mat.ErrShape)
 	}
 
-	if temp, restore := v.spalloc(a, b, ar); temp {
+	if t, temp, restore := v.spalloc(a, b); temp {
 		defer restore()
+		v = t
 	}
 
 	// Sparse specific optimised implementation
@@ -426,24 +428,23 @@ func (v *Vector) temporaryWorkspace(len, nnz int) (w *Vector, restore func()) {
 // between operands a or b with c in which case a temporary isolated workspace is
 // allocated and the returned value isTemp is true with restore representing a
 // function to clean up and restore the workspace once finished.
-func (v *Vector) spalloc(a mat.Matrix, b mat.Matrix, len int) (isTemp bool, restore func()) {
+func (v *Vector) spalloc(a mat.Vector, b mat.Vector) (t *Vector, isTemp bool, restore func()) {
 	var nnz int
+	t = v
 	lSp, lIsSp := a.(Sparser)
 	rSp, rIsSp := b.(Sparser)
 	if lIsSp && rIsSp {
 		nnz = lSp.NNZ() + rSp.NNZ()
 	} else {
 		// assume 10% of elements will be non-zero
-		nnz = len / 10
+		nnz = a.Len() / 10
 	}
-	v.reuseAs(len, nnz)
+	v.reuseAs(a.Len(), nnz)
 	if v.checkOverlap(a) || v.checkOverlap(b) {
-		var tmp *Vector
-		tmp, restore = v.temporaryWorkspace(len, nnz)
-		*v = *tmp
+		t, restore = v.temporaryWorkspace(a.Len(), nnz)
 		isTemp = true
 	}
-	v.ind = v.ind[:0]
-	v.data = v.data[:0]
+	t.ind = t.ind[:0]
+	t.data = t.data[:0]
 	return
 }
