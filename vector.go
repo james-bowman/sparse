@@ -139,22 +139,13 @@ func (v *Vector) CloneVec(a mat.Vector) {
 	v.len = a.Len()
 
 	if s, isSparse := a.(*Vector); isSparse {
-		nnz := s.NNZ()
-		v.ind = useInts(v.ind, nnz, false)
-		v.data = useFloats(v.data, nnz, false)
+		v.reuseAs(s.Len(), s.NNZ(), false)
 		copy(v.ind, s.ind)
 		copy(v.data, s.data)
 		return
 	}
 
-	if v.IsZero() {
-		v.len = a.Len()
-		nnz := v.len / 10
-		v.ind = useInts(v.ind, nnz, false)
-		v.data = useFloats(v.data, nnz, false)
-	}
-	v.ind = v.ind[:0]
-	v.data = v.data[:0]
+	v.reuseAs(v.len, v.len/10, false)
 
 	for i := 0; i < v.len; i++ {
 		val := a.AtVec(i)
@@ -232,9 +223,7 @@ func (v *Vector) ScaleVec(alpha float64, a mat.Vector) {
 
 	if s, isSparse := a.(*Vector); isSparse {
 		nnz := s.NNZ()
-		v.len = alen
-		v.ind = useInts(v.ind, nnz, false)
-		v.data = useFloats(v.data, nnz, false)
+		v.reuseAs(alen, nnz, false)
 		copy(v.ind, s.ind)
 		for i, val := range s.data {
 			v.data[i] = alpha * val
@@ -242,14 +231,7 @@ func (v *Vector) ScaleVec(alpha float64, a mat.Vector) {
 		return
 	}
 
-	if v.IsZero() {
-		v.len = a.Len()
-		nnz := v.len / 10
-		v.ind = useInts(v.ind, nnz, false)
-		v.data = useFloats(v.data, nnz, false)
-	}
-	v.ind = v.ind[:0]
-	v.data = v.data[:0]
+	v.reuseAs(alen, alen/10, true)
 
 	for i := 0; i < v.len; i++ {
 		val := a.AtVec(i)
@@ -372,17 +354,19 @@ func (v *Vector) IsZero() bool {
 // ensure there is sufficient initial capacity allocated in the underlying storage
 // to store up to nnz non-zero elements although this will be extended
 // automatically later as needed (using Go's built-in append function).
-func (v *Vector) reuseAs(len, nnz int) {
+func (v *Vector) reuseAs(len, nnz int, zero bool) {
 	if v.IsZero() {
 		v.len = len
-		v.ind = useInts(v.ind, nnz, false)
-		v.data = useFloats(v.data, nnz, false)
-
-		return
+	} else if len != v.len {
+		panic(mat.ErrShape)
 	}
 
-	if len != v.len {
-		panic(mat.ErrShape)
+	v.ind = useInts(v.ind, nnz, false)
+	v.data = useFloats(v.data, nnz, false)
+
+	if zero {
+		v.ind = v.ind[:0]
+		v.data = v.data[:0]
 	}
 }
 
@@ -415,8 +399,9 @@ func (v *Vector) checkOverlap(a mat.Matrix) bool {
 // initial capacity allocated for nnz non-zero elements and
 // returns a callback to defer which performs cleanup at the return of the call.
 // This should be used when a method receiver is the same pointer as an input argument.
-func (v *Vector) temporaryWorkspace(len, nnz int) (w *Vector, restore func()) {
-	w = getVecWorkspace(len, nnz)
+func (v *Vector) temporaryWorkspace(len, nnz int, zero bool) (w *Vector, restore func()) {
+	w = getVecWorkspace(len, nnz, zero)
+
 	return w, func() {
 		v.CloneVec(w)
 		putVecWorkspace(w)
@@ -439,12 +424,16 @@ func (v *Vector) spalloc(a mat.Vector, b mat.Vector) (t *Vector, isTemp bool, re
 		// assume 10% of elements will be non-zero
 		nnz = a.Len() / 10
 	}
-	v.reuseAs(a.Len(), nnz)
+
 	if v.checkOverlap(a) || v.checkOverlap(b) {
-		t, restore = v.temporaryWorkspace(a.Len(), nnz)
+		if !v.IsZero() || a.Len() != v.len {
+			panic(mat.ErrShape)
+		}
+		t, restore = v.temporaryWorkspace(a.Len(), nnz, true)
 		isTemp = true
+	} else {
+		v.reuseAs(a.Len(), nnz, true)
 	}
-	t.ind = t.ind[:0]
-	t.data = t.data[:0]
+
 	return
 }

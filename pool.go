@@ -36,11 +36,18 @@ var (
 	}
 )
 
-func getWorkspace(r, c, nnz int) *CSR {
+func getWorkspace(r, c, nnz int, clear bool) *CSR {
 	w := pool.Get().(*CSR)
 	w.matrix.Indptr = useInts(w.matrix.Indptr, r+1, false)
 	w.matrix.Ind = useInts(w.matrix.Ind, nnz, false)
 	w.matrix.Data = useFloats(w.matrix.Data, nnz, false)
+	if clear {
+		for i := range w.matrix.Indptr {
+			w.matrix.Indptr[i] = 0
+		}
+		w.matrix.Ind = w.matrix.Ind[:0]
+		w.matrix.Data = w.matrix.Data[:0]
+	}
 	w.matrix.I = r
 	w.matrix.J = c
 	return w
@@ -50,10 +57,14 @@ func putWorkspace(w *CSR) {
 	pool.Put(w)
 }
 
-func getVecWorkspace(len, nnz int) *Vector {
+func getVecWorkspace(len, nnz int, clear bool) *Vector {
 	w := vecPool.Get().(*Vector)
 	w.ind = useInts(w.ind, nnz, false)
 	w.data = useFloats(w.data, nnz, false)
+	if clear {
+		w.ind = w.ind[:0]
+		w.data = w.data[:0]
+	}
 	w.len = len
 	return w
 }

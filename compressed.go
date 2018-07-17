@@ -135,21 +135,14 @@ func (c *CSR) DoRowNonZero(i int, fn func(i, j int, v float64)) {
 // Clone copies the specified matrix into the receiver
 func (c *CSR) Clone(b mat.Matrix) {
 	row, col := b.Dims()
-	var nnz int
-	if sp, ok := b.(Sparser); ok {
-		nnz = sp.NNZ()
-	} else {
-		nnz = row * col / 10
-	}
-	c.reuseAs(row, col, nnz)
-	c.matrix.Ind, c.matrix.Data = c.matrix.Ind[:0], c.matrix.Data[:0]
 
 	if csr, ok := b.(*CSR); ok {
 		c.cloneCSR(csr)
 		return
 	}
 
-	c.matrix.I, c.matrix.J = row, col
+	c.Reset()
+	c.reuseAs(row, col, row*col/10, true)
 	k := 0
 	for i := 0; i < c.matrix.I; i++ {
 		c.matrix.Indptr[i] = k
@@ -166,10 +159,8 @@ func (c *CSR) Clone(b mat.Matrix) {
 
 // cloneCSR copies the specified CSR matrix into the receiver
 func (c *CSR) cloneCSR(b *CSR) {
-	c.matrix.Indptr = useInts(c.matrix.Indptr, c.matrix.I+1, false)
-	c.matrix.Ind = useInts(c.matrix.Ind, b.NNZ(), false)
-	c.matrix.Data = useFloats(c.matrix.Data, b.NNZ(), false)
-	c.matrix.I, c.matrix.J = b.matrix.I, b.matrix.J
+	c.Reset()
+	c.reuseAs(b.matrix.I, b.matrix.J, b.NNZ(), false)
 	copy(c.matrix.Indptr, b.matrix.Indptr)
 	copy(c.matrix.Ind, b.matrix.Ind)
 	copy(c.matrix.Data, b.matrix.Data)
@@ -318,20 +309,25 @@ func (c *CSR) IsZero() bool {
 // ensure there is sufficient initial capacity allocated in the underlying storage
 // to store up to nnz non-zero elements although this will be extended
 // automatically later as needed (using Go's built-in append function).
-func (c *CSR) reuseAs(row, col, nnz int) {
+func (c *CSR) reuseAs(row, col, nnz int, zero bool) {
 	if c.IsZero() {
 		c.matrix = blas.SparseMatrix{
-			I:      row,
-			J:      col,
-			Indptr: useInts(c.matrix.Indptr, row+1, false),
-			Ind:    useInts(c.matrix.Ind, nnz, false),
-			Data:   useFloats(c.matrix.Data, nnz, false),
+			I: row,
+			J: col,
 		}
-		return
 	}
 
 	if row != c.matrix.I || col != c.matrix.J {
 		panic(mat.ErrShape)
+	}
+
+	c.matrix.Indptr = useInts(c.matrix.Indptr, row+1, zero)
+	c.matrix.Ind = useInts(c.matrix.Ind, nnz, false)
+	c.matrix.Data = useFloats(c.matrix.Data, nnz, false)
+
+	if zero {
+		c.matrix.Ind = c.matrix.Ind[:0]
+		c.matrix.Data = c.matrix.Data[:0]
 	}
 }
 

@@ -23,8 +23,8 @@ func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
 // initial capacity allocated for nnz non-zero elements and
 // returns a callback to defer which performs cleanup at the return of the call.
 // This should be used when a method receiver is the same pointer as an input argument.
-func (c *CSR) temporaryWorkspace(row, col, nnz int) (w *CSR, restore func()) {
-	w = getWorkspace(row, col, nnz)
+func (c *CSR) temporaryWorkspace(row, col, nnz int, clear bool) (w *CSR, restore func()) {
+	w = getWorkspace(row, col, nnz, clear)
 	return w, func() {
 		c.cloneCSR(w)
 		putWorkspace(w)
@@ -50,16 +50,14 @@ func (c *CSR) spalloc(a mat.Matrix, b mat.Matrix) (m *CSR, isTemp bool, restore 
 		// assume 10% of elements will be non-zero
 		nnz = row * col / 10
 	}
-	c.reuseAs(row, col, nnz)
+
 	if c.checkOverlap(a) || c.checkOverlap(b) {
-		m, restore = c.temporaryWorkspace(row, col, nnz)
+		m, restore = c.temporaryWorkspace(row, col, nnz, true)
 		isTemp = true
+	} else {
+		c.reuseAs(row, col, nnz, true)
 	}
-	for i := range m.matrix.Indptr {
-		m.matrix.Indptr[i] = 0
-	}
-	m.matrix.Ind = m.matrix.Ind[:0]
-	m.matrix.Data = m.matrix.Data[:0]
+
 	return
 }
 
@@ -112,8 +110,7 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		return
 	}
 	if isRSparse {
-		w := getWorkspace(bc, ar, bc*ar/10)
-		w.matrix.Ind, w.matrix.Data = w.matrix.Ind[:0], w.matrix.Data[:0]
+		w := getWorkspace(bc, ar, bc*ar/10, true)
 		bt := srcB.ToCSC().T().(*CSR)
 		w.mulCSRMat(bt, a.T())
 		c.Clone(w.T())
