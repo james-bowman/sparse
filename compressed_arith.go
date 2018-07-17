@@ -52,6 +52,9 @@ func (c *CSR) spalloc(a mat.Matrix, b mat.Matrix) (m *CSR, isTemp bool, restore 
 	}
 
 	if c.checkOverlap(a) || c.checkOverlap(b) {
+		if !c.IsZero() && (row != c.matrix.I || col != c.matrix.J) {
+			panic(mat.ErrShape)
+		}
 		m, restore = c.temporaryWorkspace(row, col, nnz, true)
 		isTemp = true
 	} else {

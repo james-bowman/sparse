@@ -426,7 +426,7 @@ func (v *Vector) spalloc(a mat.Vector, b mat.Vector) (t *Vector, isTemp bool, re
 	}
 
 	if v.checkOverlap(a) || v.checkOverlap(b) {
-		if !v.IsZero() || a.Len() != v.len {
+		if !v.IsZero() && a.Len() != v.len {
 			panic(mat.ErrShape)
 		}
 		t, restore = v.temporaryWorkspace(a.Len(), nnz, true)
