@@ -19,6 +19,35 @@ func TestDusmm(t *testing.T) {
 	}{
 		{
 			transA: false,
+			alpha:  0,
+			a: &SparseMatrix{
+				I: 3, J: 4,
+				Ind:    []int{0, 2, 1, 2, 3},
+				Indptr: []int{0, 2, 2, 5},
+				Data:   []float64{1, 2, 3, 4, 5},
+			},
+			br: 4, bc: 5,
+			bData: []float64{
+				1, 2, 3, 4, 5,
+				6, 7, 8, 9, 1,
+				2, 3, 4, 5, 6,
+				7, 8, 9, 0, 1,
+			},
+			cr: 3, cc: 5,
+			cData: []float64{
+				0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0,
+			},
+			er: 3, ec: 5,
+			eData: []float64{
+				0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0,
+			},
+		},
+		{
+			transA: false,
 			alpha:  1,
 			a: &SparseMatrix{
 				I: 3, J: 4,
