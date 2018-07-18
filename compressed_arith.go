@@ -85,19 +85,29 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	lhs, isLCsr := a.(*CSR)
 	rhs, isRCsr := b.(*CSR)
 	if isLCsr && isRCsr {
-		// handle case where matrix A and B are both CSR
+		// handle CSR * CSR
 		c.mulCSRCSR(lhs, rhs)
 		return
 	}
 
 	if dia, ok := a.(*DIA); ok {
-		// handle case where matrix A is a DIA
-		c.mulDIA(dia, b, false)
+		if isRCsr {
+			// handle DIA * CSR
+			c.mulDIACSR(dia, rhs, false)
+			return
+		}
+		// handle DIA * mat.Matrix
+		c.mulDIAMat(dia, b, false)
 		return
 	}
 	if dia, ok := b.(*DIA); ok {
-		// handle case where matrix B is a DIA
-		c.mulDIA(dia, a, true)
+		if isLCsr {
+			// handle CSR * DIA
+			c.mulDIACSR(dia, lhs, true)
+			return
+		}
+		// handle mat.Matrix * DIA
+		c.mulDIAMat(dia, a, true)
 		return
 	}
 	// TODO: handle cases where both matrices are DIA
@@ -106,13 +116,16 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	srcB, isRSparse := b.(TypeConverter)
 	if isLSparse {
 		if isRSparse {
+			// handle Sparser * Sparser
 			c.mulCSRCSR(srcA.ToCSR(), srcB.ToCSR())
 			return
 		}
+		// handle Sparser * mat.Matrix
 		c.mulCSRMat(srcA.ToCSR(), b)
 		return
 	}
 	if isRSparse {
+		// handle mat.Matrix * Sparser
 		w := getWorkspace(bc, ar, bc*ar/10, true)
 		bt := srcB.ToCSC().T().(*CSR)
 		w.mulCSRMat(bt, a.T())
@@ -121,7 +134,7 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		return
 	}
 
-	// handle any implementation of mat.Matrix for both matrix A and B
+	// handle mat.Matrix * mat.Matrix
 	row := getFloats(ac, false)
 	defer putFloats(row)
 	var v float64
@@ -178,6 +191,25 @@ func (c *CSR) mulCSRCSC(lhs *CSR, csc *CSC) {
 	return
 }
 
+// mulCSRCSR handles CSR = CSR * CSR using Gustavson Algorithm (ACM 1978)
+func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
+	ar, _ := lhs.Dims()
+	_, bc := rhs.Dims()
+	spa := NewSPA(bc)
+
+	// rows in C
+	for i := 0; i < ar; i++ {
+		// each element t in row i of A
+		for t := lhs.matrix.Indptr[i]; t < lhs.matrix.Indptr[i+1]; t++ {
+			begin := rhs.matrix.Indptr[lhs.matrix.Ind[t]]
+			end := rhs.matrix.Indptr[lhs.matrix.Ind[t]+1]
+			spa.Scatter(rhs.matrix.Data[begin:end], rhs.matrix.Ind[begin:end], lhs.matrix.Data[t], &c.matrix.Ind)
+		}
+		spa.GatherAndZero(&c.matrix.Data, &c.matrix.Ind)
+		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
+	}
+}
+
 // mulCSRMat handles CSR = CSR * mat.Matrix
 func (c *CSR) mulCSRMat(lhs *CSR, b mat.Matrix) {
 	ar, _ := lhs.Dims()
@@ -200,77 +232,65 @@ func (c *CSR) mulCSRMat(lhs *CSR, b mat.Matrix) {
 	}
 }
 
-// mulCSRCSR handles CSR = CSR * CSR using Gustavson Algorithm (ACM 1978)
-func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
-	ar, _ := lhs.Dims()
-	_, bc := rhs.Dims()
-	spa := NewSPA(bc)
-
-	// rows in C
-	for i := 0; i < ar; i++ {
-		// each element t in row i of A
-		for t := lhs.matrix.Indptr[i]; t < lhs.matrix.Indptr[i+1]; t++ {
-			begin := rhs.matrix.Indptr[lhs.matrix.Ind[t]]
-			end := rhs.matrix.Indptr[lhs.matrix.Ind[t]+1]
-			spa.Scatter(rhs.matrix.Data[begin:end], rhs.matrix.Ind[begin:end], lhs.matrix.Data[t], &c.matrix.Ind)
-		}
-		spa.GatherAndZero(&c.matrix.Data, &c.matrix.Ind)
-		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
-	}
-}
-
-// mulDIA takes the matrix product of the diagonal matrix dia and an other matrix, other and stores the result
-// in the receiver.  This method caters for the specialised case of multiplying by a diagonal matrix where
-// significant optimisation is possible due to the sparsity pattern of the matrix.  If trans is true, the method
-// will assume that other was the LHS (Left Hand Side) operand and that dia was the RHS.
-func (c *CSR) mulDIA(dia *DIA, other mat.Matrix, trans bool) {
-	var csMat blas.SparseMatrix
-	isCS := false
-
-	if csr, ok := other.(*CSR); ok {
-		// TODO consider implicitly converting all sparsers to CSR
-		// or at least iterating only over the non-zero elements
-		csMat = csr.matrix
-		isCS = true
-	}
-
-	_, cols := other.Dims()
-	raw := dia.Diagonal()
-
-	if isCS {
-		var t int
+// mulDIACSR handles CSR = DIA * CSR (or CSR = CSR * DIA if trans == true)
+func (c *CSR) mulDIACSR(dia *DIA, other *CSR, trans bool) {
+	diagonal := dia.Diagonal()
+	if trans {
 		for i := 0; i < c.matrix.I; i++ {
 			var v float64
-			for k := csMat.Indptr[i]; k < csMat.Indptr[i+1]; k++ {
-				var indx int
-				if trans {
-					indx = csMat.Ind[k]
-				} else {
-					indx = i
-				}
-				if indx < len(raw) {
-					v = csMat.Data[k] * raw[indx]
+			for k := other.matrix.Indptr[i]; k < other.matrix.Indptr[i+1]; k++ {
+				if other.matrix.Ind[k] < len(diagonal) {
+					v = other.matrix.Data[k] * diagonal[other.matrix.Ind[k]]
 					if v != 0 {
-						c.matrix.Ind = append(c.matrix.Ind, csMat.Ind[k])
+						c.matrix.Ind = append(c.matrix.Ind, other.matrix.Ind[k])
 						c.matrix.Data = append(c.matrix.Data, v)
-						t++
 					}
 				}
 			}
-			c.matrix.Indptr[i+1] = t
+			c.matrix.Indptr[i+1] = len(c.matrix.Ind)
+		}
+	} else {
+		for i := 0; i < c.matrix.I; i++ {
+			var v float64
+			for k := other.matrix.Indptr[i]; k < other.matrix.Indptr[i+1]; k++ {
+				if i < len(diagonal) {
+					v = other.matrix.Data[k] * diagonal[i]
+					if v != 0 {
+						c.matrix.Ind = append(c.matrix.Ind, other.matrix.Ind[k])
+						c.matrix.Data = append(c.matrix.Data, v)
+					}
+				}
+			}
+			c.matrix.Indptr[i+1] = len(c.matrix.Ind)
+		}
+	}
+}
+
+// mulDIAMat handles CSR = DIA * mat.Matrix (or CSR = mat.Matrix * DIA if trans == true)
+func (c *CSR) mulDIAMat(dia *DIA, other mat.Matrix, trans bool) {
+	_, cols := other.Dims()
+	diagonal := dia.Diagonal()
+
+	if trans {
+		for i := 0; i < c.matrix.I; i++ {
+			var v float64
+			for k := 0; k < cols; k++ {
+				if k < len(diagonal) {
+					v = other.At(i, k) * diagonal[k]
+					if v != 0 {
+						c.matrix.Ind = append(c.matrix.Ind, k)
+						c.matrix.Data = append(c.matrix.Data, v)
+					}
+				}
+			}
+			c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 		}
 	} else {
 		for i := 0; i < c.matrix.I; i++ {
 			var v float64
 			for k := 0; k < cols; k++ {
-				var indx int
-				if trans {
-					indx = k
-				} else {
-					indx = i
-				}
-				if indx < len(raw) {
-					v = other.At(i, k) * raw[indx]
+				if i < len(diagonal) {
+					v = other.At(i, k) * diagonal[i]
 					if v != 0 {
 						c.matrix.Ind = append(c.matrix.Ind, k)
 						c.matrix.Data = append(c.matrix.Data, v)
