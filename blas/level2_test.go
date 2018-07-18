@@ -17,6 +17,24 @@ func TestDusmv(t *testing.T) {
 	}{
 		{
 			transA: false,
+			alpha:  0,
+			a: &SparseMatrix{
+				I: 3, J: 4,
+				Indptr: []int{0, 2, 2, 5},
+				Ind:    []int{0, 2, 0, 1, 3},
+				Data:   []float64{1, 2, 3, 4, 5},
+			},
+			// 1, 0, 2, 0,
+			// 0, 0, 0, 0,
+			// 3, 4, 0, 5,
+			x:        []float64{1, 2, 3, 4},
+			incx:     1,
+			y:        []float64{0, 0, 0},
+			incy:     1,
+			expected: []float64{0, 0, 0},
+		},
+		{
+			transA: false,
 			alpha:  1,
 			a: &SparseMatrix{
 				I: 3, J: 4,
