@@ -158,39 +158,6 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	}
 }
 
-// mulCSRCSC handles CSR = CSR * CSC
-func (c *CSR) mulCSRCSC(lhs *CSR, csc *CSC) {
-	ar, ac := lhs.Dims()
-	_, bc := csc.Dims()
-
-	bt := csc.T().(*CSR)
-	at := lhs.T().(*CSC)
-	braw := bt.RawMatrix()
-	col := getFloats(ac, true)
-	putFloats(col)
-	recv := getFloats(bc, true)
-	putFloats(recv)
-
-	for j := 0; j < ar; j++ {
-		begin, end := at.matrix.Indptr[j], at.matrix.Indptr[j+1]
-		indx := at.matrix.Ind[begin:end]
-		blas.Dussc(at.matrix.Data[begin:end], col, 1, indx)
-		blas.Dusmv(false, 1, braw, col, 1, recv, 1)
-		for _, v := range indx {
-			col[v] = 0
-		}
-		for i, v := range recv {
-			if v != 0.0 {
-				c.matrix.Ind = append(c.matrix.Ind, i)
-				c.matrix.Data = append(c.matrix.Data, v)
-				recv[i] = 0
-			}
-		}
-		c.matrix.Indptr[j+1] = len(c.matrix.Ind)
-	}
-	return
-}
-
 // mulCSRCSR handles CSR = CSR * CSR using Gustavson Algorithm (ACM 1978)
 func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
 	ar, _ := lhs.Dims()
