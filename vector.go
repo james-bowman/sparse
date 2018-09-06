@@ -130,7 +130,7 @@ func (v *Vector) Scatter(denseVector *mat.VecDense) *mat.VecDense {
 
 // CloneVec clones the supplied mat.Vector, a into the receiver, overwriting
 // the previous values of the receiver.  If the receiver is of a different
-// length from a, it will be resized to accomodate the values from a.
+// length from a, it will be resized to accommodate the values from a.
 func (v *Vector) CloneVec(a mat.Vector) {
 	if v == a {
 		return

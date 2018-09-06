@@ -7,8 +7,8 @@ import (
 var (
 	_ Sparser = (*DIA)(nil)
 
-	_ mat.ColViewer    = (*DIA)(nil)
-	_ mat.RowViewer    = (*DIA)(nil)
+	_ mat.ColViewer = (*DIA)(nil)
+	_ mat.RowViewer = (*DIA)(nil)
 )
 
 // DIA matrix type is a specialised matrix designed to store DIAgonal values of square symmetrical
@@ -136,4 +136,3 @@ func (d *DIA) ScatterCol(j int, col []float64) []float64 {
 	}
 	return col
 }
-
