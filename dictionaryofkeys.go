@@ -13,8 +13,8 @@ var (
 
 	_ mat.Mutable = dok
 
-	_ mat.ColViewer    = dok
-	_ mat.RowViewer    = dok
+	_ mat.ColViewer = dok
+	_ mat.RowViewer = dok
 )
 
 // key is used to specify the row and column of elements within the matrix.

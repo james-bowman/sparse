@@ -582,8 +582,8 @@ var (
 		{
 			want: NewDOK(2, 2),
 			items: map[key]float64{
-				key{i: 0, j: 1}: 0.5,
-				key{i: 1, j: 0}: -0.5,
+				{i: 0, j: 1}: 0.5,
+				{i: 1, j: 0}: -0.5,
 			},
 			raw: []byte(
 				"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2
@@ -604,8 +604,8 @@ var (
 		{
 			want: NewDOK(2, 3),
 			items: map[key]float64{
-				key{i: 0, j: 1}: 0.5,
-				key{i: 1, j: 0}: -0.5,
+				{i: 0, j: 1}: 0.5,
+				{i: 1, j: 0}: -0.5,
 			},
 			raw: []byte(
 				"\x02\x00\x00\x00\x00\x00\x00\x00" + // 2
@@ -626,8 +626,8 @@ var (
 		{
 			want: NewDOK(3, 2),
 			items: map[key]float64{
-				key{i: 0, j: 1}: 0.5,
-				key{i: 1, j: 0}: -0.5,
+				{i: 0, j: 1}: 0.5,
+				{i: 1, j: 0}: -0.5,
 			},
 			raw: []byte(
 				"\x03\x00\x00\x00\x00\x00\x00\x00" + // 2

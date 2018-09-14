@@ -134,7 +134,7 @@ func aliasInts(x, y []int) bool {
 }
 
 // useFloats attempts to reuse the specified slice of floats ensuring it has
-// sufficient capacity for at least n elements.  If slice does not have sufficent
+// sufficient capacity for at least n elements.  If slice does not have sufficient
 // capacity for n elements, new storage will be allocated.  If clear is true,
 // all values in the slice will be zeroed.
 func useFloats(slice []float64, n int, clear bool) []float64 {
@@ -151,7 +151,7 @@ func useFloats(slice []float64, n int, clear bool) []float64 {
 }
 
 // useInts attempts to reuse the specified slice of ints ensuring it has
-// sufficient capacity for at least n elements.  If slice does not have sufficent
+// sufficient capacity for at least n elements.  If slice does not have sufficient
 // capacity for n elements, new storage will be allocated.  If clear is true,
 // all values in the slice will be zeroed.
 func useInts(slice []int, n int, clear bool) []int {

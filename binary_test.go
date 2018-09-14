@@ -267,9 +267,9 @@ func TestBinary(t *testing.T) {
 	}{
 		{
 			b: NewBinary(4, 3, []BinaryVec{
-				BinaryVec{length: 4, data: []uint64{1}},
-				BinaryVec{length: 4, data: []uint64{15}},
-				BinaryVec{length: 4, data: []uint64{10}},
+				{length: 4, data: []uint64{1}},
+				{length: 4, data: []uint64{15}},
+				{length: 4, data: []uint64{10}},
 			}),
 		},
 	}
