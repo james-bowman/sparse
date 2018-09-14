@@ -276,18 +276,6 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 	}
 	craw := c.RawMatrix()
 
-	// TODO change signature so that matrix a changes from BLASCompatible
-	// Sparser to a mat.Matrix
-	// if a is sparse do all the below
-	// else if b is sparse then
-	// 		convert b to CSR and T()
-	// 		transpose a
-	//		do below
-	//      transpose c
-	// else if neither sparse
-	// c.Mul(a, b)
-	// c.T() and possibly copy back into dense
-
 	var araw *blas.SparseMatrix
 	if as, ok := a.(*CSC); ok {
 		// as CSC is the natural transpose of CSR, we will transpose here to CSR
