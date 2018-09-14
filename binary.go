@@ -227,7 +227,7 @@ func (b *BinaryVec) SetVec(i int, v float64) {
 // Slice panics with ErrIndexOutOfRange if the slice is outside the capacity
 // of the receiver.
 func (b *BinaryVec) SliceToUint64(from, to int) uint64 {
-	if from < 0 || to <= from || to >= b.length || to-from > 64 {
+	if from < 0 || to <= from || to > b.length || to-from > 64 {
 		panic(mat.ErrIndexOutOfRange)
 	}
 
