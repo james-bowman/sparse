@@ -343,99 +343,25 @@ func TestCSRCSCRowColView(t *testing.T) {
 
 		for i := 0; i < test.r; i++ {
 			row := csr.RowView(i)
-			row1 := csc.RowView(i)
 			for k := 0; k < row.Len(); k++ {
 				if row.At(k, 0) != test.data[i*test.c+k] {
 					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(row), k, row.At(k, 0), i, k, mat.Formatted(dense))
 					t.Fail()
 				}
-				if row1.At(k, 0) != test.data[i*test.c+k] {
-					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(row1), k, row1.At(k, 0), i, k, mat.Formatted(dense))
-					t.Fail()
-				}
 			}
 		}
 
 		for j := 0; j < test.c; j++ {
-			col := csr.ColView(j)
-			col1 := csc.ColView(j)
+			col := csc.ColView(j)
 			for k := 0; k < col.Len(); k++ {
 				if col.At(k, 0) != test.data[k*test.c+j] {
 					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(col), k, col.At(k, 0), k, j, mat.Formatted(dense))
 					t.Fail()
 				}
-				if col1.At(k, 0) != test.data[k*test.c+j] {
-					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(col1), k, col1.At(k, 0), k, j, mat.Formatted(dense))
-					t.Fail()
-				}
 			}
 		}
 	}
 }
-
-/*
-func TestCSRCSCRawRowColView(t *testing.T) {
-	var tests = []struct {
-		r, c int
-		data []float64
-	}{
-		{
-			r: 3, c: 4,
-			data: []float64{
-				1, 0, 0, 0,
-				0, 2, 0, 0,
-				0, 0, 3, 6,
-			},
-		},
-		{
-			r: 3, c: 4,
-			data: []float64{
-				1, 0, 0, 0,
-				0, 0, 0, 0,
-				0, 0, 3, 0,
-			},
-		},
-	}
-
-	for ti, test := range tests {
-		t.Logf("**** Test Run %d.\n", ti+1)
-
-		dense := mat.NewDense(test.r, test.c, test.data)
-		csr := CreateCSR(test.r, test.c, test.data).(*CSR)
-		csc := CreateCSC(test.r, test.c, test.data).(*CSC)
-
-		for i := 0; i < test.r; i++ {
-			row := csr.RawRowView(i)
-			row1 := csc.RawRowView(i)
-			for k := 0; k < len(row); k++ {
-				if row[k] != test.data[i*test.c+k] {
-					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", row, k, row[k], i, k, mat.Formatted(dense))
-					t.Fail()
-				}
-				if row1[k] != test.data[i*test.c+k] {
-					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", row1, k, row1[k], i, k, mat.Formatted(dense))
-					t.Fail()
-				}
-			}
-		}
-
-		for j := 0; j < test.c; j++ {
-			col := csr.RawColView(j)
-			col1 := csc.RawColView(j)
-			for k := 0; k < len(col); k++ {
-				if col[k] != test.data[k*test.c+j] {
-					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", col, k, col[k], k, j, mat.Formatted(dense))
-					t.Fail()
-				}
-				if col1[k] != test.data[k*test.c+j] {
-					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", col1, k, col1[k], k, j, mat.Formatted(dense))
-					t.Fail()
-				}
-			}
-		}
-	}
-}
-*/
 
 func TestCSRCSCDoNonZero(t *testing.T) {
 	var tests = []struct {
