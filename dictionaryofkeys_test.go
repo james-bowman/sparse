@@ -224,6 +224,10 @@ func TestFailDokInitialization(t *testing.T) {
 		{-1, 1},
 		{1, -1},
 		{-1, -1},
+
+		{0, 10},
+		{10, 0},
+		{0, 0},
 	}
 
 	for _, tc := range tcs {
