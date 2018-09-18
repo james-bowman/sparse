@@ -37,11 +37,8 @@ type DOK struct {
 // NewDOK creates a new Dictionary Of Keys format sparse matrix initialised to the size of the specified r * c
 // dimensions (rows * columns)
 func NewDOK(r, c int) *DOK {
-	if uint(r) < 0 {
+	if r <= 0 || c <= 0 {
 		panic(mat.ErrRowAccess)
-	}
-	if uint(c) < 0 {
-		panic(mat.ErrColAccess)
 	}
 
 	return &DOK{r: r, c: c, elements: make(map[key]float64)}
@@ -55,11 +52,8 @@ func (d *DOK) Dims() (r, c int) {
 // At returns the element of the matrix located at row i and column j.  At will panic if specified values
 // for i or j fall outside the dimensions of the matrix.
 func (d *DOK) At(i, j int) float64 {
-	if uint(i) < 0 || uint(i) >= uint(d.r) {
+	if i < 0 || i >= d.r || j < 0 || j >= d.c {
 		panic(mat.ErrRowAccess)
-	}
-	if uint(j) < 0 || uint(j) >= uint(d.c) {
-		panic(mat.ErrColAccess)
 	}
 
 	return d.elements[key{i, j}]
@@ -73,11 +67,8 @@ func (d *DOK) T() mat.Matrix {
 // Set sets the element of the matrix located at row i and column j to equal the specified value, v.  Set
 // will panic if specified values for i or j fall outside the dimensions of the matrix.
 func (d *DOK) Set(i, j int, v float64) {
-	if uint(i) < 0 || uint(i) >= uint(d.r) {
+	if i < 0 || i >= d.r || j < 0 || j >= d.c {
 		panic(mat.ErrRowAccess)
-	}
-	if uint(j) < 0 || uint(j) >= uint(d.c) {
-		panic(mat.ErrColAccess)
 	}
 
 	d.elements[key{i, j}] = v
