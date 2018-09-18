@@ -328,11 +328,16 @@ func TestConvert(t *testing.T) {
 		}
 	}
 
-	coo := dok.ToCOO()
-	csr := dok.ToCSR()
-	csc := dok.ToCSC()
-
-	mat := []mat.Matrix{dok, coo, csr, csc}
+	mat := []mat.Matrix{
+		dok,
+		dok.ToCOO(),
+		dok.ToCSR(),
+		dok.ToCSC(),
+		new(DOKType).Convert(dok),
+		new(COOType).Convert(dok),
+		new(CSRType).Convert(dok),
+		new(CSCType).Convert(dok),
+	}
 	size := len(mat)
 
 	for i := 0; i < size; i++ {
@@ -344,7 +349,7 @@ func TestConvert(t *testing.T) {
 				for i := 0; i < 4; i++ {
 					for j := 0; j < 5; j++ {
 						if from.At(i, j) != to.At(i, j) {
-							t.Errorf("Not same (%d,%d) : %T != %T",
+							t.Fatalf("Not same (%d,%d) : %T != %T",
 								i, j, from, to)
 						}
 					}
