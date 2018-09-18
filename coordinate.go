@@ -6,12 +6,9 @@ import (
 )
 
 var (
-	coo *COO
-
-	_ Sparser       = coo
-	_ TypeConverter = coo
-
-	_ mat.Mutable = coo
+	_ Sparser       = (*COO)(nil)
+	_ TypeConverter = (*COO)(nil)
+	_ mat.Mutable   = (*COO)(nil)
 )
 
 // COO is a COOrdinate format sparse matrix implementation (sometimes called `Tiplet` format) and implements the

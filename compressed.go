@@ -6,22 +6,18 @@ import (
 )
 
 var (
-	csr *CSR
+	_ Sparser            = (*CSR)(nil)
+	_ TypeConverter      = (*CSR)(nil)
+	_ mat.Mutable        = (*CSR)(nil)
+	_ mat.RowViewer      = (*CSR)(nil)
+	_ mat.RowNonZeroDoer = (*CSR)(nil)
+	_ mat.Reseter        = (*CSR)(nil)
 
-	_ Sparser            = csr
-	_ TypeConverter      = csr
-	_ mat.Mutable        = csr
-	_ mat.RowViewer      = csr
-	_ mat.RowNonZeroDoer = csr
-	_ mat.Reseter        = csr
-
-	csc *CSC
-
-	_ Sparser            = csc
-	_ TypeConverter      = csc
-	_ mat.Mutable        = csc
-	_ mat.ColViewer      = csc
-	_ mat.ColNonZeroDoer = csc
+	_ Sparser            = (*CSC)(nil)
+	_ TypeConverter      = (*CSC)(nil)
+	_ mat.Mutable        = (*CSC)(nil)
+	_ mat.ColViewer      = (*CSC)(nil)
+	_ mat.ColNonZeroDoer = (*CSC)(nil)
 )
 
 // CSR is a Compressed Sparse Row format sparse matrix implementation (sometimes called Compressed Row
