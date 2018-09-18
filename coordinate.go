@@ -12,9 +12,6 @@ var (
 	_ TypeConverter = coo
 
 	_ mat.Mutable = coo
-
-	_ mat.ColViewer = coo
-	_ mat.RowViewer = coo
 )
 
 // COO is a COOrdinate format sparse matrix implementation (sometimes called `Tiplet` format) and implements the
@@ -306,16 +303,4 @@ func (c *COO) ToCSCReuseMem() *CSC {
 // ToType returns an alternative format version fo the matrix in the format specified.
 func (c *COO) ToType(matType MatrixType) mat.Matrix {
 	return matType.Convert(c)
-}
-
-// RowView slices the matrix and returns a Vector containing a copy of elements
-// of row i.
-func (c *COO) RowView(i int) mat.Vector {
-	return mat.NewVecDense(c.c, mat.Row(nil, i, c))
-}
-
-// ColView slices the matrix and returns a Vector containing a copy of elements
-// of column i.
-func (c *COO) ColView(j int) mat.Vector {
-	return mat.NewVecDense(c.r, mat.Col(nil, j, c))
 }

@@ -12,9 +12,6 @@ var (
 	_ TypeConverter = dok
 
 	_ mat.Mutable = dok
-
-	_ mat.ColViewer = dok
-	_ mat.RowViewer = dok
 )
 
 // key is used to specify the row and column of elements within the matrix.
@@ -147,16 +144,4 @@ func (d *DOK) ToCSC() *CSC {
 // ToType returns an alternative format version fo the matrix in the format specified.
 func (d *DOK) ToType(matType MatrixType) mat.Matrix {
 	return matType.Convert(d)
-}
-
-// RowView slices the matrix and returns a Vector containing a copy of elements
-// of row i.
-func (d *DOK) RowView(i int) mat.Vector {
-	return mat.NewVecDense(d.c, mat.Row(nil, i, d))
-}
-
-// ColView slices the matrix and returns a Vector containing a copy of elements
-// of column i.
-func (d *DOK) ColView(j int) mat.Vector {
-	return mat.NewVecDense(d.r, mat.Col(nil, j, d))
 }

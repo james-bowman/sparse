@@ -127,57 +127,6 @@ func TestDOKTranspose(t *testing.T) {
 	}
 }
 
-func TestDOKRowColView(t *testing.T) {
-	var tests = []struct {
-		r, c int
-		data []float64
-	}{
-		{
-			r: 3, c: 4,
-			data: []float64{
-				1, 0, 0, 0,
-				0, 2, 0, 0,
-				0, 0, 3, 6,
-			},
-		},
-		{
-			r: 3, c: 4,
-			data: []float64{
-				1, 0, 0, 0,
-				0, 0, 0, 0,
-				0, 0, 3, 0,
-			},
-		},
-	}
-
-	for ti, test := range tests {
-		t.Logf("**** Test Run %d.\n", ti+1)
-
-		dense := mat.NewDense(test.r, test.c, test.data)
-		dok := CreateDOK(test.r, test.c, test.data).(*DOK)
-
-		for i := 0; i < test.r; i++ {
-			row := dok.RowView(i)
-			for k := 0; k < row.Len(); k++ {
-				if row.At(k, 0) != test.data[i*test.c+k] {
-					t.Logf("ROW: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(row), k, row.At(k, 0), i, k, mat.Formatted(dense))
-					t.Fail()
-				}
-			}
-		}
-
-		for j := 0; j < test.c; j++ {
-			col := dok.ColView(j)
-			for k := 0; k < col.Len(); k++ {
-				if col.At(k, 0) != test.data[k*test.c+j] {
-					t.Logf("COL: Vector = \n%v\nElement %d = %f was not element %d, %d from \n%v\n", mat.Formatted(col), k, col.At(k, 0), k, j, mat.Formatted(dense))
-					t.Fail()
-				}
-			}
-		}
-	}
-}
-
 func TestDOKDoNonZero(t *testing.T) {
 	var tests = []struct {
 		r, c int
