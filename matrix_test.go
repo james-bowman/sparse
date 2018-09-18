@@ -338,7 +338,7 @@ func TestConvert(t *testing.T) {
 		new(CSRType).Convert(dok),
 		new(CSCType).Convert(dok),
 	}
-	size := len(mat)
+	size := len(mats)
 
 	for i := 0; i < size; i++ {
 		for j := 0; j < size; j++ {
