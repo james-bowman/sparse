@@ -328,7 +328,7 @@ func TestConvert(t *testing.T) {
 		}
 	}
 
-	mat := []mat.Matrix{
+	mats := []mat.Matrix{
 		dok,
 		dok.ToCOO(),
 		dok.ToCSR(),
@@ -342,8 +342,8 @@ func TestConvert(t *testing.T) {
 
 	for i := 0; i < size; i++ {
 		for j := 0; j < size; j++ {
-			from := mat[i]
-			to := mat[j]
+			from := mats[i]
+			to := mats[j]
 			t.Run(fmt.Sprintf("%T->%T", from, to), func(t *testing.T) {
 				// compare
 				if !(mat.Equal(from, to)) {
