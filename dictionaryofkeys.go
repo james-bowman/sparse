@@ -31,10 +31,10 @@ type DOK struct {
 // NewDOK creates a new Dictionary Of Keys format sparse matrix initialised to the size of the specified r * c
 // dimensions (rows * columns)
 func NewDOK(r, c int) *DOK {
-	if r <= 0 {
+	if r < 0 {
 		panic(mat.ErrRowAccess)
 	}
-	if c <= 0 {
+	if c < 0 {
 		panic(mat.ErrColAccess)
 	}
 
