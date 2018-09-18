@@ -346,13 +346,8 @@ func TestConvert(t *testing.T) {
 			to := mat[j]
 			t.Run(fmt.Sprintf("%T->%T", from, to), func(t *testing.T) {
 				// compare
-				for i := 0; i < 4; i++ {
-					for j := 0; j < 5; j++ {
-						if from.At(i, j) != to.At(i, j) {
-							t.Fatalf("Not same (%d,%d) : %T != %T",
-								i, j, from, to)
-						}
-					}
+				if !mat.Equal(from, to) {
+					t.Fatalf("Not same (%d,%d) : %T != %T", i, j, from, to)
 				}
 			})
 		}
