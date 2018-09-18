@@ -346,7 +346,7 @@ func TestConvert(t *testing.T) {
 			to := mat[j]
 			t.Run(fmt.Sprintf("%T->%T", from, to), func(t *testing.T) {
 				// compare
-				if !mat.Equal(from, to) {
+				if !(mat.Equal(from, to)) {
 					t.Fatalf("Not same (%d,%d) : %T != %T", i, j, from, to)
 				}
 			})
