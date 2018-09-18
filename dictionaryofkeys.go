@@ -6,12 +6,9 @@ import (
 )
 
 var (
-	dok *DOK
-
-	_ Sparser       = dok
-	_ TypeConverter = dok
-
-	_ mat.Mutable = dok
+	_ Sparser       = (*DOK)(nil)
+	_ TypeConverter = (*DOK)(nil)
+	_ mat.Mutable   = (*DOK)(nil)
 )
 
 // key is used to specify the row and column of elements within the matrix.
