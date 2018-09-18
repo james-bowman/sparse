@@ -6,31 +6,18 @@ import (
 )
 
 var (
-	csr *CSR
+	_ Sparser            = (*CSR)(nil)
+	_ TypeConverter      = (*CSR)(nil)
+	_ mat.Mutable        = (*CSR)(nil)
+	_ mat.RowViewer      = (*CSR)(nil)
+	_ mat.RowNonZeroDoer = (*CSR)(nil)
+	_ mat.Reseter        = (*CSR)(nil)
 
-	_ Sparser       = csr
-	_ TypeConverter = csr
-
-	_ mat.Mutable = csr
-
-	_ mat.ColViewer = csr
-	_ mat.RowViewer = csr
-
-	_ mat.RowNonZeroDoer = csr
-
-	_ mat.Reseter = csr
-
-	csc *CSC
-
-	_ Sparser       = csc
-	_ TypeConverter = csc
-
-	_ mat.Mutable = csc
-
-	_ mat.ColViewer = csc
-	_ mat.RowViewer = csc
-
-	_ mat.ColNonZeroDoer = csc
+	_ Sparser            = (*CSC)(nil)
+	_ TypeConverter      = (*CSC)(nil)
+	_ mat.Mutable        = (*CSC)(nil)
+	_ mat.ColViewer      = (*CSC)(nil)
+	_ mat.ColNonZeroDoer = (*CSC)(nil)
 )
 
 // CSR is a Compressed Sparse Row format sparse matrix implementation (sometimes called Compressed Row
@@ -247,19 +234,6 @@ func (c *CSR) RowView(i int) mat.Vector {
 		c.matrix.Ind[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
 		c.matrix.Data[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
 	)
-}
-
-// ColView slices the Compressed Sparse Row matrix along its secondary axis.
-// Returns a VecDense dense Vector containing a copy of elements of column j.
-func (c *CSR) ColView(j int) mat.Vector {
-	if j >= c.matrix.J || j < 0 {
-		panic(mat.ErrColAccess)
-	}
-	slice := make([]float64, c.matrix.I)
-	for i := range slice {
-		slice[i] = c.At(i, j)
-	}
-	return mat.NewVecDense(c.matrix.I, slice)
 }
 
 // ScatterRow returns a slice representing row i of the matrix in dense format.  Row
@@ -513,19 +487,6 @@ func (c *CSC) ToCSC() *CSC {
 // ToType returns an alternative format version fo the matrix in the format specified.
 func (c *CSC) ToType(matType MatrixType) mat.Matrix {
 	return matType.Convert(c)
-}
-
-// RowView slices the Compressed Sparse Column matrix along its secondary axis.
-// Returns a VecDense dense Vector containing a copy of elements of row i.
-func (c *CSC) RowView(i int) mat.Vector {
-	if i >= c.matrix.J || i < 0 {
-		panic(mat.ErrRowAccess)
-	}
-	slice := make([]float64, c.matrix.I)
-	for j := range slice {
-		slice[j] = c.At(i, j)
-	}
-	return mat.NewVecDense(c.matrix.I, slice)
 }
 
 // ColView slices the Compressed Sparse Column matrix along its primary axis.
