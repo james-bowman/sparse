@@ -1,6 +1,7 @@
 package sparse
 
 import (
+	"fmt"
 	"testing"
 
 	"gonum.org/v1/gonum/mat"
@@ -214,4 +215,59 @@ func CreateDIA(m, n int, data []float64) mat.Matrix {
 
 func CreateDense(m, n int, data []float64) mat.Matrix {
 	return mat.NewDense(m, n, data)
+}
+
+func TestFailDokInitialization(t *testing.T) {
+	tcs := []struct {
+		r, c int
+	}{
+		{-1, 1},
+		{1, -1},
+		{-1, -1},
+	}
+
+	for _, tc := range tcs {
+		t.Run(fmt.Sprintf("%v", tc), func(t *testing.T) {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("Haven`t panic for wrong size: %v", tc)
+				}
+			}()
+			_ = NewDOK(tc.r, tc.c)
+		})
+	}
+}
+
+func TestFailDokIndexes(t *testing.T) {
+	d := NewDOK(1, 1)
+
+	tcs := []struct {
+		r, c int
+	}{
+		{-1, 1},
+		{1, -1},
+		{-1, -1},
+		{0, 2},
+		{2, 0},
+		{100, 100},
+	}
+
+	for _, tc := range tcs {
+		t.Run(fmt.Sprintf("At:%v", tc), func(t *testing.T) {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("Haven`t panic for wrong index: %v", tc)
+				}
+			}()
+			_ = d.At(tc.r, tc.c)
+		})
+		t.Run(fmt.Sprintf("Set:%v", tc), func(t *testing.T) {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("Haven`t panic for wrong index: %v", tc)
+				}
+			}()
+			d.Set(tc.r, tc.c, -1.0)
+		})
+	}
 }
