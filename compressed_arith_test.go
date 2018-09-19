@@ -7,6 +7,82 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+type MulVecToer interface {
+	// MulVecTo computes A*x or A^T*x and stores the result into dst.
+	MulVecTo(dst []float64, trans bool, x []float64)
+}
+
+func TestCompressedMulVecTo(t *testing.T) {
+	// A:
+	// 1, 0, 2, 0,
+	// 0, 0, 0, 0,
+	// 0, 3, 4, 5,
+	var matrixPermutationsForA = []struct {
+		name   string
+		matrix MulVecToer
+	}{
+		{
+			name: "CSR",
+			matrix: NewCSR(
+				3, 4,
+				[]int{0, 2, 2, 5},
+				[]int{0, 2, 1, 2, 3},
+				[]float64{1, 2, 3, 4, 5}),
+		},
+		{
+			name: "CSC",
+			matrix: NewCSC(
+				3, 4,
+				[]int{0, 1, 2, 4, 5},
+				[]int{0, 2, 0, 2, 2},
+				[]float64{1, 3, 2, 4, 5}),
+		},
+	}
+
+	tests := []struct {
+		x      []float64
+		y      []float64
+		er, ec int
+		eData  []float64
+	}{
+		{ // y = 1 * A * x
+			x:     []float64{1, 2, 0, 3},
+			y:     []float64{0, 0, 0},
+			eData: []float64{1, 0, 21},
+		},
+		{ // y = 1 * A * x + y
+			x:     []float64{1, 2, 0, 3},
+			y:     []float64{1, 2, 0},
+			eData: []float64{2, 2, 21},
+		},
+	}
+
+	for ti, test := range tests {
+		ycopy := make([]float64, len(test.y))
+		for _, transA := range []bool{false, true} {
+			for _, a := range matrixPermutationsForA {
+				amat := a.matrix
+				var transInd string
+				if transA {
+					amat = amat.(mat.Matrix).T().(MulVecToer)
+					transInd = "^T"
+				}
+
+				copy(ycopy, test.y)
+
+				amat.MulVecTo(ycopy, transA, test.x)
+
+				for i, v := range test.eData {
+					if v != ycopy[i] {
+						t.Errorf("Test %d (%s%s): Failed, expected\n%v\n but received \n%v", ti+1, a.name, transInd, test.eData, ycopy)
+						break
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestCSRMul(t *testing.T) {
 	var tests = []struct {
 		atype  MatrixCreator

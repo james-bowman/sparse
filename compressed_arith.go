@@ -19,6 +19,30 @@ func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
 	blas.Dusmv(false, 1, lhs.RawMatrix(), rhs, 1, out, 1)
 }
 
+// MulVecTo performs matrix vector multiplication (dst+=A*x or dst+=A^T*x), where A is
+// the receiver, and stores the result in dst.  MulVecTo panics if ac != len(x) or
+// ar != len(dst)
+func (c *CSR) MulVecTo(dst []float64, trans bool, x []float64) {
+	ar, ac := c.Dims()
+	if trans {
+		ar, ac = ac, ar
+	}
+	if ac != len(x) { //|| ar != len(dst) {
+		panic(mat.ErrShape)
+	}
+	if ar != len(dst) {
+		panic(mat.ErrShape)
+	}
+	blas.Dusmv(trans, 1, c.RawMatrix(), x, 1, dst, 1)
+}
+
+// MulVecTo performs matrix vector multiplication (dst+=A*x or dst+=A^T*x), where A is
+// the receiver, and stores the result in dst.  MulVecTo panics if ac != len(x) or
+// ar != len(dst)
+func (c *CSC) MulVecTo(dst []float64, trans bool, x []float64) {
+	c.T().(*CSR).MulVecTo(dst, !trans, x)
+}
+
 // temporaryWorkspace returns a new CSR matrix w with the size of r x c with
 // initial capacity allocated for nnz non-zero elements and
 // returns a callback to defer which performs cleanup at the return of the call.
