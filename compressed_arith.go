@@ -9,10 +9,7 @@ import (
 // the result in out
 func MulMatRawVec(lhs *CSR, rhs []float64, out []float64) {
 	m, n := lhs.Dims()
-	if len(rhs) != n {
-		panic(mat.ErrShape)
-	}
-	if len(out) != m {
+	if len(rhs) != n || len(out) != m {
 		panic(mat.ErrShape)
 	}
 
@@ -27,12 +24,10 @@ func (c *CSR) MulVecTo(dst []float64, trans bool, x []float64) {
 	if trans {
 		ar, ac = ac, ar
 	}
-	if ac != len(x) { //|| ar != len(dst) {
+	if ac != len(x) || ar != len(dst) {
 		panic(mat.ErrShape)
 	}
-	if ar != len(dst) {
-		panic(mat.ErrShape)
-	}
+
 	blas.Dusmv(trans, 1, c.RawMatrix(), x, 1, dst, 1)
 }
 
