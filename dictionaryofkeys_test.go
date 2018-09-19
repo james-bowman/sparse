@@ -67,6 +67,12 @@ func TestDOKConversion(t *testing.T) {
 			dok.Set(k.i, k.j, v)
 		}
 
+		dok2 := dok.ToDOK()
+		if !(mat.Equal(expected, dok2)) {
+			t.Logf("Expected:\n%v \nbut found DOK matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(dok2))
+			t.Fail()
+		}
+
 		coo := dok.ToCOO()
 		if !(mat.Equal(expected, coo)) {
 			t.Logf("Expected:\n%v \nbut found COO matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(coo))
@@ -84,8 +90,13 @@ func TestDOKConversion(t *testing.T) {
 			t.Logf("Expected:\n%v \nbut found CSC matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(csc))
 			t.Fail()
 		}
-	}
 
+		dense := dok.ToDense()
+		if !(mat.Equal(expected, dense)) {
+			t.Logf("Expected:\n%v \nbut found Dense matrix:\n%v\n", mat.Formatted(expected), mat.Formatted(dense))
+			t.Fail()
+		}
+	}
 }
 
 func TestDOKTranspose(t *testing.T) {
