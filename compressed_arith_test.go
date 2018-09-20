@@ -13,14 +13,16 @@ type MulVecToer interface {
 }
 
 func TestCompressedMulVecTo(t *testing.T) {
+	type MatrixTypes struct {
+		name   string
+		matrix MulVecToer
+	}
+
 	// A:
 	// 1, 0, 2, 0,
 	// 0, 0, 0, 0,
 	// 0, 3, 4, 5,
-	var matrixPermutationsForA = []struct {
-		name   string
-		matrix MulVecToer
-	}{
+	var matrixPermutationsForA = []MatrixTypes{
 		{
 			name: "CSR",
 			matrix: NewCSR(
@@ -37,30 +39,76 @@ func TestCompressedMulVecTo(t *testing.T) {
 				[]int{0, 2, 0, 2, 2},
 				[]float64{1, 3, 2, 4, 5}),
 		},
+		{
+			name: "COO",
+			matrix: NewCOO(
+				3, 4,
+				[]int{0, 2, 0, 2, 2},
+				[]int{0, 3, 2, 1, 2},
+				[]float64{1, 5, 2, 3, 4}),
+		},
+		{
+			name: "DOK",
+			matrix: NewCOO(
+				3, 4,
+				[]int{0, 2, 0, 2, 2},
+				[]int{0, 3, 2, 1, 2},
+				[]float64{1, 5, 2, 3, 4}).ToDOK(),
+		},
+		{
+			name: "DIA",
+			matrix: NewDIA(
+				3, 4,
+				[]float64{1, 0, 4}),
+		},
 	}
 
 	tests := []struct {
+		a      []MatrixTypes
 		x      []float64
 		y      []float64
 		er, ec int
 		eData  []float64
 	}{
 		{ // y = 1 * A * x
+			a:     matrixPermutationsForA[:4],
 			x:     []float64{1, 2, 0, 3},
 			y:     []float64{0, 0, 0},
 			eData: []float64{1, 0, 21},
 		},
 		{ // y = 1 * A * x + y
+			a:     matrixPermutationsForA[:4],
 			x:     []float64{1, 2, 0, 3},
 			y:     []float64{1, 2, 0},
 			eData: []float64{2, 2, 21},
+		},
+		{ // y = 1 * A * x
+			a:     matrixPermutationsForA[4:],
+			x:     []float64{1, 2, 0, 3},
+			y:     []float64{0, 0, 0},
+			eData: []float64{1, 0, 0},
+		},
+		{ // y = 1 * A * x + y
+			a:     matrixPermutationsForA[4:],
+			x:     []float64{1, 2, 0, 3},
+			y:     []float64{1, 2, 0},
+			eData: []float64{2, 2, 0},
+		},
+		{ // y = 1 * A * x + y
+			a:     matrixPermutationsForA[4:],
+			x:     []float64{1, 2, 3, 4},
+			y:     []float64{1, 2, 0},
+			eData: []float64{2, 2, 12},
 		},
 	}
 
 	for ti, test := range tests {
 		ycopy := make([]float64, len(test.y))
 		for _, transA := range []bool{false, true} {
-			for _, a := range matrixPermutationsForA {
+			for _, a := range test.a {
+				if _, isDok := a.matrix.(*DOK); isDok && transA {
+					continue
+				}
 				amat := a.matrix
 				var transInd string
 				if transA {

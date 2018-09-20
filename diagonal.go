@@ -135,3 +135,22 @@ func (d *DIA) ScatterCol(j int, col []float64) []float64 {
 	}
 	return col
 }
+
+// MulVecTo performs matrix vector multiplication (dst+=A*x or dst+=A^T*x), where A is
+// the receiver, and stores the result in dst.  MulVecTo panics if ac != len(x) or
+// ar != len(dst)
+func (d *DIA) MulVecTo(dst []float64, trans bool, x []float64) {
+	if !trans {
+		if d.n != len(x) || d.m != len(dst) {
+			panic(mat.ErrShape)
+		}
+	} else {
+		if d.m != len(x) || d.n != len(dst) {
+			panic(mat.ErrShape)
+		}
+	}
+
+	for i, v := range d.data {
+		dst[i] += v * x[i]
+	}
+}

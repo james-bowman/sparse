@@ -301,3 +301,10 @@ func (c *COO) ToCSCReuseMem() *CSC {
 func (c *COO) ToType(matType MatrixType) mat.Matrix {
 	return matType.Convert(c)
 }
+
+// MulVecTo performs matrix vector multiplication (dst+=A*x or dst+=A^T*x), where A is
+// the receiver, and stores the result in dst.  MulVecTo panics if ac != len(x) or
+// ar != len(dst)
+func (c *COO) MulVecTo(dst []float64, trans bool, x []float64) {
+	c.ToCSR().MulVecTo(dst, trans, x)
+}
