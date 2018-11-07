@@ -14,9 +14,6 @@ func Dusdot(x []float64, indx []int, y []float64, incy int) (dot float64) {
 // alpha and adds the result to the dense vector y.  indx is used as the index
 // values to gather and incy as the stride for y.
 func Dusaxpy(alpha float64, x []float64, indx []int, y []float64, incy int) {
-	if alpha == 0 {
-		return
-	}
 	for i, index := range indx {
 		y[index*incy] += alpha * x[i]
 	}
