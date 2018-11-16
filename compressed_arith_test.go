@@ -380,6 +380,31 @@ func TestCSRMul(t *testing.T) {
 				2, 10, 0, 28,
 			},
 		},
+		{
+			atype: CreateCSR,
+			am:    3, an: 4,
+			adata: []float64{
+				1, 3, 0, 6,
+				0, 4, 0, 0,
+				2, 5, 0, 7,
+			},
+			btype: func(m, n int, data []float64) mat.Matrix {
+				return CreateDense(m, n, data).T()
+			},
+			bm: 4, bn: 4,
+			bdata: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 0,
+				0, 0, 0, 4,
+			},
+			cm: 3, cn: 4,
+			cdata: []float64{
+				1, 6, 0, 24,
+				0, 8, 0, 0,
+				2, 10, 0, 28,
+			},
+		},
 		{ // 11
 			atype: CreateDense,
 			am:    3, an: 4,
@@ -401,6 +426,29 @@ func TestCSRMul(t *testing.T) {
 				1, 6, 0, 24,
 				0, 8, 0, 0,
 				2, 10, 0, 28,
+			},
+		},
+		{ // 11
+			atype: CreateDense,
+			am:    3, an: 4,
+			adata: []float64{
+				1, 3, 0, 6,
+				0, 4, 0, 0,
+				2, 5, 0, 7,
+			},
+			btype: CreateCSR,
+			bm:    4, bn: 5,
+			bdata: []float64{
+				1, 0, 0, 2, 1,
+				0, 2, 0, 0, 0,
+				0, 0, 3, 0, 2,
+				0, 1, 0, 4, 1,
+			},
+			cm: 3, cn: 5,
+			cdata: []float64{
+				1, 12, 0, 26, 7,
+				0, 8, 0, 0, 0,
+				2, 17, 0, 32, 9,
 			},
 		},
 		{ // 11

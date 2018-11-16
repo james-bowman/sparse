@@ -145,13 +145,13 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 	}
 	if isRSparse {
 		// handle mat.Matrix * Sparser
-		w := getWorkspace(bc, ar, bc*ar/10, true)
-		bt := srcB.ToCSC().T().(*CSR)
-		w.mulCSRMat(bt, a.T())
-		c.Clone(w.T())
-		putWorkspace(w)
+		c.mulMatCSR(a, srcB.ToCSR())
 		return
 	}
+
+	// TODO: consider applying loop interchange to use Axpy kernel and loop invariant
+	// motion to move a out of nested inner loop with a if != 0 test around inner
+	// nested loop
 
 	// handle mat.Matrix * mat.Matrix
 	row := getFloats(ac, false)
@@ -183,37 +183,77 @@ func (c *CSR) mulCSRCSR(lhs *CSR, rhs *CSR) {
 	_, bc := rhs.Dims()
 	spa := NewSPA(bc)
 
-	// rows in C
 	for i := 0; i < ar; i++ {
-		// each element t in row i of A
-		for t := lhs.matrix.Indptr[i]; t < lhs.matrix.Indptr[i+1]; t++ {
-			begin := rhs.matrix.Indptr[lhs.matrix.Ind[t]]
-			end := rhs.matrix.Indptr[lhs.matrix.Ind[t]+1]
-			spa.Scatter(rhs.matrix.Data[begin:end], rhs.matrix.Ind[begin:end], lhs.matrix.Data[t], &c.matrix.Ind)
+		for k := lhs.matrix.Indptr[i]; k < lhs.matrix.Indptr[i+1]; k++ {
+			begin := rhs.matrix.Indptr[lhs.matrix.Ind[k]]
+			end := rhs.matrix.Indptr[lhs.matrix.Ind[k]+1]
+			spa.Scatter(rhs.matrix.Data[begin:end], rhs.matrix.Ind[begin:end], lhs.matrix.Data[k], &c.matrix.Ind)
 		}
 		spa.GatherAndZero(&c.matrix.Data, &c.matrix.Ind)
 		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 	}
 }
 
-// mulCSRMat handles CSR = CSR * mat.Matrix
+// mulCSRMat handles CSR = CSR * mat.Matrix IJK
 func (c *CSR) mulCSRMat(lhs *CSR, b mat.Matrix) {
 	ar, _ := lhs.Dims()
 	_, bc := b.Dims()
+	var start, end int
 
+	if bd, isDense := b.(mat.RawMatrixer); isDense {
+		braw := bd.RawMatrix()
+		// handle case where matrix A is CSR and matrix B is mat.Dense
+		for i := 0; i < ar; i++ {
+			start, end = lhs.matrix.Indptr[i], lhs.matrix.Indptr[i+1]
+			for j := 0; j < bc; j++ {
+				// Dot kernel
+				c.matrix.Ind = append(c.matrix.Ind, j)
+				c.matrix.Data = append(c.matrix.Data, blas.Dusdot(lhs.matrix.Data[start:end], lhs.matrix.Ind[start:end], braw.Data[j:], braw.Stride))
+			}
+			c.matrix.Indptr[i+1] = len(c.matrix.Ind)
+		}
+		return
+	}
+
+	var ind []int
+	var data []float64
+	var v float64
 	// handle case where matrix A is CSR (matrix B can be any implementation of mat.Matrix)
 	for i := 0; i < ar; i++ {
+		start, end = lhs.matrix.Indptr[i], lhs.matrix.Indptr[i+1]
+		ind, data = lhs.matrix.Ind[start:end], lhs.matrix.Data[start:end]
 		for j := 0; j < bc; j++ {
-			var v float64
-			// TODO Consider converting all Sparser args to CSR
-			for k := lhs.matrix.Indptr[i]; k < lhs.matrix.Indptr[i+1]; k++ {
-				v += lhs.matrix.Data[k] * b.At(lhs.matrix.Ind[k], j)
+			v = 0
+			// Dot kernel
+			for k, idx := range ind {
+				v += data[k] * b.At(idx, j)
 			}
-			if v != 0 {
+			if v != 0.0 {
 				c.matrix.Ind = append(c.matrix.Ind, j)
 				c.matrix.Data = append(c.matrix.Data, v)
 			}
 		}
+		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
+	}
+}
+
+// mulMatCSR handles CSR = mat.Matrix * CSR
+func (c *CSR) mulMatCSR(a mat.Matrix, rhs *CSR) {
+	ar, ac := a.Dims()
+	_, bc := rhs.Dims()
+
+	spa := NewSPA(bc)
+
+	for i := 0; i < ar; i++ {
+		for k := 0; k < ac; k++ {
+			// Axpy kernel using SPA
+			s := a.At(i, k)
+			if s != 0.0 {
+				start, end := rhs.matrix.Indptr[k], rhs.matrix.Indptr[k+1]
+				spa.Scatter(rhs.matrix.Data[start:end], rhs.matrix.Ind[start:end], s, &c.matrix.Ind)
+			}
+		}
+		spa.GatherAndZero(&c.matrix.Data, &c.matrix.Ind)
 		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 	}
 }
@@ -472,7 +512,6 @@ func (s *SPA) AccumulateDense(x []float64, alpha float64, ind *[]int) {
 func (s SPA) Gather(data *[]float64, ind *[]int) {
 	for _, index := range (*ind)[s.nnz:] {
 		*data = append(*data, s.y[index])
-		//y[index] = 0
 	}
 }
 
