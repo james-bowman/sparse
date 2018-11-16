@@ -41,7 +41,6 @@ func (m *SparseMatrix) Set(i, j int, v float64) {
 		return
 	}
 
-	// TODO switch to binary search
 	for k := m.Indptr[i]; k < m.Indptr[i+1]; k++ {
 		if m.Ind[k] == j {
 			// if element(i, j) is already a non-zero value then simply update the existing
