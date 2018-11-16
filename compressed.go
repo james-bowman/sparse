@@ -231,8 +231,8 @@ func (c *CSR) RowView(i int) mat.Vector {
 	}
 	return NewVector(
 		c.matrix.J,
-		c.matrix.Ind[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
-		c.matrix.Data[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]],
+		c.matrix.Ind[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]:c.matrix.Indptr[i+1]],
+		c.matrix.Data[c.matrix.Indptr[i]:c.matrix.Indptr[i+1]:c.matrix.Indptr[i+1]],
 	)
 }
 
@@ -498,8 +498,8 @@ func (c *CSC) ColView(j int) mat.Vector {
 	}
 	return NewVector(
 		c.matrix.J,
-		c.matrix.Ind[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]],
-		c.matrix.Data[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]],
+		c.matrix.Ind[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]:c.matrix.Indptr[j+1]],
+		c.matrix.Data[c.matrix.Indptr[j]:c.matrix.Indptr[j+1]:c.matrix.Indptr[j+1]],
 	)
 }
 
