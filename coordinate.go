@@ -306,5 +306,20 @@ func (c *COO) ToType(matType MatrixType) mat.Matrix {
 // the receiver, and stores the result in dst.  MulVecTo panics if ac != len(x) or
 // ar != len(dst)
 func (c *COO) MulVecTo(dst []float64, trans bool, x []float64) {
-	c.ToCSR().MulVecTo(dst, trans, x)
+	if trans {
+		if c.c != len(dst) || c.r != len(x) {
+			panic(mat.ErrShape)
+		}
+		for i, v := range c.data {
+			dst[c.cols[i]] += v * x[c.rows[i]]
+		}
+		return
+	}
+
+	if c.c != len(x) || c.r != len(dst) {
+		panic(mat.ErrShape)
+	}
+	for i, v := range c.data {
+		dst[c.rows[i]] += v * x[c.cols[i]]
+	}
 }
