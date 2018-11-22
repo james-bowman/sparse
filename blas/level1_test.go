@@ -20,6 +20,13 @@ func TestDusdot(t *testing.T) {
 			expected: 26,
 		},
 		{
+			x:        []float64{1, 3, 4, 5},
+			indx:     []int{0, 2, 3, 4},
+			y:        []float64{1, 2, 3, 4, 5},
+			incy:     1,
+			expected: 51,
+		},
+		{
 			x:    []float64{1, 3, 4},
 			indx: []int{0, 2, 3},
 			y: []float64{
