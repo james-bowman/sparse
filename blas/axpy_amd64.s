@@ -6,11 +6,9 @@
 TEXT ·Dusaxpy(SB), NOSPLIT, $0
     MOVSD   alpha+0(FP), X0
     MOVQ    x+8(FP), SI
-    MOVQ    x+16(FP), BX
     MOVQ    indx+32(FP), R8
     MOVQ    indx+40(FP), AX
     MOVQ    y+56(FP), CX
-    MOVQ    y+64(FP), DX
     MOVQ    incy+80(FP), DI
 
     SHUFPD  $0, X0, X0
