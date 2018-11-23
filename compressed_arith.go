@@ -155,7 +155,6 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 
 	// handle mat.Matrix * mat.Matrix
 	row := getFloats(ac, false)
-	defer putFloats(row)
 	var v float64
 	for i := 0; i < ar; i++ {
 		for ci := range row {
@@ -175,6 +174,7 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		}
 		c.matrix.Indptr[i+1] = len(c.matrix.Ind)
 	}
+	putFloats(row)
 }
 
 // mulCSRCSR handles CSR = CSR * CSR using Gustavson Algorithm (ACM 1978)
