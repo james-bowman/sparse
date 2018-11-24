@@ -22,17 +22,18 @@ loop:
     MOVUPD  (R8)(R9*8), X1      // X1 := x[i : i+1]
     
     MOVQ    (SI)(R9*8), R10     // R10 := indx[i]
-    IMULQ   CX, R10             // R10 *= incy
-    INCQ    R9                  // i++
-    MOVLPD  (DX)(R10*8), X2     // X2l = y[R10]
+    MOVQ    8(SI)(R9*8), R11    // R11 := indx[i+1]
 
-    MOVQ    (SI)(R9*8), R10     // R10 := indx[i]
     IMULQ   CX, R10             // R10 *= incy
-    INCQ    R9                  // i++
-    MOVHPD  (DX)(R10*8), X2     // X2h = y[R10]
+    IMULQ   CX, R11             // R11 *= incy
+
+    MOVLPD  (DX)(R10*8), X2     // X2l = y[R10]
+    MOVHPD  (DX)(R11*8), X2     // X2h = y[R11]
 
     MULPD   X2, X1              
     ADDPD   X1, X0              // X0 += X1 * X2
+
+    ADDQ    $2, R9              // i += 2
 
     JMP     loop
 
