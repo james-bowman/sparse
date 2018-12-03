@@ -23,12 +23,12 @@ loop:
     JGE     tailstart
 
     MOVUPD  (SI)(R9*8), X2      // X2 := x[i : i+1]
-    MOVUPD  16(SI)(R9*8), X3    // X3 := x[i+2 : i+4]
+    MOVUPD  16(SI)(R9*8), X3    // X3 := x[i+2 : i+3]
 
     MOVQ    (R8)(R9*8), R10     // R10 := indx[i]
     MOVQ    8(R8)(R9*8), R11    // R11 := indx[i+1]
     MOVQ    16(R8)(R9*8), R12   // R12 := indx[i+2]
-    MOVQ    24(R8)(R9*8), R13   // R13 := indx[i+2]
+    MOVQ    24(R8)(R9*8), R13   // R13 := indx[i+3]
  
     IMULQ   DI, R10             // R10 *= incy
     IMULQ   DI, R11             // R11 *= incy
@@ -41,7 +41,7 @@ loop:
     MOVHPD  (CX)(R13*8), X5     // X5h = y[R13]
 
     MULPD   X0, X2              // X2 := alpha * x[i : i+1]
-    MULPD   X1, X3 
+    MULPD   X1, X3              // X3 := alpha * x[i+2 : i+3]
 
     ADDPD   X4, X2
     ADDPD   X5, X3
