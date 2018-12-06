@@ -4,4 +4,13 @@
 [![Sourcegraph](https://sourcegraph.com/github.com/james-bowman/sparse/blas/-/badge.svg)](https://sourcegraph.com/github.com/james-bowman/sparse/blas?badge)
 
 Implementation of sparse BLAS (Basic Linear Algebra Subprograms) routines in Go for 
-sparse matrix arithmetic.  See http://www.netlib.org/blas/blast-forum/chapter3.pdf for more details.
+sparse matrix arithmetic.  See http://www.netlib.org/blas/blast-forum/chapter3.pdf for more details.  Includes AMD64 optimised assembler implementations of key kernel operations (vector dot product and Axpy operations).
+
+## Indicative Benchmarks
+
+| Operation                        |  Pure Go     |  AMD64 ASM   |
+| -------------------------------- | ------------ | ------------ |
+| Dusdot (with increment/stride)   |  1567 ns/op  |  1119 ns/op  |
+| Dusdot (unitary)                 |  1330 ns/op  |   717 ns/op  |
+| Dusaxpy (with increment/stride)  |  1944 ns/op  |  1769 ns/op  |
+| Dusaxpy (unitary)                |  1091 ns/op  |   979 ns/op  |
