@@ -11,24 +11,27 @@ TEXT ·Dusaxpy(SB), NOSPLIT, $0
     MOVQ    y+56(FP), CX
     MOVQ    incy+80(FP), DI
 
+    SUBQ    $4, AX              // len(indx)-4
+
     SHUFPD  $0, X0, X0
     MOVUPD  X0, X1              // copy alpha for better pipelining
 
     XORL    R9, R9
+ 
+    LEAQ    (SI)(AX*8), R15     // R14 = &indx[len(indx)-4]
+    LEAQ    (R8)(AX*8), R14     // R15 = &indx[len(indx)-4]
 
-    SUBQ    $3, AX              // for ;len(indx) - 3;  // x4 loop unrolling
+    SUBQ    AX, R9
+    JG      tailstart
 
 loop:
-    CMPQ    R9, AX
-    JGE     tailstart
+    MOVUPD  (R15)(R9*8), X2      // X2 := x[i : i+1]
+    MOVUPD  16(R15)(R9*8), X3    // X3 := x[i+2 : i+3]
 
-    MOVUPD  (SI)(R9*8), X2      // X2 := x[i : i+1]
-    MOVUPD  16(SI)(R9*8), X3    // X3 := x[i+2 : i+3]
-
-    MOVQ    (R8)(R9*8), R10     // R10 := indx[i]
-    MOVQ    8(R8)(R9*8), R11    // R11 := indx[i+1]
-    MOVQ    16(R8)(R9*8), R12   // R12 := indx[i+2]
-    MOVQ    24(R8)(R9*8), R13   // R13 := indx[i+3]
+    MOVQ    (R14)(R9*8), R10     // R10 := indx[i]
+    MOVQ    8(R14)(R9*8), R11    // R11 := indx[i+1]
+    MOVQ    16(R14)(R9*8), R12   // R12 := indx[i+2]
+    MOVQ    24(R14)(R9*8), R13   // R13 := indx[i+3]
  
     IMULQ   DI, R10             // R10 *= incy
     IMULQ   DI, R11             // R11 *= incy
@@ -46,35 +49,31 @@ loop:
     ADDPD   X4, X2
     ADDPD   X5, X3
 
-    MOVLPD   X2, (CX)(R10*8)
-    MOVHPD   X2, (CX)(R11*8)
-    MOVLPD   X3, (CX)(R12*8)
-    MOVHPD   X3, (CX)(R13*8)
+    MOVLPD  X2, (CX)(R10*8)
+    MOVHPD  X2, (CX)(R11*8)
+    MOVLPD  X3, (CX)(R12*8)
+    MOVHPD  X3, (CX)(R13*8)
 
-    ADDQ    $4, R9              // i += 2
-
-    JMP     loop
+    ADDQ    $4, R9              // i += 4
+    JLE     loop
 
 tailstart:
-    ADDQ    $3, AX
+    SUBQ    $4, R9
+    JNS     end
 
 tail:
-    CMPQ    R9, AX
-    JGE     end
-
     // y[indx[i]*incy] += alpha * x[i] for remaining elements of x
-    MOVSD   (SI)(R9*8), X2      // X1 := x[i : i+1]
+    MOVSD   32(R15)(R9*8), X2      // X1 := x[i : i+1]
 
-    MOVQ    (R8)(R9*8), R10     // R10 := indx[i]
+    MOVQ    32(R14)(R9*8), R10     // R10 := indx[i]
     IMULQ   DI, R10             // R10 *= incy
 
     MULSD   X0, X2
     ADDSD   (CX)(R10*8), X2
     MOVSD   X2, (CX)(R10*8)
 
-    INCQ    R9
-
-    JMP     tail
+    ADDQ    $1, R9  
+    JS      tail
 
 end:
     RET

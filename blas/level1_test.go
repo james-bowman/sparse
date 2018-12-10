@@ -12,21 +12,42 @@ func TestDusdot(t *testing.T) {
 		incy     int
 		expected float64
 	}{
-		{
+		{ // 1
 			x:        []float64{1, 3, 4},
 			indx:     []int{0, 2, 3},
 			y:        []float64{1, 2, 3, 4},
 			incy:     1,
 			expected: 26,
 		},
-		{
+		{ // 2
 			x:        []float64{1, 3, 4, 5},
 			indx:     []int{0, 2, 3, 4},
 			y:        []float64{1, 2, 3, 4, 5},
 			incy:     1,
 			expected: 51,
 		},
-		{
+		{ // 3
+			x:        []float64{1, 3, 4, 5, 6},
+			indx:     []int{0, 2, 3, 4, 5},
+			y:        []float64{1, 2, 3, 4, 5, 6},
+			incy:     1,
+			expected: 87,
+		},
+		{ // 4
+			x:        []float64{1, 3, 4, 5, 6, 7, 8, 9},
+			indx:     []int{0, 2, 3, 4, 5, 6, 7, 8, 9},
+			y:        []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			incy:     1,
+			expected: 281,
+		},
+		{ // 5
+			x:        []float64{1, 3, 4, 5},
+			indx:     []int{0, 2, 3, 4},
+			y:        []float64{1, 2, 3, 4, 5},
+			incy:     1,
+			expected: 51,
+		},
+		{ // 6
 			x:    []float64{1, 3, 4},
 			indx: []int{0, 2, 3},
 			y: []float64{
@@ -37,6 +58,48 @@ func TestDusdot(t *testing.T) {
 			},
 			incy:     4,
 			expected: 26,
+		},
+		{ // 7
+			x:    []float64{1, 3, 4, 5, 6},
+			indx: []int{0, 2, 3, 4, 5},
+			y: []float64{
+				1, 5, 5, 5,
+				2, 5, 5, 5,
+				3, 5, 5, 5,
+				4, 5, 5, 5,
+				5, 5, 5, 5,
+				6, 5, 5, 5,
+			},
+			incy:     4,
+			expected: 87,
+		},
+		{ // 8
+			x:        []float64{},
+			indx:     []int{},
+			y:        []float64{1, 2, 3, 4},
+			incy:     1,
+			expected: 0,
+		},
+		{ // 9
+			x:        []float64{2},
+			indx:     []int{2},
+			y:        []float64{1, 2, 3, 4},
+			incy:     1,
+			expected: 6,
+		},
+		{ // 10
+			x:        []float64{1, 2},
+			indx:     []int{0, 2},
+			y:        []float64{1, 2, 3, 4},
+			incy:     1,
+			expected: 7,
+		},
+		{ // 11
+			x:        []float64{3, 4, 5},
+			indx:     []int{0, 1, 3},
+			y:        []float64{1, 2, 3, 4},
+			incy:     1,
+			expected: 31,
 		},
 	}
 

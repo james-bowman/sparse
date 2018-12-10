@@ -10,7 +10,7 @@ sparse matrix arithmetic.  See http://www.netlib.org/blas/blast-forum/chapter3.p
 
 | Operation                        |  Pure Go     |   Assembler  |
 | -------------------------------- | ------------ | ------------ |
-| Dusdot (with increment/stride)   |  1567 ns/op  |  1119 ns/op  |
-| Dusdot (unitary)                 |  1330 ns/op  |   717 ns/op  |
+| Dusdot (with increment/stride)   |  1340 ns/op  |   978 ns/op  |
+| Dusdot (unitary)                 |  1215 ns/op  |   662 ns/op  |
 | Dusaxpy (with increment/stride)  |  1944 ns/op  |  1769 ns/op  |
 | Dusaxpy (unitary)                |  1091 ns/op  |   979 ns/op  |

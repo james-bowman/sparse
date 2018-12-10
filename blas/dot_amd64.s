@@ -14,19 +14,22 @@ TEXT ·Dusdot(SB), NOSPLIT, $0
     XORPS   X0, X0              // sum = 0.0
     XORPS   X1, X1              // sum2 = 0.0
 
-    SUBQ    $3, AX              // len(indx)--
+    SUBQ    $4, AX              // len(indx)-4
+ 
+    LEAQ    (SI)(AX*8), R14     // R14 = &indx[len(indx)-4]
+    LEAQ    (R8)(AX*8), R15     // R15 = &indx[len(indx)-4]
+
+    SUBQ    AX, R9
+    JG      tailstart
 
 loop:
-    CMPQ    R9, AX              // for ;i < len(indx);
-    JGE     tailstart
-
-    MOVUPD  (R8)(R9*8), X2      // X1 := x[i : i+1]
-    MOVUPD  16(R8)(R9*8), X3    // X1 := x[i+2 : i+3]
+    MOVUPD  (R15)(R9*8), X2      // X1 := x[i : i+1]
+    MOVUPD  16(R15)(R9*8), X3    // X1 := x[i+2 : i+3]
     
-    MOVQ    (SI)(R9*8), R10     // R10 := indx[i]
-    MOVQ    8(SI)(R9*8), R11    // R11 := indx[i+1]
-    MOVQ    16(SI)(R9*8), R12   // R12 := indx[i+2]
-    MOVQ    24(SI)(R9*8), R13   // R13 := indx[i+3]
+    MOVQ    (R14)(R9*8), R10     // R10 := indx[i]
+    MOVQ    8(R14)(R9*8), R11    // R11 := indx[i+1]
+    MOVQ    16(R14)(R9*8), R12   // R12 := indx[i+2]
+    MOVQ    24(R14)(R9*8), R13   // R13 := indx[i+3]
 
     IMULQ   CX, R10             // R10 *= incy
     IMULQ   CX, R11             // R11 *= incy
@@ -45,27 +48,23 @@ loop:
     ADDPD   X3, X1              // X1 += X5 * X3
 
     ADDQ    $4, R9              // i += 4
-
-    JMP     loop
+    JLE     loop
 
 tailstart:
-    ADDQ    $3, AX
+    SUBQ    $4, R9
+    JNS     end
 
 tail:
-    CMPQ    R9, AX
-    JGE     end
-
     // Sum product of last elements if odd number of elements
-    MOVSD   (R8)(R9*8), X2      // X1 := x[i]
+    MOVSD   32(R15)(R9*8), X2      // X1 := x[i]
 
-    MOVQ    (SI)(R9*8), R10
+    MOVQ    32(R14)(R9*8), R10
     IMULQ   CX, R10
     MULSD   (DX)(R10*8), X2
     ADDSD   X2, X0
 
-    INCQ    R9
-
-    JMP     tail
+    ADDQ    $1, R9  
+    JS      tail
 
 end:
     // Add the two sums together.
