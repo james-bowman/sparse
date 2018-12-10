@@ -99,7 +99,7 @@ Their Applications, 41–52, New York: Plenum Press, 1972.
 * F.G. Gustavson. Efficient algorithm to perform sparse matrix
 multiplication. IBM Technical Disclosure Bulletin, 20:1262–1264, 1977.
 * [Wikipedia. Sparse Matrix](https://en.wikipedia.org/wiki/Sparse_matrix)
-* [A. Fog, “2. Optimizing subroutines in assembly language An optimization guide for x86 platforms,” 1996.](https://www.agner.org/optimize/optimizing_assembly.pdf)
+* [A. Fog. 2. Optimizing subroutines in assembly language An optimization guide for x86 platforms, 1996.](https://www.agner.org/optimize/optimizing_assembly.pdf)
 
 ## See Also
 
