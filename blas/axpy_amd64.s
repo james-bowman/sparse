@@ -25,14 +25,14 @@ TEXT ·Dusaxpy(SB), NOSPLIT, $0
     JG      tailstart
 
 loop:
-    MOVUPD  (R15)(R9*8), X2      // X2 := x[i : i+1]
-    MOVUPD  16(R15)(R9*8), X3    // X3 := x[i+2 : i+3]
+    MOVUPD  (R15)(R9*8), X2     // X2 := x[i : i+1]
+    MOVUPD  16(R15)(R9*8), X3   // X3 := x[i+2 : i+3]
 
-    MOVQ    (R14)(R9*8), R10     // R10 := indx[i]
-    MOVQ    8(R14)(R9*8), R11    // R11 := indx[i+1]
-    MOVQ    16(R14)(R9*8), R12   // R12 := indx[i+2]
-    MOVQ    24(R14)(R9*8), R13   // R13 := indx[i+3]
- 
+    MOVQ    (R14)(R9*8), R10    // R10 := indx[i]
+    MOVQ    8(R14)(R9*8), R11   // R11 := indx[i+1]
+    MOVQ    16(R14)(R9*8), R12  // R12 := indx[i+2]
+    MOVQ    24(R14)(R9*8), R13  // R13 := indx[i+3]
+
     IMULQ   DI, R10             // R10 *= incy
     IMULQ   DI, R11             // R11 *= incy
     IMULQ   DI, R12             // R12 *= incy
@@ -48,7 +48,7 @@ loop:
 
     ADDPD   X4, X2
     ADDPD   X5, X3
-
+    
     MOVLPD  X2, (CX)(R10*8)
     MOVHPD  X2, (CX)(R11*8)
     MOVLPD  X3, (CX)(R12*8)
@@ -63,9 +63,9 @@ tailstart:
 
 tail:
     // y[indx[i]*incy] += alpha * x[i] for remaining elements of x
-    MOVSD   32(R15)(R9*8), X2      // X1 := x[i : i+1]
+    MOVSD   32(R15)(R9*8), X2   // X1 := x[i : i+1]
 
-    MOVQ    32(R14)(R9*8), R10     // R10 := indx[i]
+    MOVQ    32(R14)(R9*8), R10  // R10 := indx[i]
     IMULQ   DI, R10             // R10 *= incy
 
     MULSD   X0, X2
