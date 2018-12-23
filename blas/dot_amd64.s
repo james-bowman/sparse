@@ -25,7 +25,11 @@ TEXT ·Dusdot(SB), NOSPLIT, $0
 loop:
     MOVUPD  (R15)(R9*8), X2     // X1 := x[i : i+1]
     MOVUPD  16(R15)(R9*8), X3   // X1 := x[i+2 : i+3]
-   
+
+    // For larger lengths of x and indx, this ordering of the unwound
+    // operations is actually more performant than typical
+    // ordering e.g. all the MOVQ ops, followed by all the IMULQ, ... 
+
     MOVQ    (R14)(R9*8), R10    // R10 := indx[i]
     IMULQ   CX, R10             // R10 *= incy
     MOVLPD  (DX)(R10*8), X4     // X4l = y[R10]
@@ -56,28 +60,23 @@ tailstart:
     JNS     end
 
 tail:
-    // Sum product of last elements if odd number of elements
-    MOVSD   32(R15)(R9*8), X2   // X1 := x[i]
-
-    MOVQ    32(R14)(R9*8), R10
-    IMULQ   CX, R10
-    MULSD   (DX)(R10*8), X2
-    ADDSD   X2, X0
+    // Sum product of last elements if number of elements is not divisible
+    // by 4
+    MOVSD   32(R15)(R9*8), X2   // X2 = x[i]
+    MOVQ    32(R14)(R9*8), R10  // R10 = indx[i]
+    IMULQ   CX, R10             // R10 *= incy
+    MULSD   (DX)(R10*8), X2     // X2 = x[i] * y[indx[i]*incy]
+    ADDSD   X2, X0              // sum += X2
 
     ADDQ    $1, R9  
     JS      tail
 
 end:
-    // Add the two sums together.
+    // Add the two accumulators together.
+    ADDPD   X1, X0
     MOVSD   X0, X7
     UNPCKHPD X0, X0
     ADDSD   X7, X0
 
-    MOVSD   X1, X7
-    UNPCKHPD X1, X1
-    ADDSD   X7, X0
-    ADDSD   X1, X0
-
     MOVSD   X0, dot+80(FP)      // Return final sum.
     RET
- 
