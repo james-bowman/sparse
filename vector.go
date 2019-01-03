@@ -280,7 +280,7 @@ func (v *Vector) AddScaledVec(a mat.Vector, alpha float64, b mat.Vector) {
 // See Normer interface for more details.
 func (v *Vector) Norm(L float64) float64 {
 	if L == 2 {
-		return math.Sqrt(Dot(v, v))
+		return math.Sqrt(floats.Dot(v.data, v.data))
 	}
 	return floats.Norm(v.data, L)
 }
