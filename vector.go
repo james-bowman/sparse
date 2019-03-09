@@ -91,6 +91,12 @@ func (v *Vector) DoNonZero(fn func(i int, j int, v float64)) {
 	}
 }
 
+// RawVector returns the underlying sparse vector data and indices
+// respectively for raw manipulation or use in sparse BLAS routines.
+func (v *Vector) RawVector() ([]float64, []int) {
+	return v.data, v.ind
+}
+
 // Gather gathers the entries from the supplied mat.VecDense structure
 // that have corresponding non-zero entries in the receiver into the
 // receiver.  The method will panic if denseVector is not the same
