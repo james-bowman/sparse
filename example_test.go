@@ -85,7 +85,7 @@ func ExampleLU() {
 	var lu mat.LU
 	lu.Factorize(A)
 
-	err := lu.Solve(d, false, f)
+	err := lu.SolveTo(d, false, f)
 	if err != nil {
 		fmt.Printf("err = %v", err)
 		return
