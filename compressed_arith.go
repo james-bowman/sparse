@@ -108,8 +108,12 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		c.mulCSRCSR(lhs, rhs)
 		return
 	}
-
 	if dia, ok := a.(*DIA); ok {
+		if diaB, okB := b.(*DIA); okB {
+			// handle DIA * DIA
+			c.mulDIADIA(dia, diaB)
+			return
+		}
 		if isRCsr {
 			// handle DIA * CSR
 			c.mulDIACSR(dia, rhs, false)
@@ -129,7 +133,6 @@ func (c *CSR) Mul(a, b mat.Matrix) {
 		c.mulDIAMat(dia, a, true)
 		return
 	}
-	// TODO: handle cases where both matrices are DIA
 
 	srcA, isLSparse := a.(TypeConverter)
 	srcB, isRSparse := b.(TypeConverter)
@@ -328,6 +331,47 @@ func (c *CSR) mulDIAMat(dia *DIA, other mat.Matrix, trans bool) {
 	}
 }
 
+// mulDIADIA multiplies two diagonal matrices
+func (c *CSR) mulDIADIA(a, b *DIA) {
+	_, ac := a.Dims()
+	br, _ := b.Dims()
+	aDiagonal := a.Diagonal()
+	bDiagonal := a.Diagonal()
+	if ac != br {
+		panic(mat.ErrShape)
+	}
+	for i := 0; i < br; i++ {
+		var v float64
+		v = aDiagonal[i] * bDiagonal[i]
+		if v != 0 {
+			c.matrix.Ind = append(c.matrix.Ind, i)
+			c.matrix.Data = append(c.matrix.Data, v)
+		}
+		c.matrix.Indptr[i+1] = i + 1
+	}
+}
+
+// addDIADIA add two diagonal matrices
+func (c *CSR) addDIADIA(a, b *DIA, alpha, beta float64) {
+	ar, ac := a.Dims()
+	br, bc := b.Dims()
+	aDiagonal := a.Diagonal()
+	bDiagonal := a.Diagonal()
+	if ac != bc {
+		panic(mat.ErrShape)
+	}
+	if ar != br {
+		panic(mat.ErrShape)
+	}
+	for i := 0; i < br; i++ {
+		var v float64
+		v = aDiagonal[i]*alpha + bDiagonal[i]*beta
+		c.matrix.Ind = append(c.matrix.Ind, i)
+		c.matrix.Data = append(c.matrix.Data, v)
+		c.matrix.Indptr[i+1] = i + 1
+	}
+}
+
 // Sub subtracts matrix b from a and stores the result in the receiver.
 // If matrices a and b are not the same shape then the method will panic.
 func (c *CSR) Sub(a, b mat.Matrix) {
@@ -354,9 +398,17 @@ func (c *CSR) addScaled(a mat.Matrix, b mat.Matrix, alpha float64, beta float64)
 		c = m
 	}
 
+	// special case both diagonal
+	lDIA, lIsDIA := a.(*DIA)
+	rDIA, rIsDIA := b.(*DIA)
+	if lIsDIA && rIsDIA {
+		c.addDIADIA(lDIA, rDIA, alpha, beta)
+		return
+	}
+
+	// and then one or both csr
 	lCsr, lIsCsr := a.(*CSR)
 	rCsr, rIsCsr := b.(*CSR)
-	// TODO optimisation for DIA matrices
 	if lIsCsr && rIsCsr {
 		c.addCSRCSR(lCsr, rCsr, alpha, beta)
 		return
