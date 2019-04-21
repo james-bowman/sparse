@@ -1,6 +1,7 @@
 package sparse
 
 import (
+	"gonum.org/v1/gonum/floats"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -153,4 +154,9 @@ func (d *DIA) MulVecTo(dst []float64, trans bool, x []float64) {
 	for i, v := range d.data {
 		dst[i] += v * x[i]
 	}
+}
+
+// Trace returns the trace.
+func (d *DIA) Trace() float64 {
+	return floats.Sum(d.data)
 }

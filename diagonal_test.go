@@ -3,6 +3,7 @@ package sparse
 import (
 	"testing"
 
+	"gonum.org/v1/gonum/floats"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -128,5 +129,29 @@ func TestDIADoNonZero(t *testing.T) {
 			t.Logf("Expected %d Non Zero elements but found %d", nnz, matrix.NNZ())
 			t.Fail()
 		}
+	}
+}
+
+func TestDIATrace(t *testing.T) {
+	var tests = []struct {
+		s int
+	}{
+		{s: 8},
+		{s: 32},
+		{s: 100},
+		{s: 123},
+	}
+	for _, test := range tests {
+		dia := RandomDIA(test.s, test.s)
+		tr := mat.Trace(dia)
+		var checkTr float64
+		for i := 0; i < test.s; i++ {
+			checkTr += dia.At(i, i)
+		}
+		if !floats.EqualWithinAbs(tr, checkTr, 1e-13) {
+			t.Logf("trace mismatch: %f vs %f", tr, checkTr)
+			t.Fail()
+		}
+
 	}
 }
