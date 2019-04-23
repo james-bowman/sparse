@@ -446,3 +446,32 @@ func BenchmarkNorm(b *testing.B) {
 	}
 	_ = v
 }
+
+var traceResult float64
+
+func BenchmarkTraceCS(b *testing.B) {
+	formats := []MatrixType{CSRFormat, CSCFormat}
+	for s := 100; s <= 1600; s *= 2 {
+		for _, density := range densities {
+			for _, format := range formats {
+				a := Random(format, s, s, density)
+				b.Run(fmt.Sprintf("BenchTraceCS%d/%f-%d", format, density, s), func(b *testing.B) {
+					for n := 0; n < b.N; n++ {
+						traceResult = mat.Trace(a)
+					}
+				})
+			}
+		}
+	}
+}
+
+func BenchmarkTraceDIA(b *testing.B) {
+	for s := 100; s <= 1600; s *= 2 {
+		a := RandomDIA(s, s)
+		b.Run(fmt.Sprintf("BenchTraceDIA-%d", s), func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				traceResult = mat.Trace(a)
+			}
+		})
+	}
+}

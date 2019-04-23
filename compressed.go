@@ -96,6 +96,21 @@ func (c *CSR) NNZ() int {
 	return len(c.matrix.Data)
 }
 
+// Trace returns the trace.
+func (c *CSR) Trace() float64 {
+	var trace float64
+	nrows := len(c.matrix.Indptr) - 1
+	for i := 0; i < nrows; i++ {
+		for j := c.matrix.Indptr[i]; j < c.matrix.Indptr[i+1]; j++ {
+			if c.matrix.Ind[j] == i {
+				trace += c.matrix.Data[j]
+				break
+			}
+		}
+	}
+	return trace
+}
+
 // RawMatrix returns a pointer to the underlying blas sparse matrix.
 func (c *CSR) RawMatrix() *blas.SparseMatrix {
 	return &c.matrix
@@ -423,6 +438,21 @@ func (c *CSC) NNZ() int {
 	return len(c.matrix.Data)
 }
 
+// Trace returns the trace.
+func (c *CSC) Trace() float64 {
+	var trace float64
+	ncols := len(c.matrix.Indptr) - 1
+	for i := 0; i < ncols; i++ {
+		for j := c.matrix.Indptr[i]; j < c.matrix.Indptr[i+1]; j++ {
+			if c.matrix.Ind[j] == i {
+				trace += c.matrix.Data[j]
+				break
+			}
+		}
+	}
+	return trace
+}
+
 // RawMatrix returns a pointer to the underlying blas sparse matrix.
 func (c *CSC) RawMatrix() *blas.SparseMatrix {
 	return &c.matrix
@@ -487,6 +517,14 @@ func (c *CSC) ToCSC() *CSC {
 // ToType returns an alternative format version fo the matrix in the format specified.
 func (c *CSC) ToType(matType MatrixType) mat.Matrix {
 	return matType.Convert(c)
+}
+
+// ColNNZ returns the Number of Non Zero values in the specified col i.  ColNNZ will panic if i is out of range.
+func (c *CSC) ColNNZ(i int) int {
+	if uint(i) < 0 || uint(i) >= uint(c.matrix.I) {
+		panic(mat.ErrColAccess)
+	}
+	return c.matrix.Indptr[i+1] - c.matrix.Indptr[i]
 }
 
 // ColView slices the Compressed Sparse Column matrix along its primary axis.

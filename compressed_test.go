@@ -3,6 +3,7 @@ package sparse
 import (
 	"testing"
 
+	"gonum.org/v1/gonum/floats"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -419,5 +420,47 @@ func TestCSRCSCDoNonZero(t *testing.T) {
 				t.Fail()
 			}
 		}
+	}
+}
+
+func TestCSTrace(t *testing.T) {
+	var tests = []struct {
+		s       int
+		theType MatrixType
+		density float32
+	}{
+		{
+			s:       8,
+			theType: CSRFormat,
+			density: 0.1,
+		},
+		{
+			s:       8,
+			theType: CSCFormat,
+			density: 0.1,
+		},
+		{
+			s:       80,
+			theType: CSRFormat,
+			density: 0.75,
+		},
+		{
+			s:       80,
+			theType: CSCFormat,
+			density: 0.75,
+		},
+	}
+	for _, test := range tests {
+		m := Random(test.theType, test.s, test.s, test.density)
+		tr := mat.Trace(m)
+		var checkTr float64
+		for i := 0; i < test.s; i++ {
+			checkTr += m.At(i, i)
+		}
+		if !floats.EqualWithinAbs(tr, checkTr, 1e-13) {
+			t.Logf("trace mismatch: %f vs %f", tr, checkTr)
+			t.Fail()
+		}
+
 	}
 }
