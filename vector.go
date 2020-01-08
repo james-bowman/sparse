@@ -443,3 +443,45 @@ func (v *Vector) spalloc(a mat.Vector, b mat.Vector) (t *Vector, isTemp bool, re
 
 	return
 }
+
+// MulMatSparseVec (c = alpha * a * v + c) multiplies a dense matrix by a sparse
+// vector and stores the result in mat.VecDense.  c is a *mat.VecDense, if c is nil,
+// a new mat.VecDense of the correct size will be allocated and returned as the
+// result from the function.  a*v will be scaled by alpha.  The function will
+// panic if ac != |v| or if (C != nil and |c| != ar).
+// Note this is not a Sparse BLAS routine -- that library does not cover this
+// case.  This is a lookalike function in the Sparse BLAS style.  As a and c are
+// dense there is limited benefit to including alpha and c; this is done for
+// consistency rather than performance.
+func MulMatSparseVec(alpha float64, a mat.Matrix, v *Vector, c *mat.VecDense) *mat.VecDense {
+	rows, cols := a.Dims()
+	if cols != v.Len() {
+		panic(mat.ErrShape)
+	}
+	if c == nil {
+		c = mat.NewVecDense(rows, nil)
+	} else {
+		if c.Len() != rows {
+			panic(mat.ErrShape)
+		}
+	}
+	res := mat.NewVecDense(rows, nil)
+	// if a has RowView() we use that and sparse.Dot
+	if rv, aIsRowViewer := a.(mat.RowViewer); aIsRowViewer {
+		for row := 0; row < rows; row++ {
+			thisRow := rv.RowView(row)
+			res.SetVec(row, Dot(thisRow, v))
+		}
+	} else {
+		// otherwise can only rely on At()
+		for row := 0; row < rows; row++ {
+			thisVal := 0.0
+			for i, col := range v.ind {
+				thisVal += a.At(row, col) * v.data[i]
+			}
+			res.SetVec(row, thisVal)
+		}
+	}
+	c.AddScaledVec(c, alpha, res)
+	return c
+}

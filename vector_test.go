@@ -429,3 +429,96 @@ func TestVecToVecDense(t *testing.T) {
 		}
 	}
 }
+
+func TestMulMatSparseVec(t *testing.T) {
+	permsB := []struct {
+		name   string
+		vector Vector
+	}{
+		{
+			name:   "Sparse",
+			vector: *NewVector(4, []int{0, 1, 3}, []float64{1, 2, 3}),
+		},
+	}
+
+	tests := []struct {
+		alpha  float64
+		y      *mat.VecDense
+		er, ec int
+		eData  []float64
+	}{
+		{ // y = 0 * A * x
+			alpha: 0,
+			y:     mat.NewVecDense(3, []float64{0, 0, 0}),
+			er:    3, ec: 1,
+			eData: []float64{0, 0, 0},
+		},
+		{ // y = 1 * A * x
+			alpha: 1,
+			y:     mat.NewVecDense(3, []float64{0, 0, 0}),
+			er:    3, ec: 1,
+			eData: []float64{1, 0, 21},
+		},
+		{ // y = 2 * A * x
+			alpha: 2,
+			y:     mat.NewVecDense(3, []float64{0, 0, 0}),
+			er:    3, ec: 1,
+			eData: []float64{2, 0, 42},
+		},
+		{ // y = 1 * A * x + y
+			alpha: 1,
+			y:     mat.NewVecDense(3, []float64{1, 2, 0}),
+			er:    3, ec: 1,
+			eData: []float64{2, 2, 21},
+		},
+		{ // y = 1 * A * x + y
+			alpha: 1,
+			y:     nil,
+			er:    3, ec: 1,
+			eData: []float64{1, 0, 21},
+		},
+	}
+
+	for ti, test := range tests {
+		for _, b := range permsB {
+			for _, rawa := range matrixPermutationsForA {
+				var matPair = []struct {
+					name   string
+					matrix mat.Matrix
+				}{
+					{
+						name:   rawa.name,
+						matrix: rawa.matrix,
+					},
+					{
+						name:   "ToDense",
+						matrix: rawa.matrix.(TypeConverter).ToDense(),
+					},
+				}
+				for _, a := range matPair {
+					amat := a.matrix
+					var ycopy *mat.VecDense
+					if test.y != nil {
+						ycopy = mat.VecDenseCopyOf(test.y)
+					}
+					y := MulMatSparseVec(test.alpha, amat, &b.vector, ycopy)
+
+					yr, yc := y.Dims()
+					if yr != test.er || yc != test.ec {
+						t.Errorf("Test %d (%s x %s): Incorrect dimensions: expected %d x %d but received %d x %d", ti+1, a.name, b.name, test.er, test.ec, yr, yc)
+					}
+
+					yraw := y.RawVector()
+
+					for i, v := range test.eData {
+						if v != yraw.Data[i] {
+							e := mat.NewDense(test.er, test.ec, test.eData)
+							t.Errorf("Test %d (%s x %s): Failed, expected\n%v\n but received \n%v", ti+1, a.name, b.name, mat.Formatted(e), mat.Formatted(y))
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+}
