@@ -2,6 +2,7 @@ package sparse
 
 import (
 	"math"
+	"sort"
 
 	"github.com/gonum/floats"
 	"github.com/james-bowman/sparse/blas"
@@ -305,11 +306,7 @@ func Dot(a, b mat.Vector) float64 {
 
 	if aIsSparse {
 		if bIsSparse {
-			buf := getFloats(bs.len, true)
-			blas.Dussc(bs.data, buf, 1, bs.ind)
-			val := blas.Dusdot(as.data, as.ind, buf, 1)
-			putFloats(buf)
-			return val
+			return dotSparseSparse(as, bs)
 		}
 		if bdense, bIsDense := b.(mat.RawVectorer); bIsDense {
 			raw := bdense.RawVector()
@@ -484,4 +481,59 @@ func MulMatSparseVec(alpha float64, a mat.Matrix, v *Vector, c *mat.VecDense) *m
 	}
 	c.AddScaledVec(c, alpha, res)
 	return c
+}
+
+type indexPair struct {
+	index int
+	value float64
+}
+
+// Sort the entries in a vector.
+func (v *Vector) Sort() {
+	if v.IsSorted() {
+		return
+	}
+	pairs := make([]indexPair, len(v.ind))
+	for i, idx := range v.ind {
+		pairs[i].index = idx
+		pairs[i].value = v.data[i]
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].index < pairs[j].index
+	})
+	for i, p := range pairs {
+		v.ind[i] = p.index
+		v.data[i] = p.value
+	}
+}
+
+// IsSorted checks if the vector is stored in sorted order
+func (v *Vector) IsSorted() bool {
+	return sort.IntsAreSorted(v.ind)
+}
+
+// dotSparseSparse computes the dot product of two sparse vectors.
+// This will be called by Dot if both entered vectors are Sparse.
+func dotSparseSparse(a, b *Vector) float64 {
+	a.Sort()
+	b.Sort()
+	tot := 0.0
+	aPos := 0
+	bPos := 0
+	for aPos < len(a.ind) && bPos < len(b.ind) {
+		aIndex := a.ind[aPos]
+		bIndex := b.ind[bPos]
+		if aIndex == bIndex {
+			tot += a.data[aPos] * b.data[bPos]
+			aPos++
+			bPos++
+		} else {
+			if aIndex < bIndex {
+				aPos++
+			} else {
+				bPos++
+			}
+		}
+	}
+	return tot
 }

@@ -334,3 +334,33 @@ func MulMatMat(transA bool, alpha float64, a BlasCompatibleSparser, b mat.Matrix
 	putFloats(col)
 	return c
 }
+
+// GenericMulMatMat ...
+func GenericMulMatMat(transA bool, alpha float64, a mat.Matrix, b mat.Matrix, c mat.Matrix) mat.Matrix {
+	aBlasCompat, aIsBlasCompat := a.(BlasCompatibleSparser)
+	bSparseVec, bIsSparseVec := b.(*Vector)
+
+	if aIsBlasCompat {
+		if c == nil {
+			return MulMatMat(transA, alpha, aBlasCompat, b, nil)
+		}
+		if cDense, cIsDense := c.(*mat.Dense); cIsDense {
+			return MulMatMat(transA, alpha, aBlasCompat, b, cDense)
+		}
+		panic(mat.ErrShape)
+	}
+
+	if bIsSparseVec {
+		if transA {
+			panic(mat.ErrShape)
+		}
+		if c == nil {
+			return MulMatSparseVec(alpha, a, bSparseVec, nil)
+		}
+		if cVecDense, cIsVecDense := c.(*mat.VecDense); cIsVecDense {
+			return MulMatSparseVec(alpha, a, bSparseVec, cVecDense)
+		}
+		panic(mat.ErrShape)
+	}
+	panic(mat.ErrShape)
+}

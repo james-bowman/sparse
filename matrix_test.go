@@ -305,7 +305,6 @@ func TestMulMatMat(t *testing.T) {
 					}
 
 					craw := c.RawMatrix()
-
 					for i, v := range test.eData {
 						if v != craw.Data[i] {
 							e := mat.NewDense(test.er, test.ec, test.eData)

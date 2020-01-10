@@ -497,6 +497,7 @@ func TestMulMatSparseVec(t *testing.T) {
 				}
 				for _, a := range matPair {
 					amat := a.matrix
+					amatCopy := mat.DenseCopyOf(amat)
 					var ycopy *mat.VecDense
 					if test.y != nil {
 						ycopy = mat.VecDenseCopyOf(test.y)
@@ -516,6 +517,9 @@ func TestMulMatSparseVec(t *testing.T) {
 							t.Errorf("Test %d (%s x %s): Failed, expected\n%v\n but received \n%v", ti+1, a.name, b.name, mat.Formatted(e), mat.Formatted(y))
 							break
 						}
+					}
+					if !mat.Equal(amat, amatCopy) {
+						t.Error("somehow matrix changed")
 					}
 				}
 			}
