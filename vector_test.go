@@ -429,3 +429,193 @@ func TestVecToVecDense(t *testing.T) {
 		}
 	}
 }
+
+func TestVectorSetVec(t *testing.T) {
+	tests := []struct {
+		idx      int
+		val      float64
+		source   *Vector
+		expected *Vector
+	}{
+		{
+			idx:      0,
+			val:      0.1,
+			source:   NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+			expected: NewVector(5, []int{0, 1, 2, 4}, []float64{0.1, 1.1, 2.2, 4.4}),
+		},
+		{
+			idx:      3,
+			val:      3.3,
+			source:   NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+			expected: NewVector(5, []int{1, 2, 3, 4}, []float64{1.1, 2.2, 3.3, 4.4}),
+		},
+		{
+			idx:      4,
+			val:      4.4,
+			source:   NewVector(5, []int{1, 2, 3}, []float64{1.1, 2.2, 3.3}),
+			expected: NewVector(5, []int{1, 2, 3, 4}, []float64{1.1, 2.2, 3.3, 4.4}),
+		},
+		{
+			idx:      2,
+			val:      8.8,
+			source:   NewVector(5, []int{1, 2, 3}, []float64{1.1, 2.2, 3.3}),
+			expected: NewVector(5, []int{1, 2, 3}, []float64{1.1, 8.8, 3.3}),
+		},
+	}
+
+	for ti, test := range tests {
+		act := new(Vector)
+		act.CloneVec(test.source)
+		act.SetVec(test.idx, test.val)
+
+		if len(test.expected.ind) != len(act.ind) {
+			t.Errorf("Test %d: Incorrect count for indices, Expected %v but received %v", ti+1, len(test.expected.ind), len(act.ind))
+		} else if len(test.expected.data) != len(act.data) {
+			t.Errorf("Test %d: Incorrect count for data, Expected %v but received %v", ti+1, len(test.expected.data), len(act.data))
+		} else {
+			for i := 0; i < len(test.expected.ind); i++ {
+				if test.expected.ind[i] != act.ind[i] {
+					t.Errorf("Test %d: Mismatch indice at index %d, Expected %v but received %v", ti+1, i, test.expected.ind[i], act.ind[i])
+				}
+			}
+			for i := 0; i < len(test.expected.data); i++ {
+				if test.expected.data[i] != act.data[i] {
+					t.Errorf("Test %d: Mismatch data at index %d, Expected %v but received %v", ti+1, i, test.expected.data[i], act.data[i])
+				}
+			}
+		}
+	}
+}
+
+func TestVectorSet(t *testing.T) {
+	tests := []struct {
+		idx      int
+		val      float64
+		source   *Vector
+		expected *Vector
+	}{
+		{
+			idx:      0,
+			val:      0.1,
+			source:   NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+			expected: NewVector(5, []int{0, 1, 2, 4}, []float64{0.1, 1.1, 2.2, 4.4}),
+		},
+		{
+			idx:      3,
+			val:      3.3,
+			source:   NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+			expected: NewVector(5, []int{1, 2, 3, 4}, []float64{1.1, 2.2, 3.3, 4.4}),
+		},
+		{
+			idx:      4,
+			val:      4.4,
+			source:   NewVector(5, []int{1, 2, 3}, []float64{1.1, 2.2, 3.3}),
+			expected: NewVector(5, []int{1, 2, 3, 4}, []float64{1.1, 2.2, 3.3, 4.4}),
+		},
+		{
+			idx:      2,
+			val:      8.8,
+			source:   NewVector(5, []int{1, 2, 3}, []float64{1.1, 2.2, 3.3}),
+			expected: NewVector(5, []int{1, 2, 3}, []float64{1.1, 8.8, 3.3}),
+		},
+	}
+
+	for ti, test := range tests {
+		act := new(Vector)
+		act.CloneVec(test.source)
+		act.Set(test.idx, 0, test.val)
+
+		if len(test.expected.ind) != len(act.ind) {
+			t.Errorf("Test %d: Incorrect count for indices, Expected %v but received %v", ti+1, len(test.expected.ind), len(act.ind))
+		} else if len(test.expected.data) != len(act.data) {
+			t.Errorf("Test %d: Incorrect count for data, Expected %v but received %v", ti+1, len(test.expected.data), len(act.data))
+		} else {
+			for i := 0; i < len(test.expected.ind); i++ {
+				if test.expected.ind[i] != act.ind[i] {
+					t.Errorf("Test %d: Mismatch indice at index %d, Expected %v but received %v", ti+1, i, test.expected.ind[i], act.ind[i])
+				}
+			}
+			for i := 0; i < len(test.expected.data); i++ {
+				if test.expected.data[i] != act.data[i] {
+					t.Errorf("Test %d: Mismatch data at index %d, Expected %v but received %v", ti+1, i, test.expected.data[i], act.data[i])
+				}
+			}
+		}
+	}
+}
+
+func TestVecSetVecPanic(t *testing.T) {
+	tests := []struct {
+		idx    int
+		source *Vector
+	}{
+		{
+			idx:    -1,
+			source: NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+		},
+		{
+			idx:    5,
+			source: NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+		},
+		{
+			idx:    6,
+			source: NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+		},
+	}
+
+	for ti, test := range tests {
+		func(ti int, idx int, src *Vector) {
+			defer func() {
+				msg := recover()
+				if msg == nil {
+					t.Errorf("Test %d: method did not panic as epected", ti+1)
+				} else {
+					if msg != mat.ErrRowAccess {
+						t.Errorf("Test %d: recovered error was not mat.ErrRowAccess", ti+1)
+					}
+				}
+			}()
+
+			act := new(Vector)
+			act.CloneVec(test.source)
+			act.SetVec(idx, 1.1)
+
+		}(ti, test.idx, test.source)
+	}
+}
+
+func TestVecSetPanic(t *testing.T) {
+	tests := []struct {
+		col    int
+		source *Vector
+	}{
+		{
+			col:    -1,
+			source: NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+		},
+		{
+			col:    1,
+			source: NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+		},
+	}
+
+	for ti, test := range tests {
+		func(ti int, col int, src *Vector) {
+			defer func() {
+				msg := recover()
+				if msg == nil {
+					t.Errorf("Test %d: method did not panic as epected", ti+1)
+				} else {
+					if msg != mat.ErrColAccess {
+						t.Errorf("Test %d: recovered error was not mat.ErrColAccess", ti+1)
+					}
+				}
+			}()
+
+			act := new(Vector)
+			act.CloneVec(test.source)
+			act.Set(2, col, 1.1)
+
+		}(ti, test.col, test.source)
+	}
+}
