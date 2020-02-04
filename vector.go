@@ -89,10 +89,25 @@ func (v *Vector) AtVec(i int) float64 {
 
 // SetVec sets the i'th element to the value val. It panics if i is out of bounds.
 func (v *Vector) SetVec(i int, val float64) {
+
+	// Panic if the sought index is out of bounds
 	if i < 0 || i >= v.len {
 		panic(mat.ErrRowAccess)
 	}
+
+	// Identify where in the slice this index would exist
 	j := sort.SearchInts(v.ind, i)
+
+	// The value is zero so we are really removing it
+	if val == 0.0 {
+		if j < len(v.ind) && v.ind[j] == i {
+			v.ind = append(v.ind[:j], v.ind[j+1:]...)
+			v.data = append(v.data[:j], v.data[j+1:]...)
+		}
+		return
+	}
+
+	// Set the value
 	if j == len(v.ind) {
 		v.ind = append(v.ind, i)
 		v.data = append(v.data, val)

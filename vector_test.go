@@ -461,6 +461,24 @@ func TestVectorSetVec(t *testing.T) {
 			source:   NewVector(5, []int{1, 2, 3}, []float64{1.1, 2.2, 3.3}),
 			expected: NewVector(5, []int{1, 2, 3}, []float64{1.1, 8.8, 3.3}),
 		},
+		{
+			idx:      1,
+			val:      0.0,
+			source:   NewVector(5, []int{1, 2, 4}, []float64{1.1, 2.2, 4.4}),
+			expected: NewVector(5, []int{2, 4}, []float64{2.2, 4.4}),
+		},
+		{
+			idx:      2,
+			val:      0.0,
+			source:   NewVector(5, []int{1, 2, 3}, []float64{1.1, 2.2, 3.3}),
+			expected: NewVector(5, []int{1, 3}, []float64{1.1, 3.3}),
+		},
+		{
+			idx:      3,
+			val:      0.0,
+			source:   NewVector(5, []int{1, 2, 3}, []float64{1.1, 2.2, 3.3}),
+			expected: NewVector(5, []int{1, 2}, []float64{1.1, 2.2}),
+		},
 	}
 
 	for ti, test := range tests {
