@@ -27,18 +27,14 @@ func (m *SparseMatrix) At(i, j int) float64 {
 	return 0
 }
 
-// Set is a generic method to set a matrix element.
+// Set is a generic method to set a matrix element.  Note: setting a non-zero element to zero
+// does not remove the element from the sparcity pattern but will actually store a zero value.
 func (m *SparseMatrix) Set(i, j int, v float64) {
 	if uint(i) < 0 || uint(i) >= uint(m.I) {
 		panic("sparse/blas: index out of range")
 	}
 	if uint(j) < 0 || uint(j) >= uint(m.J) {
 		panic("sparse/blas: index out of range")
-	}
-
-	if v == 0 {
-		// don't bother storing zero values
-		return
 	}
 
 	for k := m.Indptr[i]; k < m.Indptr[i+1]; k++ {
@@ -48,6 +44,11 @@ func (m *SparseMatrix) Set(i, j int, v float64) {
 			m.Data[k] = v
 			return
 		}
+	}
+
+	if v == 0 {
+		// don't bother storing new zero values
+		return
 	}
 
 	// element(i, j) doesn't exist in current sparsity pattern and is beyond the last
