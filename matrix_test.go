@@ -294,13 +294,10 @@ func TestMulMatMat(t *testing.T) {
 						transInd = "^T"
 					}
 					var ccopy *mat.Dense
-					var cPrimecopy *mat.Dense
 					if test.c != nil {
 						ccopy = mat.DenseCopyOf(test.c)
-						cPrimecopy = mat.DenseCopyOf(test.c)
 					}
 					c := MulMatMat(transA, test.alpha, amat, b.matrix, ccopy)
-					cPrime := GenericMulMatMat(transA, test.alpha, amat, b.matrix, cPrimecopy)
 
 					cr, cc := c.Dims()
 					if cr != test.er || cc != test.ec {
@@ -313,15 +310,6 @@ func TestMulMatMat(t *testing.T) {
 							e := mat.NewDense(test.er, test.ec, test.eData)
 							t.Errorf("Test %d (%s%s x %s): Failed, expected\n%v\n but received \n%v", ti+1, a.name, transInd, b.name, mat.Formatted(e), mat.Formatted(c))
 							break
-						}
-					}
-					for row := 0; row < cr; row++ {
-						for col := 0; col < cc; col++ {
-							if cPrime.At(row, col) != c.At(row, col) {
-								e := mat.NewDense(test.er, test.ec, test.eData)
-								t.Errorf("Test %d (%s%s x %s): Failed, expected\n%v\n but received \n%v", ti+1, a.name, transInd, b.name, mat.Formatted(e), mat.Formatted(c))
-								break
-							}
 						}
 					}
 				}
