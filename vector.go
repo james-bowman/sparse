@@ -2,6 +2,7 @@ package sparse
 
 import (
 	"math"
+	"sort"
 
 	"github.com/gonum/floats"
 	"github.com/james-bowman/sparse/blas"
@@ -305,11 +306,7 @@ func Dot(a, b mat.Vector) float64 {
 
 	if aIsSparse {
 		if bIsSparse {
-			buf := getFloats(bs.len, true)
-			blas.Dussc(bs.data, buf, 1, bs.ind)
-			val := blas.Dusdot(as.data, as.ind, buf, 1)
-			putFloats(buf)
-			return val
+			return dotSparseSparse(as, bs)
 		}
 		if bdense, bIsDense := b.(mat.RawVectorer); bIsDense {
 			raw := bdense.RawVector()
@@ -442,4 +439,101 @@ func (v *Vector) spalloc(a mat.Vector, b mat.Vector) (t *Vector, isTemp bool, re
 	}
 
 	return
+}
+
+// MulMatSparseVec (c = alpha * a * v + c) multiplies a dense matrix by a sparse
+// vector and stores the result in mat.VecDense.  c is a *mat.VecDense, if c is nil,
+// a new mat.VecDense of the correct size will be allocated and returned as the
+// result from the function.  a*v will be scaled by alpha.  The function will
+// panic if ac != |v| or if (C != nil and |c| != ar).
+// Note this is not a Sparse BLAS routine -- that library does not cover this
+// case.  This is a lookalike function in the Sparse BLAS style.  As a and c are
+// dense there is limited benefit to including alpha and c; this is done for
+// consistency rather than performance.
+func MulMatSparseVec(alpha float64, a mat.Matrix, v *Vector, c *mat.VecDense) *mat.VecDense {
+	rows, cols := a.Dims()
+	if cols != v.Len() {
+		panic(mat.ErrShape)
+	}
+	if c == nil {
+		c = mat.NewVecDense(rows, nil)
+	} else {
+		if c.Len() != rows {
+			panic(mat.ErrShape)
+		}
+	}
+	res := mat.NewVecDense(rows, nil)
+	// if a has RowView() we use that and sparse.Dot
+	if rv, aIsRowViewer := a.(mat.RowViewer); aIsRowViewer {
+		for row := 0; row < rows; row++ {
+			thisRow := rv.RowView(row)
+			res.SetVec(row, Dot(thisRow, v))
+		}
+	} else {
+		// otherwise can only rely on At()
+		for row := 0; row < rows; row++ {
+			thisVal := 0.0
+			for i, col := range v.ind {
+				thisVal += a.At(row, col) * v.data[i]
+			}
+			res.SetVec(row, thisVal)
+		}
+	}
+	c.AddScaledVec(c, alpha, res)
+	return c
+}
+
+type indexPair struct {
+	index int
+	value float64
+}
+
+// Sort the entries in a vector.
+func (v *Vector) Sort() {
+	if v.IsSorted() {
+		return
+	}
+	pairs := make([]indexPair, len(v.ind))
+	for i, idx := range v.ind {
+		pairs[i].index = idx
+		pairs[i].value = v.data[i]
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].index < pairs[j].index
+	})
+	for i, p := range pairs {
+		v.ind[i] = p.index
+		v.data[i] = p.value
+	}
+}
+
+// IsSorted checks if the vector is stored in sorted order
+func (v *Vector) IsSorted() bool {
+	return sort.IntsAreSorted(v.ind)
+}
+
+// dotSparseSparse computes the dot product of two sparse vectors.
+// This will be called by Dot if both entered vectors are Sparse.
+func dotSparseSparse(a, b *Vector) float64 {
+	a.Sort()
+	b.Sort()
+	tot := 0.0
+	aPos := 0
+	bPos := 0
+	for aPos < len(a.ind) && bPos < len(b.ind) {
+		aIndex := a.ind[aPos]
+		bIndex := b.ind[bPos]
+		if aIndex == bIndex {
+			tot += a.data[aPos] * b.data[bPos]
+			aPos++
+			bPos++
+		} else {
+			if aIndex < bIndex {
+				aPos++
+			} else {
+				bPos++
+			}
+		}
+	}
+	return tot
 }
