@@ -117,6 +117,36 @@ func TestSparseMatrixSet(t *testing.T) {
 				0, 0, 3, 6,
 			},
 		},
+		{ // non-zero on otherwise all zero row/column set to zero
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 2, 0,
+				0, 5, 0, 0,
+				0, 0, 3, 6,
+			},
+			i: 1, j: 1,
+			v: 0,
+			result: []float64{
+				1, 0, 2, 0,
+				0, 0, 0, 0,
+				0, 0, 3, 6,
+			},
+		},
+		{ // zero on otherwise all zero row/column set to zero
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 2, 0,
+				0, 0, 0, 0,
+				0, 0, 3, 6,
+			},
+			i: 1, j: 1,
+			v: 0,
+			result: []float64{
+				1, 0, 2, 0,
+				0, 0, 0, 0,
+				0, 0, 3, 6,
+			},
+		},
 	}
 
 	for ti, test := range tests {
