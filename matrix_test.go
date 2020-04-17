@@ -1,6 +1,7 @@
 package sparse
 
 import (
+	"fmt"
 	"testing"
 
 	"gonum.org/v1/gonum/mat"
@@ -317,4 +318,39 @@ func TestMulMatMat(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestConvert(t *testing.T) {
+	dok := NewDOK(4, 5)
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 5; j++ {
+			dok.Set(i, j, float64(i+j*4))
+		}
+	}
+
+	mats := []mat.Matrix{
+		dok,
+		dok.ToCOO(),
+		dok.ToCSR(),
+		dok.ToCSC(),
+		new(DOKType).Convert(dok),
+		new(COOType).Convert(dok),
+		new(CSRType).Convert(dok),
+		new(CSCType).Convert(dok),
+	}
+	size := len(mats)
+
+	for i := 0; i < size; i++ {
+		for j := 0; j < size; j++ {
+			from := mats[i]
+			to := mats[j]
+			t.Run(fmt.Sprintf("%T->%T", from, to), func(t *testing.T) {
+				// compare
+				if !(mat.Equal(from, to)) {
+					t.Fatalf("Not same (%d,%d) : %T != %T", i, j, from, to)
+				}
+			})
+		}
+	}
+
 }
