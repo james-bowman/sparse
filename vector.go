@@ -4,8 +4,8 @@ import (
 	"math"
 	"sort"
 
-	"github.com/gonum/floats"
 	"github.com/james-bowman/sparse/blas"
+	"gonum.org/v1/gonum/floats"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -14,6 +14,7 @@ var (
 	_ mat.Matrix  = (*Vector)(nil)
 	_ mat.Vector  = (*Vector)(nil)
 	_ mat.Reseter = (*Vector)(nil)
+	_ mat.Mutable = (*Vector)(nil)
 )
 
 // Vector is a sparse vector format.  It implements the mat.Vector
@@ -55,6 +56,14 @@ func (v *Vector) At(r, c int) float64 {
 	return v.AtVec(r)
 }
 
+// Set sets the element at row r, column c to the value val. Set will panic if c != 0.
+func (v *Vector) Set(r, c int, val float64) {
+	if c != 0 {
+		panic(mat.ErrColAccess)
+	}
+	v.SetVec(r, val)
+}
+
 // T returns the transpose of the receiver.
 func (v *Vector) T() mat.Matrix {
 	return mat.TransposeVec{Vector: v}
@@ -76,6 +85,40 @@ func (v *Vector) AtVec(i int) float64 {
 		}
 	}
 	return 0.0
+}
+
+// SetVec sets the i'th element to the value val. It panics if i is out of bounds.
+func (v *Vector) SetVec(i int, val float64) {
+
+	// Panic if the sought index is out of bounds
+	if i < 0 || i >= v.len {
+		panic(mat.ErrRowAccess)
+	}
+
+	// Identify where in the slice this index would exist
+	j := sort.SearchInts(v.ind, i)
+
+	// The value is zero so we are really removing it
+	if val == 0.0 {
+		if j < len(v.ind) && v.ind[j] == i {
+			v.ind = append(v.ind[:j], v.ind[j+1:]...)
+			v.data = append(v.data[:j], v.data[j+1:]...)
+		}
+		return
+	}
+
+	// Set the value
+	if j == len(v.ind) {
+		v.ind = append(v.ind, i)
+		v.data = append(v.data, val)
+	} else if j < len(v.ind) {
+		if v.ind[j] == i {
+			v.data[j] = val
+		} else {
+			v.ind = append(v.ind[:j], append([]int{i}, v.ind[j:]...)...)
+			v.data = append(v.data[:j], append([]float64{val}, v.data[j:]...)...)
+		}
+	}
 }
 
 // Len returns the length of the vector
