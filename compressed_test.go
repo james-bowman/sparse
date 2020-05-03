@@ -49,6 +49,7 @@ func TestCSRCSCTranspose(t *testing.T) {
 			t.Logf("For CSC^T, Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csc.T()))
 			t.Fail()
 		}
+
 	}
 }
 
@@ -462,5 +463,144 @@ func TestCSTrace(t *testing.T) {
 			t.Fail()
 		}
 
+	}
+}
+
+func TestCSRCSCCull(t *testing.T) {
+	var tests = []struct {
+		r, c     int
+		data     []float64
+		nnz      int
+		epsilon  float64
+		nnzE     int
+		expected []float64
+	}{
+		{
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 6,
+			},
+			nnz:     4,
+			epsilon: 0.0,
+			nnzE:    4,
+			expected: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 6,
+			},
+		},
+		{
+			r: 3, c: 4,
+			data: []float64{
+				1, 0, 0, 0,
+				0, 2, 0, 0,
+				0, 0, 3, 6,
+			},
+			nnz:     4,
+			epsilon: 2.5,
+			nnzE:    2,
+			expected: []float64{
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 3, 6,
+			},
+		},
+	}
+
+	for ti, test := range tests {
+		t.Logf("**** Test Run %d.\n", ti+1)
+
+		expected := mat.NewDense(test.r, test.c, test.expected)
+		csr := CreateCSR(test.r, test.c, test.data).(*CSR)
+		csc := CreateCSC(test.r, test.c, test.data).(*CSC)
+
+		nnzCSR := csr.NNZ()
+		nnzCSC := csc.NNZ()
+
+		if nnzCSR != test.nnz {
+			t.Logf("CSR NNZ is %d vs %d", nnzCSR, test.nnz)
+			t.Fail()
+		}
+		if nnzCSC != test.nnz {
+			t.Logf("CSC NNZ is %d vs %d", nnzCSC, test.nnz)
+			t.Fail()
+		}
+
+		csrLen := len(csr.matrix.Data)
+		cscLen := len(csc.matrix.Data)
+		if csrLen != test.nnz {
+			t.Logf("CSR data length incorrect: %d, %d", csrLen, test.nnz)
+			t.Fail()
+		}
+		if cscLen != test.nnz {
+			t.Logf("CSC data length incorrect: %d, %d", cscLen, test.nnz)
+			t.Fail()
+		}
+
+		csr.Cull(test.epsilon)
+		csc.Cull(test.epsilon)
+
+		if !mat.Equal(csr, expected) {
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csr))
+			t.Fail()
+		}
+		if !mat.Equal(csc, expected) {
+			t.Logf("Expected:\n%v\n but received:\n%v\n", mat.Formatted(expected), mat.Formatted(csc))
+			t.Fail()
+		}
+
+		nnzECSR := csr.NNZ()
+		nnzECSC := csc.NNZ()
+		if nnzECSR != test.nnzE {
+			t.Logf("CSR NNZE is %d vs %d", nnzECSR, test.nnzE)
+			t.Fail()
+		}
+		if nnzECSC != test.nnzE {
+			t.Logf("CSC NNZE is %d vs %d", nnzECSC, test.nnzE)
+			t.Fail()
+		}
+
+		csrELen := len(csr.matrix.Data)
+		cscELen := len(csc.matrix.Data)
+		if csrELen != test.nnzE {
+			t.Logf("CSR data length incorrect: %d, %d", csrELen, test.nnzE)
+			t.Fail()
+		}
+		if cscELen != test.nnzE {
+			t.Logf("CSC data length incorrect: %d, %d", cscELen, test.nnzE)
+			t.Fail()
+		}
+
+		csr2 := CreateCSR(test.r, test.c, test.data).(*CSR)
+		csc2 := CreateCSC(test.r, test.c, test.data).(*CSC)
+		cscT := csc2.T().(*CSR)
+		csrT := csr2.T().(*CSC)
+		nnzCSRT := csrT.NNZ()
+		nnzCSCT := cscT.NNZ()
+
+		csrT.Cull(test.epsilon)
+		cscT.Cull(test.epsilon)
+
+		nnzECSRT := csrT.NNZ()
+		nnzECSCT := cscT.NNZ()
+
+		if nnzCSRT != test.nnz {
+			t.Logf("CSRT NNZ is %d vs %d", nnzCSRT, test.nnz)
+			t.Fail()
+		}
+		if nnzECSRT != test.nnzE {
+			t.Logf("CSRT NNZE is %d vs %d", nnzECSRT, test.nnzE)
+			t.Fail()
+		}
+		if nnzCSCT != test.nnz {
+			t.Logf("CSCT NNZ is %d vs %d", nnzCSCT, test.nnz)
+			t.Fail()
+		}
+		if nnzECSCT != test.nnzE {
+			t.Logf("CSCT NNZE is %d vs %d", nnzECSCT, test.nnzE)
+			t.Fail()
+		}
 	}
 }

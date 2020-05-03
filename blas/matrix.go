@@ -1,5 +1,10 @@
 package blas
 
+import (
+	"github.com/gonum/floats"
+	"gonum.org/v1/gonum/mat"
+)
+
 // SparseMatrix represents the common structure for representing compressed sparse
 // matrix formats e.g. CSR (Compressed Sparse Row) or CSC (Compressed Sparse Column)
 type SparseMatrix struct {
@@ -69,5 +74,49 @@ func (m *SparseMatrix) insert(i int, j int, v float64, insertionPoint int) {
 
 	for n := i + 1; n <= m.I; n++ {
 		m.Indptr[n]++
+	}
+}
+
+func (m *SparseMatrix) nnzWithin(epsilon float64) int {
+	count := 0
+	for _, v := range m.Data {
+		if !floats.EqualWithinAbs(v, 0, epsilon) {
+			count++
+		}
+	}
+	return count
+}
+
+// Cull returns a new SparseMatrix with all entries within epsilon of 0 removed.
+func (m *SparseMatrix) Cull(epsilon float64) *SparseMatrix {
+	nMajor := len(m.Indptr)
+	targetNNZ := m.nnzWithin(epsilon)
+	newIndPtr := make([]int, nMajor)
+	newInd := make([]int, targetNNZ)
+	newData := make([]float64, targetNNZ)
+	curPos := 0
+	for major := 0; major < nMajor-1; major++ {
+		startIdx := m.Indptr[major]
+		endIdx := m.Indptr[major+1]
+		newIndPtr[major] = curPos
+		for minor := startIdx; minor < endIdx; minor++ {
+			col := m.Ind[minor]
+			v := m.Data[minor]
+			if !floats.EqualWithinAbs(v, 0, epsilon) {
+				newInd[curPos] = col
+				newData[curPos] = v
+				curPos++
+			}
+		}
+	}
+	if curPos != targetNNZ {
+		panic(mat.ErrShape)
+	}
+	newIndPtr[nMajor-1] = curPos
+	return &SparseMatrix{
+		I: m.I, J: m.J,
+		Indptr: newIndPtr,
+		Ind:    newInd,
+		Data:   newData,
 	}
 }
