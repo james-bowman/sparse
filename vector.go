@@ -560,12 +560,28 @@ func (v *Vector) IsSorted() bool {
 func dotSparseSparse(a, b *Vector) float64 {
 	a.Sort()
 	b.Sort()
+	return dotSparseSparseNoSort(a, b)
+}
+
+func dotSparseSparseNoSort(a, b *Vector) float64 {
+	n := a.Len()
+	return dotSparseSparseNoSortBefore(a, b, n)
+}
+
+func dotSparseSparseNoSortBefore(a, b *Vector, n int) float64 {
+	v, _, _ := dotSparseSparseNoSortBeforeWithStart(a, b, n, 0, 0)
+	return v
+}
+
+func dotSparseSparseNoSortBeforeWithStart(a, b *Vector, n, aStart, bStart int) (float64, int, int) {
 	tot := 0.0
-	aPos := 0
-	bPos := 0
-	for aPos < len(a.ind) && bPos < len(b.ind) {
-		aIndex := a.ind[aPos]
-		bIndex := b.ind[bPos]
+	aPos := aStart
+	bPos := bStart
+	aIndex := -1
+	bIndex := -1
+	for aPos < len(a.ind) && bPos < len(b.ind) && aIndex < n && bIndex < n {
+		aIndex = a.ind[aPos]
+		bIndex = b.ind[bPos]
 		if aIndex == bIndex {
 			tot += a.data[aPos] * b.data[bPos]
 			aPos++
@@ -578,5 +594,5 @@ func dotSparseSparse(a, b *Vector) float64 {
 			}
 		}
 	}
-	return tot
+	return tot, aPos, bPos
 }
