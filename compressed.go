@@ -565,13 +565,13 @@ func (c *CSC) ScatterCol(j int, col []float64) []float64 {
 	return col
 }
 
-// Cull removes all entries within tolerance of 0.
+// Cull removes all entries within epsilon of 0.
 func (c *CSR) Cull(epsilon float64) {
 	newM := c.matrix.Cull(epsilon)
 	c.matrix = *newM
 }
 
-// Cull removes all entries within tolerance of 0.
+// Cull removes all entries within epsilon of 0.
 func (c *CSC) Cull(epsilon float64) {
 	newM := c.matrix.Cull(epsilon)
 	c.matrix = *newM
