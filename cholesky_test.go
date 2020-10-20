@@ -3,10 +3,12 @@ package sparse
 import (
 	"fmt"
 	"math"
-	"math/rand"
 	"testing"
 
+	"golang.org/x/exp/rand"
+
 	"gonum.org/v1/gonum/mat"
+	"gonum.org/v1/gonum/stat/distmat"
 )
 
 func TestCholesky(t *testing.T) {
@@ -223,23 +225,27 @@ func cholMatches(a *mat.SymDense) bool {
 // computes a permutation matrix where each non-zero is rand.Float64() instead of 1
 // and then return aat of that
 func randomScaledPermutationMatrixAAT(n int, src rand.Source) *mat.SymDense {
-	idxList := make([]int, n)
-	for i := range idxList {
-		idxList[i] = i
-	}
-	rnd := rand.New(src)
-	rnd.Shuffle(n, func(i, j int) { idxList[i], idxList[j] = idxList[j], idxList[i] })
-	m := mat.NewDense(n, n, nil)
+	// p contains a permutation matrix
+	p := mat.NewDense(n, n, nil)
+	u := distmat.NewUniformPermutation(src)
+	u.PermTo(p)
 
-	for i, j := range idxList {
-		v := rnd.Float64()
-		m.Set(i, j, v)
+	// s is a scale matrix with rnd.Float64() down the diagonal
+	s := mat.NewDense(n, n, nil)
+	rnd := rand.New(src)
+	for i := 0; i < n; i++ {
+		s.Set(i, i, rnd.Float64())
 	}
-	mt := m.T()
-	mmt := mat.NewDense(n, n, nil)
-	mmt.Mul(m, mt)
-	mmtSym := mat.NewSymDense(n, mmt.RawMatrix().Data)
-	return mmtSym
+
+	// a = s p
+	// compute aat and convert to symdense
+	a := mat.NewDense(n, n, nil)
+	a.Mul(p, s)
+	at := a.T()
+	aat := mat.NewDense(n, n, nil)
+	aat.Mul(a, at)
+	aatSym := mat.NewSymDense(n, aat.RawMatrix().Data)
+	return aatSym
 }
 
 func randomSymDensePosDefinite(n int, fracNZ float64, src rand.Source) *mat.SymDense {
@@ -301,7 +307,7 @@ func matToCSR(m mat.Matrix, tol float64) *CSR {
 	return coo.ToCSR()
 }
 
-func BenchmarkCholSimple800(b *testing.B) { cholSimpleBench(b, 400, 0) }
+func BenchmarkCholSimple800(b *testing.B) { cholSimpleBench(b, 800, 0) }
 
 func BenchmarkCholGoNum400S3(b *testing.B) { cholGoNumBench(b, 400, 3.0/400) }
 func BenchmarkCholGoNum400S5(b *testing.B) { cholGoNumBench(b, 400, 5.0/400) }
