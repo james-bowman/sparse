@@ -157,6 +157,11 @@ func TestDot(t *testing.T) {
 			r: 5,
 		},
 		{
+			a: NewVector(6, []int{4, 3, 1}, []float64{1, 2, 1}),
+			b: NewVector(6, []int{1, 0, 3}, []float64{1, 1, 2}),
+			r: 5,
+		},
+		{
 			a: mat.NewVecDense(6, []float64{0, 1, 0, 2, 1, 0}),
 			b: NewVector(6, []int{0, 1, 3}, []float64{1, 1, 2}),
 			r: 5,
@@ -171,9 +176,36 @@ func TestDot(t *testing.T) {
 	for ti, test := range tests {
 
 		result := Dot(test.a, test.b)
-
 		if result != test.r {
 			t.Errorf("Test %d: Incorrect result for Dot - expected:\n%v\nbut received:\n%v\n", ti+1, test.r, result)
+		}
+	}
+}
+
+func TestMulElemVec(t *testing.T) {
+	v := NewVector(6, nil, nil)
+	tests := []struct {
+		a *Vector
+		b *Vector
+		r *Vector
+	}{
+		{
+			a: NewVector(6, []int{1, 3, 4}, []float64{1, 2, 1}),
+			b: NewVector(6, []int{0, 1, 3}, []float64{1, 1, 2}),
+			r: NewVector(6, []int{1, 3}, []float64{1, 4}),
+		},
+		{
+			a: NewVector(6, []int{4, 3, 1}, []float64{1, 2, 1}),
+			b: NewVector(6, []int{1, 0, 3}, []float64{1, 1, 2}),
+			r: NewVector(6, []int{1, 3}, []float64{1, 4}),
+		},
+	}
+
+	for ti, test := range tests {
+
+		v.MulElemVec(test.a, test.b)
+		if !mat.Equal(v, test.r) {
+			t.Errorf("Test %d: Incorrect result for MulElemVec - expected:\n%v\nbut received:\n%v\n", ti+1, test.r, v)
 		}
 	}
 }
@@ -538,7 +570,7 @@ func TestVectorSet(t *testing.T) {
 		},
 	}
 
-	for ti, test := range tests {      
+	for ti, test := range tests {
 		act := new(Vector)
 		act.CloneVec(test.source)
 		act.Set(test.idx, 0, test.val)
@@ -635,9 +667,9 @@ func TestVecSetPanic(t *testing.T) {
 			act.Set(2, col, 1.1)
 
 		}(ti, test.col, test.source)
-  }
+	}
 }
-    
+
 func TestMulMatSparseVec(t *testing.T) {
 	permsB := []struct {
 		name   string
@@ -687,7 +719,7 @@ func TestMulMatSparseVec(t *testing.T) {
 		},
 	}
 
-	for ti, test := range tests {    
+	for ti, test := range tests {
 		for _, b := range permsB {
 			for _, rawa := range matrixPermutationsForA {
 				var matPair = []struct {
