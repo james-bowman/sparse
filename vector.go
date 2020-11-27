@@ -349,7 +349,7 @@ func Dot(a, b mat.Vector) float64 {
 
 	if aIsSparse {
 		if bIsSparse {
-			return dotSparseSparse(as, bs)
+			return dotSparseSparse(as, bs, nil)
 		}
 		if bdense, bIsDense := b.(mat.RawVectorer); bIsDense {
 			raw := bdense.RawVector()
@@ -557,23 +557,23 @@ func (v *Vector) IsSorted() bool {
 
 // dotSparseSparse computes the dot product of two sparse vectors.
 // This will be called by Dot if both entered vectors are Sparse.
-func dotSparseSparse(a, b *Vector) float64 {
+func dotSparseSparse(a, b, c *Vector) float64 {
 	a.Sort()
 	b.Sort()
-	return dotSparseSparseNoSort(a, b)
+	return dotSparseSparseNoSort(a, b, c)
 }
 
-func dotSparseSparseNoSort(a, b *Vector) float64 {
+func dotSparseSparseNoSort(a, b, c *Vector) float64 {
 	n := a.Len()
-	return dotSparseSparseNoSortBefore(a, b, n)
+	return dotSparseSparseNoSortBefore(a, b, c, n)
 }
 
-func dotSparseSparseNoSortBefore(a, b *Vector, n int) float64 {
-	v, _, _ := dotSparseSparseNoSortBeforeWithStart(a, b, n, 0, 0)
+func dotSparseSparseNoSortBefore(a, b, c *Vector, n int) float64 {
+	v, _, _ := dotSparseSparseNoSortBeforeWithStart(a, b, c, n, 0, 0)
 	return v
 }
 
-func dotSparseSparseNoSortBeforeWithStart(a, b *Vector, n, aStart, bStart int) (float64, int, int) {
+func dotSparseSparseNoSortBeforeWithStart(a, b, c *Vector, n, aStart, bStart int) (float64, int, int) {
 	tot := 0.0
 	aPos := aStart
 	bPos := bStart
@@ -583,7 +583,11 @@ func dotSparseSparseNoSortBeforeWithStart(a, b *Vector, n, aStart, bStart int) (
 		aIndex = a.ind[aPos]
 		bIndex = b.ind[bPos]
 		if aIndex == bIndex {
-			tot += a.data[aPos] * b.data[bPos]
+			val := a.data[aPos] * b.data[bPos]
+			tot += val
+			if c != nil {
+				c.SetVec(aIndex, val)
+			}
 			aPos++
 			bPos++
 		} else {
@@ -595,4 +599,22 @@ func dotSparseSparseNoSortBeforeWithStart(a, b *Vector, n, aStart, bStart int) (
 		}
 	}
 	return tot, aPos, bPos
+}
+
+// MulElemVec does element-by-element multiplication of a and b
+// and puts the result in the receiver.
+func (v *Vector) MulElemVec(a, b *Vector) {
+	ar := a.Len()
+	br := b.Len()
+	if ar != br {
+		panic(mat.ErrShape)
+	}
+	aNNZ := a.NNZ()
+	bNNZ := b.NNZ()
+	minNNZ := aNNZ
+	if bNNZ < minNNZ {
+		minNNZ = bNNZ
+	}
+	v.reuseAs(ar, minNNZ, true)
+	dotSparseSparse(a, b, v)
 }

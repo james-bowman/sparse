@@ -41,7 +41,7 @@ func (ch *Cholesky) At(i, j int) float64 {
 	ri := ch.chol.RowView(i).(*Vector)
 	rj := ch.chol.RowView(j).(*Vector)
 	// FIXME: check types
-	val = dotSparseSparseNoSortBefore(ri, rj, min(i, j)+1)
+	val = dotSparseSparseNoSortBefore(ri, rj, nil, min(i, j)+1)
 	return val
 }
 
@@ -212,10 +212,6 @@ func cholCSR(matrix *CSR, lower *CSR) {
 		if matrix.RowNNZ(i) == 0 {
 			continue
 		}
-		//		rowDotSum := 0.0
-		//		aPos := 0
-		//		bPos := 0
-		//		thisSum := 0.0
 		for j := 0; j <= i; j++ {
 			iRow := lower.RowView(i)
 			iRowS, iRowIsSparse := iRow.(*Vector)
@@ -231,9 +227,7 @@ func cholCSR(matrix *CSR, lower *CSR) {
 				}
 				lower.Set(j, j, math.Sqrt(matrix.At(i, i)-sum))
 			} else {
-				//				thisSum, _, _ = dotSparseSparseNoSortBeforeWithStart(iRowS, jRowS, j, aPos, bPos)
-				//				rowDotSum = thisSum
-				rowDotSum := dotSparseSparseNoSort(iRowS, jRowS)
+				rowDotSum := dotSparseSparseNoSort(iRowS, jRowS, nil)
 				if rowDotSum == 0.0 && matrix.At(i, j) == 0.0 {
 					continue
 				}
