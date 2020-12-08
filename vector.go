@@ -355,14 +355,14 @@ func Dot(a, b mat.Vector) float64 {
 			raw := bdense.RawVector()
 			return blas.Dusdot(as.data, as.ind, raw.Data, raw.Inc)
 		}
-		return dotSparse(as, b)
+		return dotSparse(as, b, nil)
 	}
 	if bIsSparse {
 		if adense, aIsDense := a.(mat.RawVectorer); aIsDense {
 			raw := adense.RawVector()
 			return blas.Dusdot(bs.data, bs.ind, raw.Data, raw.Inc)
 		}
-		return dotSparse(bs, a)
+		return dotSparse(bs, a, nil)
 	}
 	return mat.Dot(a, b)
 }
@@ -370,10 +370,14 @@ func Dot(a, b mat.Vector) float64 {
 // dotSparse returns the sum of the element-wise multiplication
 // of a and b where a is sparse and b is any implementation of
 // mat.Vector.
-func dotSparse(a *Vector, b mat.Vector) float64 {
+func dotSparse(a *Vector, b mat.Vector, c *Vector) float64 {
 	var result float64
 	for i, ind := range a.ind {
-		result += a.data[i] * b.AtVec(ind)
+		val := a.data[i] * b.AtVec(ind)
+		result += val
+		if c != nil {
+			c.SetVec(ind, val)
+		}
 	}
 	return result
 }
@@ -603,18 +607,44 @@ func dotSparseSparseNoSortBeforeWithStart(a, b, c *Vector, n, aStart, bStart int
 
 // MulElemVec does element-by-element multiplication of a and b
 // and puts the result in the receiver.
-func (v *Vector) MulElemVec(a, b *Vector) {
+func (v *Vector) MulElemVec(a, b mat.Vector) {
 	ar := a.Len()
 	br := b.Len()
 	if ar != br {
 		panic(mat.ErrShape)
 	}
-	aNNZ := a.NNZ()
-	bNNZ := b.NNZ()
-	minNNZ := aNNZ
-	if bNNZ < minNNZ {
-		minNNZ = bNNZ
+
+	as, aIsSparse := a.(*Vector)
+	bs, bIsSparse := b.(*Vector)
+
+	if aIsSparse {
+		aNNZ := as.NNZ()
+		if bIsSparse {
+			bNNZ := bs.NNZ()
+			minNNZ := aNNZ
+			if bNNZ < minNNZ {
+				minNNZ = bNNZ
+			}
+			if v != nil {
+				v.reuseAs(ar, minNNZ, true)
+			}
+			dotSparseSparse(as, bs, v)
+		} else {
+			if v != nil {
+				v.reuseAs(ar, aNNZ, true)
+			}
+			dotSparse(as, b, v)
+		}
+	} else if bIsSparse {
+		bNNZ := bs.NNZ()
+		if v != nil {
+			v.reuseAs(ar, bNNZ, true)
+		}
+		dotSparse(bs, a, v)
+	} else {
+		v.reuseAs(ar, ar, true)
+		for i := 0; i < ar; i++ {
+			v.SetVec(i, a.AtVec(i)*b.AtVec(i))
+		}
 	}
-	v.reuseAs(ar, minNNZ, true)
-	dotSparseSparse(a, b, v)
 }
