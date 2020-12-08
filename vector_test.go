@@ -766,3 +766,22 @@ func TestMulMatSparseVec(t *testing.T) {
 		}
 	}
 }
+
+func TestReset(t *testing.T) {
+	tests := []struct {
+		a *Vector
+	}{
+		{
+			a: NewVector(6, []int{1, 2, 4}, []float64{1, 3, 2}),
+		},
+	}
+
+	for ti, test := range tests {
+		test.a.Reset()
+		b := NewVector(test.a.Len(), []int{}, []float64{})
+
+		if !mat.Equal(test.a, b) {
+			t.Errorf("Test %d: Incorrect result for Reset - expected:\n%v\nbut received:\n%v\n", ti+1, b, test.a)
+		}
+	}
+}
