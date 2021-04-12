@@ -3,7 +3,7 @@ package sparse
 import (
 	"testing"
 
-	"gonum.org/v1/gonum/floats"
+	"gonum.org/v1/gonum/floats/scalar"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -458,7 +458,7 @@ func TestCSTrace(t *testing.T) {
 		for i := 0; i < test.s; i++ {
 			checkTr += m.At(i, i)
 		}
-		if !floats.EqualWithinAbs(tr, checkTr, 1e-13) {
+		if !scalar.EqualWithinAbs(tr, checkTr, 1e-13) {
 			t.Logf("trace mismatch: %f vs %f", tr, checkTr)
 			t.Fail()
 		}

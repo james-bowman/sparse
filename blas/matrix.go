@@ -1,7 +1,7 @@
 package blas
 
 import (
-	"gonum.org/v1/gonum/floats"
+	"gonum.org/v1/gonum/floats/scalar"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -80,7 +80,7 @@ func (m *SparseMatrix) insert(i int, j int, v float64, insertionPoint int) {
 func (m *SparseMatrix) nnzWithin(epsilon float64) int {
 	count := 0
 	for _, v := range m.Data {
-		if !floats.EqualWithinAbs(v, 0, epsilon) {
+		if !scalar.EqualWithinAbs(v, 0, epsilon) {
 			count++
 		}
 	}
@@ -102,7 +102,7 @@ func (m *SparseMatrix) Cull(epsilon float64) *SparseMatrix {
 		for minor := startIdx; minor < endIdx; minor++ {
 			col := m.Ind[minor]
 			v := m.Data[minor]
-			if !floats.EqualWithinAbs(v, 0, epsilon) {
+			if !scalar.EqualWithinAbs(v, 0, epsilon) {
 				newInd[curPos] = col
 				newData[curPos] = v
 				curPos++
