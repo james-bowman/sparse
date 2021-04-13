@@ -186,15 +186,19 @@ func compress(row []int, col []int, data []float64, n int) (ia []int, ja []int, 
 }
 
 func dedupe(ia []int, ja []int, d []float64, m int, n int) ([]int, []float64) {
-	//w := make([]int, n)
-	w := getInts(n, true)
+	w := getInts(n, false)
 	defer putInts(w)
-	nz := 0
 
+	// start -1 to dedupe leading duplicates
+	for k, _ := range w {
+		w[k] = -1
+	}
+
+	nz := 0
 	for i := 0; i < m; i++ {
 		q := nz
 		for j := ia[i]; j < ia[i+1]; j++ {
-			if w[ja[j]] > q {
+			if w[ja[j]] >= q {
 				d[w[ja[j]]] += d[j]
 			} else {
 				w[ja[j]] = nz
