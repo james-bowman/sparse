@@ -7,6 +7,24 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+func CreateCOOWithLeadingDupes(m, n int, data []float64) mat.Matrix {
+	pad := 0
+	I, J, V := make([]int, pad), make([]int, pad), make([]float64, pad)
+	coo := NewCOO(m, n, I, J, V)
+
+	// insert leading duplicates
+	coo.Set(0, 0, 100)
+	coo.Set(0, 0, -100)
+
+	// insert matrix
+	for i := 0; i < m; i++ {
+		for j := 0; j < n; j++ {
+			coo.Set(i, j, data[i*n+j])
+		}
+	}
+	return coo
+}
+
 func CreateCOOWithDupes(m, n int, data []float64) mat.Matrix {
 	coo := CreateCOO(m, n, data).(*COO)
 	for k := 0; k < rand.Intn(m*n-1)+1; k++ {
@@ -44,6 +62,11 @@ func TestCOOConversion(t *testing.T) {
 		{
 			"COO -> CSR (With Dupes)",
 			CreateCOOWithDupes,
+			func(a TypeConverter) Sparser { return a.ToCSR() },
+		},
+		{
+			"COO -> CSR (With Leading Dupes)",
+			CreateCOOWithLeadingDupes,
 			func(a TypeConverter) Sparser { return a.ToCSR() },
 		},
 		{
