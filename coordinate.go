@@ -11,8 +11,8 @@ var (
 	_ mat.Mutable   = (*COO)(nil)
 )
 
-// COO is a COOrdinate format sparse matrix implementation (sometimes called `Tiplet` format) and implements the
-// Matrix interface from gonum/matrix.  This allows large sparse (mostly zero values) matrices to be stored
+// COO is a COOrdinate format sparse matrix implementation (sometimes called `Triplet` format) and implements the
+// Matrix interface from gonum/matrix.  This allows large sparse (mostly zero-valued) matrices to be stored
 // efficiently in memory (only storing non-zero values).  COO matrices are good for constructing sparse matrices
 // initially and very good at converting to CSR and CSC formats but poor for arithmetic operations.  As this
 // type implements the gonum mat.Matrix interface, it may be used with any of the Gonum mat functions that
@@ -25,7 +25,7 @@ type COO struct {
 	data []float64
 }
 
-// NewCOO creates a new DIAgonal format sparse matrix.
+// NewCOO creates a new COOrdinate format sparse matrix.
 // The matrix is initialised to the size of the specified r * c dimensions (rows * columns)
 // with the specified slices containing either nil or containing rows and cols indexes of non-zero elements
 // and the non-zero data values themselves respectively.  If not nil, the supplied slices will be used as the
@@ -54,12 +54,14 @@ func NewCOO(r int, c int, rows []int, cols []int, data []float64) *COO {
 	return coo
 }
 
-// NNZ returns the Number of Non Zero elements in the sparse matrix.
+// NNZ returns the number of stored data elements. This number includes explicit
+// zeroes, if stored, and may be exceed the total number of matrix elements
+// (rows * columns) if duplicate coordinates are stored.
 func (c *COO) NNZ() int {
 	return len(c.data)
 }
 
-// DoNonZero calls the function fn for each of the non-zero elements of the receiver.
+// DoNonZero calls the function fn for each of the stored data elements in the receiver.
 // The function fn takes a row/column index and the element value of the receiver at
 // (i, j).  The order of visiting to each non-zero element is not guaranteed.
 func (c *COO) DoNonZero(fn func(i, j int, v float64)) {
