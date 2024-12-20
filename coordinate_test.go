@@ -200,3 +200,86 @@ func TestCOOTranspose(t *testing.T) {
 		}
 	}
 }
+
+func TestPermutations(t *testing.T) {
+	for _, test := range []struct {
+		m           *COO
+		permutation []int
+		want        *mat.Dense
+		desc        string
+		permuteCol  bool
+	}{
+		{
+			m:           NewCOO(2, 3, []int{0, 0, 1}, []int{0, 1, 0}, []float64{1.0, 2.0, 3.0}),
+			permutation: []int{1, 0},
+			want:        mat.NewDense(2, 3, []float64{3.0, 0.0, 0.0, 1.0, 2.0, 0.0}),
+			desc:        "2x3 matrix row permutation",
+			permuteCol:  false,
+		},
+		{
+			m:           NewCOO(2, 3, []int{0, 0, 1}, []int{0, 1, 0}, []float64{1.0, 2.0, 3.0}),
+			permutation: []int{1, 0, 2},
+			want:        mat.NewDense(2, 3, []float64{2.0, 1.0, 0.0, 0.0, 3.0, 0.0}),
+			desc:        "2x3 matrix col permutation",
+			permuteCol:  true,
+		},
+		{
+			m:           NewCOO(1, 1, []int{0}, []int{0}, []float64{1.0}),
+			permutation: []int{0},
+			want:        mat.NewDense(1, 1, []float64{1.0}),
+			desc:        "1x1 matrix row permutation",
+			permuteCol:  false,
+		},
+	} {
+		if test.permuteCol {
+			test.m.PermuteCols(test.permutation)
+		} else {
+			test.m.PermuteRows(test.permutation)
+		}
+
+		result := test.m.ToDense()
+
+		if !mat.Equal(result, test.want) {
+			t.Errorf("Test: %s: Expected\n%v\ngot%v\n", test.desc, test.want, result)
+		}
+
+	}
+}
+
+func TestIsPermutation(t *testing.T) {
+	for _, test := range []struct {
+		N           int
+		permutation []int
+		valid       bool
+		desc        string
+	}{
+		{
+			N:           2,
+			permutation: []int{0, 1},
+			valid:       true,
+			desc:        "Valid 2xN matrix permutation",
+		},
+		{
+			N:           3,
+			permutation: []int{0, 1},
+			valid:       false,
+			desc:        "Invalid: missing 2",
+		},
+		{
+			N:           3,
+			permutation: []int{0, 0, 1},
+			valid:       false,
+			desc:        "Invalid: duplicates",
+		},
+		{
+			N:           3,
+			permutation: []int{1, 0, 4},
+			valid:       false,
+			desc:        "Invalid: value out of bounds",
+		},
+	} {
+		if result := isPermutation(test.permutation, test.N); result != test.valid {
+			t.Errorf("Test %s: expected %v got %v\n", test.desc, test.valid, result)
+		}
+	}
+}
