@@ -154,6 +154,52 @@ func (c *COO) ToCOO() *COO {
 	return c
 }
 
+// a []int is a row permutation if all row numbers are present once
+func isPermutation(permutation []int, N int) bool {
+	if len(permutation) != N {
+		return false
+	}
+
+	distinctValues := make(map[int]bool)
+	for _, v := range permutation {
+		if v < N && v >= 0 {
+			distinctValues[v] = true
+		}
+	}
+	return len(distinctValues) == N
+}
+
+// PermuteRows swaps rows in the matrix given by the permutations.
+// If the provided array is not a valid permutation, it panics.
+// A valid permutation contains all rows exactly once
+//
+// Example:
+// For a 3x2 matrix a permutation that swaps row 1 and 3 is
+// {2, 1, 0}
+func (c *COO) PermuteRows(permutations []int) {
+	if !isPermutation(permutations, c.r) {
+		panic("invalid permutation (some rows are missing)")
+	}
+	mapSlice(c.rows, permutations)
+}
+
+// PermuteCols swaps columns int the matrix given by permutations
+// If the provided array is not a valid permutation, it panics
+// See PermuteRows for a detailed explination of valid permutations
+// (works the same except "row" are replaced by "col")
+func (c *COO) PermuteCols(permutations []int) {
+	if !isPermutation(permutations, c.c) {
+		panic("invalid permutation (some cols missing)")
+	}
+	mapSlice(c.cols, permutations)
+}
+
+func mapSlice(data []int, permutation []int) {
+	for i := range data {
+		data[i] = permutation[data[i]]
+	}
+}
+
 func cumsum(p []int, c []int, n int) int {
 	nz := 0
 	for i := 0; i < n; i++ {
