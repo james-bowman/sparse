@@ -61,9 +61,11 @@ func NewBinaryVec(length int) *BinaryVec {
 
 // DistanceFrom is the number of bits that are different between the
 // receiver and rhs i.e.
-// 	recevier 	= 1001001
+//
+//	recevier 	= 1001001
 //	rhs 		= 1010101
-// 	Distance	= 3
+//	Distance	= 3
+//
 // because there are three bits that are different between the 2
 // binary vectors.  This is sometimes referred to as the `Hamming
 // distance` or `Matching distance`.  In this case, the distance
@@ -263,7 +265,7 @@ func (b BinaryVec) String() string {
 }
 
 // Format outputs the vector to f and allows the output format
-// to be specified.  Supported values of c are `x`, `X`, `b`` and `s`
+// to be specified.  Supported values of c are `x`, `X`, `b“ and `s`
 // to format the bits of the vector as a hex digit or binary digit string.
 // `s` (the default format) will output as binary digits.
 // Please refer to the fmt package documentation for more information.
@@ -342,7 +344,7 @@ func (b *Binary) Dims() (int, int) {
 	return b.r, b.c
 }
 
-// At returns the value of the element at row i and column k.
+// At returns the value of the element at row i and column j.
 // i (row) and j (col) must be within the dimensions of the matrix otherwise the
 // method panics.  This method is part of the Gonum mat.Matrix interface.
 func (b *Binary) At(i int, j int) float64 {
@@ -367,4 +369,27 @@ func (b *Binary) ColView(j int) mat.Vector {
 		panic(mat.ErrColAccess)
 	}
 	return &b.cols[j]
+}
+
+// Set sets the bit at the specified index (i, j) to 1.  If the bit is already set
+// there are no adverse effects.
+// i (row) and j (col) must be within the dimensions of the matrix otherwise the
+// method panics.
+func (b *Binary) Set(i, j int) {
+	if j < 0 || j >= b.c {
+		panic(mat.ErrColAccess)
+	}
+	b.cols[j].SetBit(i)
+}
+
+// BitIsSet tests whether the element (bit) at position (i, j) is set (equals 1) and
+// returns true if so.  If the element (bit) is not set or has been unset (equal
+// to 0) the the method will return false.
+// i (row) and j (col) must be within the dimensions of the matrix otherwise the
+// method panics.
+func (b *Binary) BitIsSet(i, j int) bool {
+	if j < 0 || j >= b.c {
+		panic(mat.ErrColAccess)
+	}
+	return b.cols[j].bitIsSet(i)
 }
